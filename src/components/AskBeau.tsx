@@ -8,8 +8,23 @@ interface Message {
   text: string;
 }
 
+interface BootLine {
+  type: 'command' | 'output';
+  text: string;
+  highlight?: boolean;
+}
+
 const MAX_QUESTIONS = 10;
 const QUESTION_COUNT_KEY = 'askBeau_questionCount';
+
+const bootSequence: BootLine[] = [
+  { type: 'command', text: '$ beau --status' },
+  { type: 'output', text: '> ROLE: Operations Director & AI Architect' },
+  { type: 'output', text: '> LOCATION: Austin, TX' },
+  { type: 'output', text: '> STATUS: Deployable', highlight: true },
+  { type: 'output', text: '> SKILLS: Maximized for ROI' },
+  { type: 'output', text: '> CONTEXT: Nothing left on the table' },
+];
 
 export default function AskBeau() {
   const [input, setInput] = useState('');
@@ -20,9 +35,16 @@ export default function AskBeau() {
   const [showCursor, setShowCursor] = useState(true);
   const [questionCount, setQuestionCount] = useState(0);
   const [hasReachedLimit, setHasReachedLimit] = useState(false);
-  const [showHint, setShowHint] = useState(true);
-  const [showGlow, setShowGlow] = useState(true);
+  const [showHint, setShowHint] = useState(false); // Start false, show after boot
+  const [showGlow, setShowGlow] = useState(false); // Start false, show after boot
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Boot sequence state
+  const [bootComplete, setBootComplete] = useState(false);
+  const [displayedBootLines, setDisplayedBootLines] = useState<string[]>([]);
+  const [currentBootLine, setCurrentBootLine] = useState(0);
+  const [currentBootChar, setCurrentBootChar] = useState(0);
+  const [showReady, setShowReady] = useState(false);
 
   // Load question count from session storage on mount
   useEffect(() => {
@@ -42,13 +64,69 @@ export default function AskBeau() {
     return () => clearInterval(cursorInterval);
   }, []);
 
-  // Stop glow animation after 3 seconds
+  // Boot sequence typewriter effect
   useEffect(() => {
+    if (bootComplete) return;
+
+    // If we've finished all lines
+    if (currentBootLine >= bootSequence.length) {
+      // Small delay before showing "ready" state
+      const readyTimeout = setTimeout(() => {
+        setBootComplete(true);
+        setShowReady(true);
+        // Trigger the input glow and hint after boot
+        setTimeout(() => {
+          setShowGlow(true);
+          setShowHint(true);
+        }, 300);
+        // Stop the ready flash after a moment
+        setTimeout(() => {
+          setShowReady(false);
+        }, 1500);
+      }, 400);
+      return () => clearTimeout(readyTimeout);
+    }
+
+    const currentLine = bootSequence[currentBootLine];
+    const text = currentLine.text;
+
+    // Still typing current line
+    if (currentBootChar < text.length) {
+      // Commands type slower (human-like), output types faster (computer-like)
+      const typingSpeed = currentLine.type === 'command'
+        ? 60 + Math.random() * 40 // Commands: 60-100ms per char
+        : 18 + Math.random() * 22; // Output: 18-40ms per char
+
+      const typingTimeout = setTimeout(() => {
+        setDisplayedBootLines(prev => {
+          const newLines = [...prev];
+          newLines[currentBootLine] = text.substring(0, currentBootChar + 1);
+          return newLines;
+        });
+        setCurrentBootChar(prev => prev + 1);
+      }, typingSpeed);
+
+      return () => clearTimeout(typingTimeout);
+    } else {
+      // Finished current line, move to next
+      const lineDelay = currentLine.type === 'command' ? 350 : 120;
+      const nextLineTimeout = setTimeout(() => {
+        setCurrentBootLine(prev => prev + 1);
+        setCurrentBootChar(0);
+      }, lineDelay);
+
+      return () => clearTimeout(nextLineTimeout);
+    }
+  }, [bootComplete, currentBootLine, currentBootChar]);
+
+  // Stop glow animation after 3 seconds (once it starts)
+  useEffect(() => {
+    if (!showGlow) return;
     const glowTimer = setTimeout(() => {
       setShowGlow(false);
     }, 3000);
     return () => clearTimeout(glowTimer);
-  }, []);
+  }, [showGlow]);
 
   // Typewriter effect for responses
   useEffect(() => {
@@ -126,13 +204,6 @@ export default function AskBeau() {
     }
   };
 
-  const statusLines = [
-    { label: 'ROLE', value: 'Operations Director & AI Architect' },
-    { label: 'LOCATION', value: 'Austin, TX' },
-    { label: 'STATUS', value: 'Deployable', highlight: true },
-    { label: 'SKILLS', value: 'Maximized for ROI' },
-    { label: 'CONTEXT', value: 'Nothing left on the table' },
-  ];
 
   return (
     <motion.div
@@ -177,24 +248,71 @@ export default function AskBeau() {
         </div>
 
         {/* Terminal content */}
-        <div className="p-4 font-mono text-sm">
-          {/* Static status output */}
-          <div className="text-[#7C3AED] mb-1">$ beau --status</div>
-          {statusLines.map((line, index) => (
-            <div key={index} className="text-[#94A3B8]">
-              {'> '}{line.label}: {' '}
-              <span className={line.highlight ? 'text-[#7C3AED]' : ''}>
-                {line.value}
-              </span>
-            </div>
-          ))}
+        <div className="p-4 font-mono text-sm relative overflow-hidden">
+          {/* Scanline effect overlay */}
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] opacity-30" />
 
-          {/* Divider */}
-          <div className="border-t border-[#2A2A2A] my-4" />
+          {/* Boot sequence with typewriter effect */}
+          <div className="relative">
+            {displayedBootLines.map((line, index) => {
+              const lineData = bootSequence[index];
+              const isCurrentLine = index === currentBootLine && !bootComplete;
+              const isCommand = lineData?.type === 'command';
 
-          {/* Messages history */}
+              // For output lines, check if this line should have highlight
+              const hasHighlight = lineData?.highlight;
+
+              // Split the line to apply highlight to the value part (after the colon)
+              const renderLine = () => {
+                if (hasHighlight && line.includes(': ')) {
+                  const colonIndex = line.indexOf(': ');
+                  const prefix = line.substring(0, colonIndex + 2);
+                  const value = line.substring(colonIndex + 2);
+                  return (
+                    <>
+                      {prefix}<span className="text-[#7C3AED]">{value}</span>
+                    </>
+                  );
+                }
+                return line;
+              };
+
+              return (
+                <div
+                  key={index}
+                  className={`leading-relaxed ${
+                    isCommand ? 'text-[#7C3AED]' : 'text-[#94A3B8]'
+                  }`}
+                >
+                  {renderLine()}
+                  {isCurrentLine && showCursor && (
+                    <span className="inline-block w-2 h-4 bg-[#7C3AED] ml-0.5 align-middle animate-pulse" />
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Show cursor on empty state before boot starts */}
+            {displayedBootLines.length === 0 && showCursor && (
+              <span className="inline-block w-2 h-4 bg-[#7C3AED] animate-pulse" />
+            )}
+          </div>
+
+          {/* Divider - only show after boot complete */}
           <AnimatePresence>
-            {messages.map((message, index) => (
+            {bootComplete && (
+              <motion.div
+                initial={{ opacity: 0, scaleX: 0 }}
+                animate={{ opacity: 1, scaleX: 1 }}
+                transition={{ duration: 0.3 }}
+                className="border-t border-[#2A2A2A] my-4 origin-left"
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Messages history - only show after boot */}
+          <AnimatePresence>
+            {bootComplete && messages.map((message, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 10 }}
@@ -219,7 +337,7 @@ export default function AskBeau() {
           </AnimatePresence>
 
           {/* Loading indicator */}
-          {isLoading && (
+          {bootComplete && isLoading && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -229,45 +347,70 @@ export default function AskBeau() {
             </motion.div>
           )}
 
-          {/* Input form */}
-          {hasReachedLimit ? (
-            <div className="mt-4 text-[#94A3B8]">
-              <span className="text-[#7C3AED]">$ </span>
-              That&apos;s a wrap, partner! 🤠 You&apos;ve hit the {MAX_QUESTIONS}-question limit. Refresh the page to start a new round, or better yet—reach out to the real Beau! 🥊
-            </div>
-          ) : (
-            <div className="mt-4 relative">
-              {/* Input with glow effect */}
-              <form
-                onSubmit={handleSubmit}
-                className={`flex items-center gap-2 p-2 -m-2 rounded-lg transition-all duration-300 ${
-                  showGlow && messages.length === 0
-                    ? 'animate-pulse-glow'
-                    : ''
-                }`}
-              >
-                <span className="text-[#7C3AED]">$ ask-beau&gt;</span>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onFocus={() => setShowHint(false)}
-                  placeholder="Ask anything about Beau..."
-                  disabled={isLoading}
-                  className="flex-1 bg-transparent text-white placeholder-[#666] outline-none font-mono text-sm"
-                  maxLength={200}
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading || !input.trim()}
-                  className="text-[#7C3AED] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  [{MAX_QUESTIONS - questionCount} left]
-                </button>
-              </form>
-            </div>
-          )}
+          {/* Input form - only show after boot */}
+          <AnimatePresence>
+            {bootComplete && (
+              <>
+                {hasReachedLimit ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 text-[#94A3B8]"
+                  >
+                    <span className="text-[#7C3AED]">$ </span>
+                    That&apos;s a wrap, partner! 🤠 You&apos;ve hit the {MAX_QUESTIONS}-question limit. Refresh the page to start a new round, or better yet—reach out to the real Beau! 🥊
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-4 relative"
+                  >
+                    {/* Ready flash effect */}
+                    {showReady && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0, 1, 0] }}
+                        transition={{ duration: 0.6, times: [0, 0.3, 1] }}
+                        className="absolute -inset-2 rounded-lg bg-[#7C3AED]/20 pointer-events-none"
+                      />
+                    )}
+
+                    {/* Input with glow effect */}
+                    <form
+                      onSubmit={handleSubmit}
+                      className={`flex items-center gap-2 p-2 -m-2 rounded-lg transition-all duration-300 ${
+                        showGlow && messages.length === 0
+                          ? 'animate-pulse-glow'
+                          : ''
+                      }`}
+                    >
+                      <span className="text-[#7C3AED]">$ ask-beau&gt;</span>
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onFocus={() => setShowHint(false)}
+                        placeholder="Ask anything about Beau..."
+                        disabled={isLoading}
+                        className="flex-1 bg-transparent text-white placeholder-[#666] outline-none font-mono text-sm"
+                        maxLength={200}
+                      />
+                      <button
+                        type="submit"
+                        disabled={isLoading || !input.trim()}
+                        className="text-[#7C3AED] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        [{MAX_QUESTIONS - questionCount} left]
+                      </button>
+                    </form>
+                  </motion.div>
+                )}
+              </>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </motion.div>
