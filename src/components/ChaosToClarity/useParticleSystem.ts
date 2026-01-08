@@ -172,28 +172,62 @@ export function useParticleSystem(
           }
 
           const startPos = chaosPositionsRef.current[idx] || { x: p.x, y: p.y };
-          const transitionDuration = 1500;
-          const progress = Math.min(1, phaseTime / transitionDuration);
+          const transitionDuration = 1800;
 
-          // Ease out expo for dramatic deceleration
-          const eased = 1 - Math.pow(1 - progress, 4);
+          // STAGED TRANSITION: Each particle starts at a different time based on distance
+          // Particles closer to their targets start moving first
+          const distToTarget = Math.hypot(startPos.x - p.targetX, startPos.y - p.targetY);
+          const maxDist = Math.hypot(width, height);
+          const normalizedDist = distToTarget / maxDist;
 
-          // Particles converge to their group's target position
-          // Multiple particles per group converge to same point
-          p.x = startPos.x + (p.targetX - startPos.x) * eased;
-          p.y = startPos.y + (p.targetY - startPos.y) * eased;
+          // Stagger start: closer particles wait less (0-400ms delay based on distance)
+          const staggerDelay = normalizedDist * 400;
+          const particleTime = Math.max(0, phaseTime - staggerDelay);
+          const particleDuration = transitionDuration - staggerDelay;
+          const progress = Math.min(1, particleTime / particleDuration);
 
-          // Color transition
-          p.color = interpolateColor('#EF4444', COLORS.CLARITY_NODE, eased);
+          // Elastic ease out - overshoots slightly then settles (feels more alive)
+          const c4 = (2 * Math.PI) / 3;
+          const eased = progress === 0 ? 0 : progress === 1 ? 1 :
+            Math.pow(2, -10 * progress) * Math.sin((progress * 10 - 0.75) * c4) + 1;
 
-          // Size: converge to uniform
-          p.radius = p.baseRadius + (5 - p.baseRadius) * eased;
+          // During first 300ms: particles swirl inward with slight spiral
+          const swirlPhase = Math.min(1, phaseTime / 300);
+          const swirlAngle = (1 - swirlPhase) * Math.PI * 0.5 * (idx % 2 === 0 ? 1 : -1);
+          const swirlRadius = (1 - swirlPhase) * 20;
 
-          // Fade out duplicate particles in same group (keep only first 12)
-          if (idx >= CLARITY_NODE_COUNT) {
-            p.opacity = Math.max(0, 1 - eased * 1.5);
+          // Base interpolation toward target
+          const baseX = startPos.x + (p.targetX - startPos.x) * eased;
+          const baseY = startPos.y + (p.targetY - startPos.y) * eased;
+
+          // Add swirl offset that fades out
+          p.x = baseX + Math.cos(swirlAngle + p.id) * swirlRadius * (1 - eased);
+          p.y = baseY + Math.sin(swirlAngle + p.id) * swirlRadius * (1 - eased);
+
+          // Color transition with intermediate purple glow at peak
+          const colorProgress = Math.min(1, phaseTime / 1200);
+          if (colorProgress < 0.4) {
+            // Red -> Bright transitional purple
+            const t = colorProgress / 0.4;
+            p.color = interpolateColor('#EF4444', '#A855F7', t);
           } else {
-            p.opacity = 1;
+            // Bright purple -> Final clarity purple
+            const t = (colorProgress - 0.4) / 0.6;
+            p.color = interpolateColor('#A855F7', COLORS.CLARITY_NODE, t);
+          }
+
+          // Size: pulse up during transition, then settle
+          const sizePulse = Math.sin(progress * Math.PI) * 2;
+          p.radius = p.baseRadius + (5 - p.baseRadius) * eased + sizePulse * (1 - progress);
+
+          // Fade out duplicate particles - staggered by group position
+          if (idx >= CLARITY_NODE_COUNT) {
+            const fadeDelay = (idx % CLARITY_NODE_COUNT) * 30;
+            const fadeProgress = Math.max(0, (phaseTime - fadeDelay - 600) / 600);
+            p.opacity = Math.max(0, 1 - fadeProgress * 1.2);
+          } else {
+            // Main particles brighten during transition
+            p.opacity = 0.8 + progress * 0.2;
           }
 
         } else {
@@ -431,42 +465,117 @@ export function useParticleSystem(
         }
 
       } else if (phase === 'transition') {
-        // Fading chaos connections
         const phaseTime = Date.now() - phaseStartTimeRef.current;
-        const fadeOut = Math.max(0, 1 - phaseTime / 600);
+        const time = Date.now() * 0.001;
 
-        if (fadeOut > 0) {
-          ctx.strokeStyle = `rgba(239, 68, 68, ${0.08 * fadeOut})`;
-          ctx.lineWidth = 1;
+        // PHASE 1 (0-400ms): Chaos connections contract and intensify
+        const contractPhase = Math.min(1, phaseTime / 400);
+        if (contractPhase < 1) {
+          // Connections get brighter as they contract toward center
+          const intensity = 0.08 + contractPhase * 0.15;
+          ctx.strokeStyle = `rgba(239, 68, 68, ${intensity * (1 - contractPhase * 0.5)})`;
+          ctx.lineWidth = 1 + contractPhase;
 
-          for (let i = 0; i < particles.length; i += 3) {
-            for (let j = i + 1; j < particles.length; j += 3) {
+          for (let i = 0; i < particles.length; i += 2) {
+            for (let j = i + 1; j < particles.length; j += 2) {
               const p1 = particles[i];
               const p2 = particles[j];
-              ctx.beginPath();
-              ctx.moveTo(p1.x, p1.y);
-              ctx.lineTo(p2.x, p2.y);
-              ctx.stroke();
+              const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+              if (dist < 120) {
+                const opacity = (1 - dist / 120) * (1 - contractPhase * 0.8);
+                ctx.strokeStyle = `rgba(239, 68, 68, ${opacity * 0.15})`;
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+              }
             }
           }
         }
 
-        // Forming structured connections
-        const fadeIn = Math.min(1, (phaseTime - 400) / 800);
-        if (fadeIn > 0) {
-          ctx.strokeStyle = `rgba(124, 58, 237, ${0.5 * fadeIn})`;
-          ctx.lineWidth = 1.5;
+        // PHASE 2 (200-600ms): Central energy burst / shockwave
+        if (phaseTime > 200 && phaseTime < 800) {
+          const burstProgress = (phaseTime - 200) / 600;
+          const burstRadius = burstProgress * Math.max(width, height) * 0.6;
+          const burstOpacity = Math.sin(burstProgress * Math.PI) * 0.4;
 
-          STRUCTURED_CONNECTIONS.forEach((conn) => {
+          // Expanding ring
+          ctx.strokeStyle = `rgba(168, 85, 247, ${burstOpacity})`;
+          ctx.lineWidth = 3 - burstProgress * 2;
+          ctx.beginPath();
+          ctx.arc(width / 2, height / 2, burstRadius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Inner glow
+          const gradient = ctx.createRadialGradient(
+            width / 2, height / 2, 0,
+            width / 2, height / 2, burstRadius * 0.8
+          );
+          gradient.addColorStop(0, `rgba(168, 85, 247, ${burstOpacity * 0.3})`);
+          gradient.addColorStop(1, 'rgba(168, 85, 247, 0)');
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(width / 2, height / 2, burstRadius * 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // PHASE 3 (500-1500ms): Structured connections emerge with energy flowing through them
+        const connectionFadeIn = Math.max(0, Math.min(1, (phaseTime - 500) / 800));
+        if (connectionFadeIn > 0) {
+          STRUCTURED_CONNECTIONS.forEach((conn, connIdx) => {
             const from = particles[conn.from];
             const to = particles[conn.to];
-            if (!from || !to || from.opacity < 0.3 || to.opacity < 0.3) return;
+            if (!from || !to || from.opacity < 0.2 || to.opacity < 0.2) return;
 
+            // Stagger connection appearance by index
+            const connDelay = connIdx * 40;
+            const connProgress = Math.max(0, Math.min(1, (phaseTime - 500 - connDelay) / 600));
+            if (connProgress <= 0) return;
+
+            // Connection "draws" itself from source to target
+            const drawProgress = Math.min(1, connProgress * 1.5);
+            const lineEndX = from.x + (to.x - from.x) * drawProgress;
+            const lineEndY = from.y + (to.y - from.y) * drawProgress;
+
+            // Base connection line
+            ctx.strokeStyle = `rgba(124, 58, 237, ${0.4 * connProgress})`;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.moveTo(from.x, from.y);
-            ctx.lineTo(to.x, to.y);
+            ctx.lineTo(lineEndX, lineEndY);
             ctx.stroke();
+
+            // Energy pulse traveling along the forming connection
+            if (drawProgress > 0.3) {
+              const pulsePos = ((time * 2 + connIdx * 0.3) % 1) * drawProgress;
+              const px = from.x + (to.x - from.x) * pulsePos;
+              const py = from.y + (to.y - from.y) * pulsePos;
+
+              ctx.beginPath();
+              ctx.arc(px, py, 3, 0, Math.PI * 2);
+              ctx.fillStyle = `rgba(167, 139, 250, ${0.6 * connProgress})`;
+              ctx.shadowBlur = 10;
+              ctx.shadowColor = 'rgba(167, 139, 250, 0.6)';
+              ctx.fill();
+              ctx.shadowBlur = 0;
+            }
           });
+        }
+
+        // Sparkle particles during transformation
+        if (phaseTime > 300 && phaseTime < 1400) {
+          const sparkleIntensity = Math.sin((phaseTime - 300) / 1100 * Math.PI);
+          for (let i = 0; i < 15; i++) {
+            const sparkleTime = (time * 3 + i * 0.7) % 1;
+            const sparkleX = width * 0.2 + (width * 0.6) * ((i * 137) % 100) / 100;
+            const sparkleY = height * 0.2 + (height * 0.6) * ((i * 89) % 100) / 100;
+            const drift = Math.sin(time * 4 + i) * 20;
+
+            ctx.beginPath();
+            ctx.arc(sparkleX + drift, sparkleY + drift * 0.5, 2 * (1 - sparkleTime), 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(196, 181, 253, ${0.5 * sparkleIntensity * (1 - sparkleTime)})`;
+            ctx.fill();
+          }
         }
 
       } else {
@@ -640,14 +749,30 @@ export function useParticleSystem(
           ctx.shadowBlur = 0;
 
         } else {
-          // Transition
-          ctx.shadowBlur = 8;
+          // Transition - enhanced glow effect
+          const phaseTime = Date.now() - phaseStartTimeRef.current;
+          const glowIntensity = Math.sin(Math.min(1, phaseTime / 1000) * Math.PI) * 0.5 + 0.5;
+
+          // Outer glow ring (pulsing)
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius * 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(168, 85, 247, ${0.1 * glowIntensity * p.opacity})`;
+          ctx.fill();
+
+          // Main glow
+          ctx.shadowBlur = 15 * glowIntensity;
           ctx.shadowColor = p.color;
 
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
           ctx.fillStyle = p.color;
           ctx.globalAlpha = p.opacity;
+          ctx.fill();
+
+          // Bright center
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius * 0.35, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${0.6 * glowIntensity})`;
           ctx.fill();
 
           ctx.globalAlpha = 1;
