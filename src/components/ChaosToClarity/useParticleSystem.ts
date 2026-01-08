@@ -129,8 +129,28 @@ export function useParticleSystem(
           const angle = (p.id / CHAOS_PARTICLE_COUNT) * Math.PI * 2 + time * 0.3;
           const radius = 80 + Math.sin(time + p.id) * 40;
 
-          p.x = centerX + Math.cos(angle) * radius + driftX * 15;
-          p.y = centerY + Math.sin(angle) * radius + driftY * 15;
+          let baseX = centerX + Math.cos(angle) * radius + driftX * 15;
+          let baseY = centerY + Math.sin(angle) * radius + driftY * 15;
+
+          // Subtle gravity: smaller particles pulled slightly toward larger ones
+          // Only apply to smaller particles (baseRadius < 3.5)
+          if (p.baseRadius < 3.5) {
+            particles.forEach((other, otherIdx) => {
+              if (otherIdx === idx || other.baseRadius < 4) return;
+              const dx = other.x - baseX;
+              const dy = other.y - baseY;
+              const dist = Math.hypot(dx, dy);
+              if (dist > 20 && dist < 100) {
+                // Gentle pull - larger particles have more gravity
+                const pull = (other.baseRadius / 5) * 0.15 * (1 - dist / 100);
+                baseX += dx * pull;
+                baseY += dy * pull;
+              }
+            });
+          }
+
+          p.x = baseX;
+          p.y = baseY;
 
           // Keep in bounds with soft margins
           const margin = 40;
@@ -356,24 +376,38 @@ export function useParticleSystem(
           ctx.shadowBlur = 0;
         });
 
-        // Draw the 3 output buckets (dimmer in chaos - not receiving much)
+        // Draw the 3 output receivers (customer expectations - distinct from worker bubbles)
         endpointPositions.forEach((pos, idx) => {
-          const pulse = Math.sin(time * 4 + idx) * 0.2 + 0.5;
+          const pulse = Math.sin(time * 4 + idx) * 0.15 + 0.85;
 
-          // Outer glow - weak
+          // Receiver dish shape - concave arc facing left (receiving from the system)
+          ctx.strokeStyle = `rgba(239, 68, 68, ${0.5 * pulse})`;
+          ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(pos.x, pos.y, 8 * pulse, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(239, 68, 68, 0.1)';
-          ctx.fill();
+          ctx.arc(pos.x + 8, pos.y, 12, Math.PI * 0.6, Math.PI * 1.4);
+          ctx.stroke();
 
-          // Core node
+          // Inner receiver arc
+          ctx.strokeStyle = `rgba(239, 68, 68, ${0.3 * pulse})`;
+          ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.arc(pos.x, pos.y, 5, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(239, 68, 68, 0.6)';
-          ctx.shadowBlur = 6;
-          ctx.shadowColor = 'rgba(239, 68, 68, 0.4)';
+          ctx.arc(pos.x + 5, pos.y, 8, Math.PI * 0.65, Math.PI * 1.35);
+          ctx.stroke();
+
+          // Collection point (where energy lands)
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(239, 68, 68, ${0.6 * pulse})`;
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = 'rgba(239, 68, 68, 0.5)';
           ctx.fill();
           ctx.shadowBlur = 0;
+
+          // Small indicator light (dim - not receiving much)
+          ctx.beginPath();
+          ctx.arc(pos.x + 10, pos.y - 8, 2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(239, 68, 68, ${0.3 + Math.sin(time * 6 + idx) * 0.2})`;
+          ctx.fill();
         });
 
         // Scattered energy dissipating into nothing (wasted energy fading out)
@@ -514,37 +548,77 @@ export function useParticleSystem(
         if (p.opacity < 0.05) return;
 
         if (phase === 'clarity') {
-          // Clarity - same circular bubbles, just organized
+          // Clarity - bubbles for workers, receivers for outputs
           if (idx >= CLARITY_NODE_COUNT) return;
 
           const isOutputNode = OUTPUT_ENDPOINT_INDICES.includes(idx);
           const time = Date.now() * 0.001;
           const pulseGlow = Math.sin(time * 3 + idx) * 0.2 + 0.8;
 
-          // Outer glow ring
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius * 2, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(124, 58, 237, ${0.15 * pulseGlow})`;
-          ctx.fill();
+          if (isOutputNode) {
+            // Output nodes: Draw as receivers (customer expectations)
+            // Receiver dish shape - concave arc facing left
+            ctx.strokeStyle = `rgba(34, 197, 94, ${0.7 * pulseGlow})`;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(p.x + 10, p.y, 14, Math.PI * 0.6, Math.PI * 1.4);
+            ctx.stroke();
 
-          // Main bubble with glow
-          ctx.shadowBlur = isOutputNode ? 20 : 12;
-          ctx.shadowColor = 'rgba(124, 58, 237, 0.6)';
+            // Inner receiver arc
+            ctx.strokeStyle = `rgba(34, 197, 94, ${0.5 * pulseGlow})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(p.x + 6, p.y, 9, Math.PI * 0.65, Math.PI * 1.35);
+            ctx.stroke();
 
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-          ctx.fillStyle = p.color;
-          ctx.globalAlpha = p.opacity;
-          ctx.fill();
+            // Collection point (brightly lit - receiving lots of energy)
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(34, 197, 94, ${0.9 * pulseGlow})`;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = 'rgba(34, 197, 94, 0.7)';
+            ctx.fill();
 
-          // Bright center highlight
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius * 0.4, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(237, 233, 254, 0.7)';
-          ctx.fill();
+            // Bright core
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(187, 247, 208, 0.9)';
+            ctx.fill();
 
-          ctx.globalAlpha = 1;
-          ctx.shadowBlur = 0;
+            // Indicator light (bright - receiving well)
+            ctx.beginPath();
+            ctx.arc(p.x + 12, p.y - 10, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(34, 197, 94, ${0.7 + Math.sin(time * 5 + idx) * 0.3})`;
+            ctx.fill();
+
+            ctx.shadowBlur = 0;
+          } else {
+            // Worker nodes: circular bubbles
+            // Outer glow ring
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius * 2, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(124, 58, 237, ${0.15 * pulseGlow})`;
+            ctx.fill();
+
+            // Main bubble with glow
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = 'rgba(124, 58, 237, 0.6)';
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.opacity;
+            ctx.fill();
+
+            // Bright center highlight
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius * 0.4, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(237, 233, 254, 0.7)';
+            ctx.fill();
+
+            ctx.globalAlpha = 1;
+            ctx.shadowBlur = 0;
+          }
 
         } else if (phase === 'chaos') {
           // Chaos - same circular bubbles, scattered
