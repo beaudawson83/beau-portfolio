@@ -51,25 +51,13 @@ export default function Hero() {
             <div className="relative w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96">
               {/* Placeholder for headshot - replace with actual image */}
               <div className="relative w-full h-full rounded-sm overflow-hidden border border-[#1F1F1F] scanlines">
-                {/* Gradient background as placeholder */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#1F1F1F] to-[#111111]" />
-
-                {/* When you have an actual headshot, uncomment this: */}
-                {/* <Image
-                  src="/headshot.jpg"
+                <Image
+                  src="/beau.jpg"
                   alt="Beau Dawson"
                   fill
                   className="object-cover grayscale contrast-125"
                   priority
-                /> */}
-
-                {/* Placeholder content */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center font-mono text-[#94A3B8]">
-                    <div className="text-6xl mb-2">BD</div>
-                    <div className="text-xs tracking-wider">[HEADSHOT]</div>
-                  </div>
-                </div>
+                />
 
                 {/* Corner accents */}
                 <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#7C3AED]" />
