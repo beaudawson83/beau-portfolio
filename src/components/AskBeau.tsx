@@ -139,8 +139,31 @@ export default function AskBeau() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.6 }}
-      className="w-full max-w-lg"
+      className="w-full max-w-lg relative"
     >
+      {/* Bouncing hint - positioned outside right of terminal */}
+      <AnimatePresence>
+        {showHint && messages.length === 0 && !hasReachedLimit && (
+          <motion.div
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            className="absolute -right-4 bottom-6 translate-x-full hidden lg:flex items-center gap-2"
+          >
+            <motion.span
+              animate={{ x: [0, 6, 0] }}
+              transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
+              className="text-[#7C3AED] text-2xl"
+            >
+              👈
+            </motion.span>
+            <span className="text-[#7C3AED] text-sm whitespace-nowrap">
+              Ask me anything about Beau!
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Terminal window */}
       <div className="bg-[#0D0D0D] rounded-lg border border-[#2A2A2A] overflow-hidden shadow-2xl">
         {/* Terminal header */}
@@ -214,26 +237,6 @@ export default function AskBeau() {
             </div>
           ) : (
             <div className="mt-4 relative">
-              {/* Bouncing hint arrow */}
-              <AnimatePresence>
-                {showHint && messages.length === 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="absolute -top-8 left-0 right-0 flex justify-center"
-                  >
-                    <motion.span
-                      animate={{ y: [0, -6, 0] }}
-                      transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
-                      className="text-[#7C3AED] text-xs flex items-center gap-1"
-                    >
-                      <span>👇</span> Ask me anything about Beau!
-                    </motion.span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
               {/* Input with glow effect */}
               <form
                 onSubmit={handleSubmit}
