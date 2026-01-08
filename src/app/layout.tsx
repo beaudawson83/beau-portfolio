@@ -15,6 +15,10 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  icons: {
+    icon: '/icon.svg',
+    apple: '/apple-icon.png',
+  },
   title: 'Beau Dawson | OPS_DIRECTOR_AI_ARCHITECT',
   description:
     '10+ years scaling revenue systems and support infrastructure. Bridging the gap between Operational Strategy and Technical Execution.',
