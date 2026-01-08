@@ -106,7 +106,8 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       // Rate limited or other API error - use fallback
-      console.error('Gemini API error:', response.status);
+      const errorText = await response.text();
+      console.error('Gemini API error:', response.status, errorText);
       return NextResponse.json({
         response: getHashedFallback(question),
         source: 'fallback'
@@ -117,6 +118,7 @@ export async function POST(request: NextRequest) {
     const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!aiResponse) {
+      console.error('Gemini API returned no response. Full data:', JSON.stringify(data, null, 2));
       return NextResponse.json({
         response: getHashedFallback(question),
         source: 'fallback'
