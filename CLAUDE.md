@@ -45,6 +45,8 @@ This file provides context for AI coding assistants (Claude, Cursor, Copilot, et
 | `src/app/layout.tsx` | Fonts, metadata, SEO | SEO updates, adding scripts |
 | `src/app/page.tsx` | Page composition | Adding/removing sections |
 | `src/components/*.tsx` | Individual sections | UI/layout changes |
+| `src/app/api/contact/route.ts` | Contact form email handler | Email template, Resend config |
+| `src/app/api/ask-beau/route.ts` | AI chatbot endpoint | Gemini config, system prompt, fallback responses |
 
 ---
 
@@ -213,9 +215,27 @@ interface Skill {
   items: string[];
 }
 
+type ContactObjective =
+  | 'full-time'      // Full-Time Director
+  | 'fractional'     // Fractional Deployment
+  | 'project'        // Project-Based Engagement
+  | 'consulting'     // Consulting / Advisory
+  | 'speaking'       // Speaking / Workshop
+  | 'connecting';    // Just Connecting
+
+// Maps objective values to display labels
+const OBJECTIVE_LABELS: Record<ContactObjective, string> = {
+  'full-time': 'Full-Time Director',
+  'fractional': 'Fractional Deployment',
+  'project': 'Project-Based Engagement',
+  'consulting': 'Consulting / Advisory',
+  'speaking': 'Speaking / Workshop',
+  'connecting': 'Just Connecting',
+};
+
 interface ContactFormData {
   name: string;
-  objective: 'full-time' | 'fractional';
+  objective: ContactObjective;
   message: string;
 }
 
@@ -239,7 +259,8 @@ interface SocialLink {
 - [ ] Responsive: Test mobile (375px), tablet (768px), desktop (1280px), ultrawide (1920px+)
 - [ ] Animations: Scroll through page, verify fade-ins trigger once
 - [ ] Links: Test all navigation and external links
-- [ ] Form: Test contact form submission (currently mailto: fallback)
+- [ ] Contact Form: Test form submission (sends via Resend API)
+- [ ] Ask Beau: Test AI chatbot responses (uses Gemini API with fallback)
 
 ---
 
@@ -273,13 +294,44 @@ npm run lint     # Run ESLint
 - **Platform:** Vercel
 - **Trigger:** Automatic on push to `main`
 - **Preview:** PRs generate preview deployments
-- **Environment:** No environment variables required (static site)
+- **Environment Variables Required:**
+  - `GEMINI_API_KEY` - Google Gemini API key for "Ask Beau" chatbot
+  - `RESEND_API_KEY` - Resend API key for contact form emails
 
 ---
 
-## Contact Form Status
+## API Routes
 
-Currently uses `mailto:` links as fallback. To upgrade:
-1. Create `src/app/api/contact/route.ts`
-2. Integrate email service (Resend, SendGrid, etc.)
-3. Update `Footer.tsx` form submission handler
+### Contact Form (`/api/contact`)
+
+Handles contact form submissions via Resend email service.
+
+**Request:**
+```ts
+POST /api/contact
+{
+  name: string;
+  objective: ContactObjective;
+  message: string;
+}
+```
+
+**Response:** Sends terminal-themed HTML email to configured recipient.
+
+### Ask Beau (`/api/ask-beau`)
+
+AI chatbot powered by Google Gemini 2.0 Flash with intelligent fallback responses.
+
+**Request:**
+```ts
+POST /api/ask-beau
+{
+  messages: Array<{ role: 'user' | 'model'; text: string }>;
+}
+```
+
+**Features:**
+- Multi-turn conversation support (maintains context)
+- System prompt with Beau's background and expertise
+- Deterministic fallback responses when API unavailable/rate-limited
+- Response length capped at ~150 words for conciseness

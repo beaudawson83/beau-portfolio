@@ -17,6 +17,8 @@ Professional portfolio showcasing 10+ years of operations leadership and AI arch
 | Tailwind CSS | 4.x | Utility-first styling |
 | Framer Motion | 12.24.10 | Animations |
 | Lucide React | 0.562.0 | Icons |
+| Resend | - | Contact form email delivery |
+| Google Gemini | 2.0 Flash | AI chatbot ("Ask Beau" feature) |
 
 ---
 
@@ -50,16 +52,27 @@ src/
 ├── app/
 │   ├── layout.tsx        # Root layout, fonts, metadata
 │   ├── page.tsx          # Main page composing all sections
-│   └── globals.css       # CSS variables, theme, animations
+│   ├── globals.css       # CSS variables, theme, animations
+│   └── api/
+│       ├── contact/route.ts    # Contact form email handler (Resend)
+│       └── ask-beau/route.ts   # AI chatbot endpoint (Gemini)
 ├── components/
 │   ├── Header.tsx        # Fixed terminal-style header bar
-│   ├── Hero.tsx          # Split hero (headline + headshot)
+│   ├── Hero.tsx          # Split hero (headline + headshot + Ask Beau)
 │   ├── TelemetryGrid.tsx # Key metrics with count-up animation
+│   ├── ChaosToClarity/   # Interactive particle animation
+│   │   ├── index.tsx     # Main component
+│   │   ├── useParticleSystem.ts  # Canvas animation hook
+│   │   ├── constants.ts  # Particle configuration
+│   │   └── types.ts      # TypeScript interfaces
 │   ├── ArchitectureShowcase.tsx  # Code editor mockup
 │   ├── ChangeLog.tsx     # Git-style experience timeline
 │   ├── SystemKernel.tsx  # Skills grid (3 columns)
+│   ├── SystemMonitor.tsx # Performance chart visualization
 │   ├── HookSection.tsx   # Featured quote section
 │   ├── Footer.tsx        # Contact form + social links
+│   ├── AskBeau.tsx       # AI chatbot component
+│   ├── TerminalAnimation.tsx  # Terminal typing effect
 │   └── ui/
 │       └── Button.tsx    # Reusable button component
 ├── lib/
@@ -140,6 +153,17 @@ All components use:
 
 ---
 
+## Environment Variables
+
+Copy `.env.example` to `.env.local` and configure:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GEMINI_API_KEY` | Yes | Google Gemini API key for "Ask Beau" AI chatbot. Get free key at [aistudio.google.com](https://aistudio.google.com/app/apikey) |
+| `RESEND_API_KEY` | Yes | Resend API key for contact form emails. Get key at [resend.com](https://resend.com/api-keys) |
+
+---
+
 ## Deployment
 
 ### Vercel (Automatic)
@@ -147,6 +171,7 @@ All components use:
 Connected to GitHub for automatic deployments:
 - Push to `main` triggers production deploy
 - Pull requests generate preview deployments
+- **Required:** Set `GEMINI_API_KEY` and `RESEND_API_KEY` in Vercel project settings
 
 ### Manual Deployment
 
