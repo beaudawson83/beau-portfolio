@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Button from './ui/Button';
+import TerminalAnimation from './TerminalAnimation';
 import { heroContent } from '@/lib/data';
 
 export default function Hero() {
@@ -31,13 +32,18 @@ export default function Hero() {
             <p className="text-base sm:text-lg lg:text-xl 2xl:text-2xl text-[#94A3B8] leading-relaxed mb-6 sm:mb-8 max-w-xl 2xl:max-w-2xl">
               {heroContent.subheader}
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <Button variant="primary" onClick={scrollToContact}>
                 {heroContent.primaryCTA}
               </Button>
               <Button variant="secondary" onClick={scrollToExperience}>
                 {heroContent.secondaryCTA}
               </Button>
+            </div>
+
+            {/* Terminal Animation */}
+            <div className="hidden lg:block">
+              <TerminalAnimation />
             </div>
           </motion.div>
 
