@@ -119,44 +119,9 @@ export default function ChaosToClarity() {
                 style={{ background: '#0D0D0D' }}
               />
 
-              {/* Center Button / Status */}
+              {/* Center Status (transition only) */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <AnimatePresence mode="wait">
-                  {phase === 'chaos' && (
-                    <motion.button
-                      key="activate"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 1.2 }}
-                      transition={{ duration: 0.3 }}
-                      onClick={handleActivate}
-                      className="pointer-events-auto relative group"
-                    >
-                      {/* Outer glow ring */}
-                      <motion.div
-                        className="absolute inset-0 rounded-full bg-violet-500/20 blur-xl"
-                        animate={{
-                          scale: [1, 1.2, 1],
-                          opacity: [0.3, 0.6, 0.3],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                        }}
-                      />
-                      {/* Button */}
-                      <div className="relative px-6 py-3 bg-gradient-to-r from-violet-600 to-violet-500 rounded-full font-mono text-sm uppercase tracking-wider text-white shadow-lg shadow-violet-500/30 group-hover:shadow-violet-500/50 group-hover:scale-105 transition-all duration-200 border border-violet-400/30">
-                        <span className="flex items-center gap-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                          </svg>
-                          Activate Beau Protocols
-                        </span>
-                      </div>
-                    </motion.button>
-                  )}
-
                   {phase === 'transition' && (
                     <motion.div
                       key="transitioning"
@@ -175,20 +140,6 @@ export default function ChaosToClarity() {
                         Optimizing...
                       </span>
                     </motion.div>
-                  )}
-
-                  {phase === 'clarity' && (
-                    <motion.button
-                      key="reset"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.5, delay: 0.3 }}
-                      onClick={handleReset}
-                      className="pointer-events-auto font-mono text-xs text-[#666] hover:text-[#999] uppercase tracking-wider transition-colors"
-                    >
-                      [ Reset Demo ]
-                    </motion.button>
                   )}
                 </AnimatePresence>
               </div>
@@ -212,6 +163,63 @@ export default function ChaosToClarity() {
                   <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 ml-2" />
                 </motion.div>
               </div>
+            </div>
+
+            {/* Control Bar */}
+            <div className="px-4 py-3 bg-[#1A1A1A] border-t border-[#2A2A2A] flex items-center justify-center gap-3">
+              <AnimatePresence mode="wait">
+                {phase === 'chaos' && (
+                  <motion.button
+                    key="activate-btn"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={handleActivate}
+                    disabled={isActivating}
+                    className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 border border-violet-400/50 rounded font-mono text-xs uppercase tracking-wider text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Activate Beau Protocol
+                  </motion.button>
+                )}
+
+                {phase === 'transition' && (
+                  <motion.div
+                    key="transition-btn"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded font-mono text-xs uppercase tracking-wider text-[#94A3B8]"
+                  >
+                    <motion.div
+                      className="w-3 h-3 border-2 border-violet-400/30 border-t-violet-400 rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    />
+                    Processing...
+                  </motion.div>
+                )}
+
+                {phase === 'clarity' && (
+                  <motion.button
+                    key="reset-btn"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={handleReset}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#2A2A2A] hover:bg-[#3A3A3A] border border-[#3A3A3A] hover:border-[#4A4A4A] rounded font-mono text-xs uppercase tracking-wider text-[#94A3B8] hover:text-white transition-all duration-200"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Reset Demo
+                  </motion.button>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Footer Stats */}

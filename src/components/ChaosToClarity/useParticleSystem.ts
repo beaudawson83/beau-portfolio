@@ -419,50 +419,59 @@ export function useParticleSystem(
         }
 
       } else {
-        // Clarity - structured connections with animated energy flow
+        // Clarity - well-oiled corporate machine with conveyor belt connections
         const time = Date.now() * 0.001;
 
-        // Draw connections with animated gradient effect
+        // Draw conveyor-belt style connections (thick lines with dashes moving)
         STRUCTURED_CONNECTIONS.forEach((conn, connIdx) => {
           const from = particles[conn.from];
           const to = particles[conn.to];
           if (!from || !to) return;
 
-          // Create gradient along connection
-          const gradient = ctx.createLinearGradient(from.x, from.y, to.x, to.y);
-          const flowPhase = (time * 2 + connIdx * 0.3) % 1;
-
-          // Animated flow effect along the connection
-          gradient.addColorStop(0, 'rgba(124, 58, 237, 0.3)');
-          gradient.addColorStop(Math.max(0, flowPhase - 0.2), 'rgba(124, 58, 237, 0.4)');
-          gradient.addColorStop(flowPhase, 'rgba(167, 139, 250, 0.9)');
-          gradient.addColorStop(Math.min(1, flowPhase + 0.2), 'rgba(124, 58, 237, 0.4)');
-          gradient.addColorStop(1, 'rgba(124, 58, 237, 0.3)');
-
-          ctx.strokeStyle = gradient;
-          ctx.lineWidth = 2.5;
-
+          // Conveyor belt track (outer)
+          ctx.strokeStyle = 'rgba(45, 45, 55, 0.8)';
+          ctx.lineWidth = 8;
+          ctx.lineCap = 'round';
           ctx.beginPath();
           ctx.moveTo(from.x, from.y);
           ctx.lineTo(to.x, to.y);
           ctx.stroke();
 
-          // Arrow with glow
-          const angle = Math.atan2(to.y - from.y, to.x - from.x);
-          const arrowX = to.x - Math.cos(angle) * 12;
-          const arrowY = to.y - Math.sin(angle) * 12;
-
-          ctx.strokeStyle = COLORS.CLARITY_PULSE;
-          ctx.lineWidth = 2;
+          // Inner track
+          ctx.strokeStyle = 'rgba(30, 30, 40, 0.9)';
+          ctx.lineWidth = 5;
           ctx.beginPath();
-          ctx.moveTo(arrowX, arrowY);
-          ctx.lineTo(arrowX - 6 * Math.cos(angle - Math.PI / 6), arrowY - 6 * Math.sin(angle - Math.PI / 6));
-          ctx.moveTo(arrowX, arrowY);
-          ctx.lineTo(arrowX - 6 * Math.cos(angle + Math.PI / 6), arrowY - 6 * Math.sin(angle + Math.PI / 6));
+          ctx.moveTo(from.x, from.y);
+          ctx.lineTo(to.x, to.y);
           ctx.stroke();
+
+          // Moving dashes (conveyor belt effect)
+          ctx.strokeStyle = 'rgba(124, 58, 237, 0.6)';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([4, 12]);
+          ctx.lineDashOffset = -time * 40 - connIdx * 8;
+          ctx.beginPath();
+          ctx.moveTo(from.x, from.y);
+          ctx.lineTo(to.x, to.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Arrow indicator at end
+          const angle = Math.atan2(to.y - from.y, to.x - from.x);
+          const arrowDist = 18;
+          const arrowX = to.x - Math.cos(angle) * arrowDist;
+          const arrowY = to.y - Math.sin(angle) * arrowDist;
+
+          ctx.fillStyle = 'rgba(124, 58, 237, 0.5)';
+          ctx.beginPath();
+          ctx.moveTo(arrowX + Math.cos(angle) * 6, arrowY + Math.sin(angle) * 6);
+          ctx.lineTo(arrowX - 5 * Math.cos(angle - Math.PI / 5), arrowY - 5 * Math.sin(angle - Math.PI / 5));
+          ctx.lineTo(arrowX - 5 * Math.cos(angle + Math.PI / 5), arrowY - 5 * Math.sin(angle + Math.PI / 5));
+          ctx.closePath();
+          ctx.fill();
         });
 
-        // Energy pulses - bigger, brighter, with longer trails
+        // Draw data packets moving along connections (like items on conveyor)
         pulses.forEach((pulse) => {
           const conn = STRUCTURED_CONNECTIONS[pulse.connectionIndex];
           if (!conn) return;
@@ -474,105 +483,130 @@ export function useParticleSystem(
           const x = from.x + (to.x - from.x) * pulse.progress;
           const y = from.y + (to.y - from.y) * pulse.progress;
 
-          // Outer glow halo
+          // Data packet (small rounded rectangle)
+          const packetW = 10;
+          const packetH = 6;
+
+          // Glow
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = 'rgba(167, 139, 250, 0.8)';
+
+          // Packet body
+          ctx.fillStyle = '#A78BFA';
           ctx.beginPath();
-          ctx.arc(x, y, 8, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(167, 139, 250, 0.2)';
+          ctx.roundRect(x - packetW/2, y - packetH/2, packetW, packetH, 2);
           ctx.fill();
 
-          // Main glowing pulse - larger and brighter
-          ctx.beginPath();
-          ctx.arc(x, y, 5, 0, Math.PI * 2);
-          ctx.fillStyle = '#C4B5FD'; // Brighter purple
-          ctx.shadowBlur = 20;
-          ctx.shadowColor = COLORS.CLARITY_PULSE;
-          ctx.fill();
-
-          // Bright core
-          ctx.beginPath();
-          ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-          ctx.fillStyle = '#EDE9FE'; // Near white core
-          ctx.fill();
-
-          // Longer trail with 5 segments
-          for (let t = 1; t <= 5; t++) {
-            const trailProgress = Math.max(0, pulse.progress - t * 0.04);
-            const tx = from.x + (to.x - from.x) * trailProgress;
-            const ty = from.y + (to.y - from.y) * trailProgress;
-            const trailSize = 4 - t * 0.6;
-            const trailOpacity = 0.5 - t * 0.08;
-
-            ctx.beginPath();
-            ctx.arc(tx, ty, trailSize, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(167, 139, 250, ${trailOpacity})`;
-            ctx.fill();
-          }
+          // Bright stripe
+          ctx.fillStyle = '#DDD6FE';
+          ctx.fillRect(x - packetW/2 + 2, y - 1, packetW - 4, 2);
 
           ctx.shadowBlur = 0;
         });
 
-        // Add ambient energy particles floating near connections
-        for (let i = 0; i < 20; i++) {
-          const sparkle = Math.sin(time * 6 + i * 2) * 0.5 + 0.5;
-          const x = width * (0.15 + (i % 5) * 0.2) + Math.sin(time * 2 + i) * 15;
-          const y = height * (0.25 + Math.floor(i / 5) * 0.2) + Math.cos(time * 1.8 + i) * 15;
-
-          ctx.beginPath();
-          ctx.arc(x, y, 1.5 * sparkle, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(167, 139, 250, ${0.3 * sparkle})`;
-          ctx.fill();
-        }
+        // Draw column labels
+        const columnLabels = ['INPUT', 'PROCESS', 'CORE', 'VALIDATE', 'OUTPUT'];
+        const columnX = [0.12, 0.32, 0.52, 0.72, 0.92];
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(100, 100, 120, 0.5)';
+        columnLabels.forEach((label, i) => {
+          ctx.fillText(label, width * columnX[i], 16);
+        });
       }
 
-      // Draw particles
+      // Draw particles/nodes
       particles.forEach((p, idx) => {
         if (p.opacity < 0.05) return;
 
-        // Glow intensity based on phase
+        // Different rendering for clarity phase - rectangular machine nodes
         if (phase === 'clarity') {
+          if (idx >= CLARITY_NODE_COUNT) return;
+
           const isOutputNode = OUTPUT_ENDPOINT_INDICES.includes(idx);
+          const isInputNode = idx < 3;
           const time = Date.now() * 0.001;
-          const pulseGlow = Math.sin(time * 4 + idx) * 0.3 + 0.7;
+          const pulseGlow = Math.sin(time * 3 + idx) * 0.15 + 0.85;
 
-          // Outer glow ring for all clarity nodes
+          // Node dimensions - rectangular
+          const nodeW = isOutputNode || isInputNode ? 28 : 24;
+          const nodeH = isOutputNode || isInputNode ? 20 : 18;
+
+          // Outer glow
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = isOutputNode
+            ? 'rgba(34, 197, 94, 0.6)'
+            : isInputNode
+              ? 'rgba(59, 130, 246, 0.5)'
+              : 'rgba(124, 58, 237, 0.5)';
+
+          // Node background
+          ctx.fillStyle = 'rgba(25, 25, 35, 0.95)';
           ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius * 2.5, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(124, 58, 237, ${0.15 * pulseGlow})`;
+          ctx.roundRect(p.x - nodeW/2, p.y - nodeH/2, nodeW, nodeH, 4);
           ctx.fill();
 
-          // Second glow layer
+          // Node border
+          ctx.strokeStyle = isOutputNode
+            ? `rgba(34, 197, 94, ${0.7 * pulseGlow})`
+            : isInputNode
+              ? `rgba(59, 130, 246, ${0.6 * pulseGlow})`
+              : `rgba(124, 58, 237, ${0.6 * pulseGlow})`;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Activity indicator (blinking light)
+          const blinkPhase = (time * 2 + idx * 0.5) % 1;
+          const blinkOn = blinkPhase < 0.7;
+          ctx.fillStyle = isOutputNode
+            ? (blinkOn ? 'rgba(34, 197, 94, 0.9)' : 'rgba(34, 197, 94, 0.3)')
+            : isInputNode
+              ? (blinkOn ? 'rgba(59, 130, 246, 0.9)' : 'rgba(59, 130, 246, 0.3)')
+              : (blinkOn ? 'rgba(167, 139, 250, 0.9)' : 'rgba(167, 139, 250, 0.3)');
           ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius * 1.8, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(167, 139, 250, ${0.25 * pulseGlow})`;
+          ctx.arc(p.x + nodeW/2 - 5, p.y - nodeH/2 + 5, 2, 0, Math.PI * 2);
           ctx.fill();
 
-          // Stronger shadow for output nodes
-          ctx.shadowBlur = isOutputNode ? 25 : 18;
-          ctx.shadowColor = isOutputNode ? 'rgba(167, 139, 250, 0.8)' : 'rgba(124, 58, 237, 0.6)';
+          // Internal detail lines (circuit-like)
+          ctx.strokeStyle = isOutputNode
+            ? 'rgba(34, 197, 94, 0.25)'
+            : isInputNode
+              ? 'rgba(59, 130, 246, 0.2)'
+              : 'rgba(124, 58, 237, 0.2)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(p.x - nodeW/2 + 4, p.y);
+          ctx.lineTo(p.x + nodeW/2 - 4, p.y);
+          ctx.stroke();
+
+          ctx.shadowBlur = 0;
         } else if (phase === 'chaos') {
+          // Chaos - scattered circles
           ctx.shadowBlur = 6;
           ctx.shadowColor = 'rgba(239, 68, 68, 0.4)';
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.opacity;
+          ctx.fill();
+
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
         } else {
+          // Transition
           ctx.shadowBlur = 8;
           ctx.shadowColor = p.color;
-        }
 
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = p.opacity;
-        ctx.fill();
-
-        // Bright center for clarity nodes
-        if (phase === 'clarity' && idx < CLARITY_NODE_COUNT) {
           ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius * 0.4, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(237, 233, 254, 0.8)'; // Bright core
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.opacity;
           ctx.fill();
-        }
 
-        ctx.globalAlpha = 1;
-        ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
+        }
       });
     },
     []
