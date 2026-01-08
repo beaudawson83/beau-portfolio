@@ -154,9 +154,9 @@ class Syrum extends Agentic_CRM {
 }`;
 
 export const heroContent = {
-  headline: "I don't just manage workflows; I automate them.",
+  headline: "I don't just manage workflows; I solve them.",
   subheader:
-    '10+ years scaling revenue systems and support infrastructure. Bridging the gap between Operational Strategy and Technical Execution.',
+    'I find personal joy in treating operational friction like a puzzle—hunting down the "complexity tax" and deleting it from your bottom line. With 10+ years of scaling revenue systems, I bridge the gap between strategy and execution to turn manual bottlenecks into automated wins.',
   primaryCTA: '> INITIATE_CONTACT',
   secondaryCTA: '[ VIEW_SYSTEM_LOGS ]',
 };
