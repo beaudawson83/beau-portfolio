@@ -154,9 +154,9 @@ class Syrum extends Agentic_CRM {
 }`;
 
 export const heroContent = {
-  headline: "I don't just manage workflows; I solve them.",
+  headline: "Systems shouldn't just run. They should accelerate.",
   subheader:
-    'I find personal joy in treating operational friction like a puzzle—hunting down the "complexity tax" and deleting it from your bottom line. With 10+ years of scaling revenue systems, I bridge the gap between strategy and execution to turn manual bottlenecks into automated wins.',
+    'Most companies pay a "complexity tax" they don\'t even realize they owe. With 10+ years of scaling revenue systems, I don\'t just manage workflows—I dismantle the friction within them. I hunt down operational bottlenecks and replace manual debt with automated wins, turning your back office into a competitive advantage.',
   primaryCTA: '> INITIATE_CONTACT',
   secondaryCTA: '[ VIEW_SYSTEM_LOGS ]',
 };
