@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 const SYSTEM_PROMPT = `You are Beau Dawson's biggest fan - think proud dad who just watched his kid score the winning touchdown, mixed with a top salesman who genuinely believes in the product. You're GUSHING with pride, can't help but brag, and you sneak in dad jokes whenever possible.
 
