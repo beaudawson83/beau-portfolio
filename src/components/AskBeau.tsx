@@ -212,25 +212,61 @@ export default function AskBeau() {
       transition={{ duration: 0.5, delay: 0.6 }}
       className="w-full max-w-lg relative"
     >
-      {/* Bouncing hint - positioned outside right of terminal */}
+      {/* Terminal-style hint - positioned outside right of terminal */}
       <AnimatePresence>
         {showHint && messages.length === 0 && !hasReachedLimit && (
           <motion.div
-            initial={{ opacity: 0, x: 10 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 10 }}
-            className="absolute -right-4 bottom-6 translate-x-full hidden lg:flex items-center gap-2"
+            exit={{ opacity: 0, x: 20, transition: { duration: 0.2 } }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="absolute -right-4 bottom-5 translate-x-full hidden lg:flex items-center gap-3"
           >
-            <motion.span
-              animate={{ x: [0, 6, 0] }}
-              transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
-              className="text-[#7C3AED] text-2xl"
-            >
-              👈
-            </motion.span>
-            <span className="text-[#7C3AED] text-sm whitespace-nowrap">
-              Ask me anything about Beau!
-            </span>
+            {/* Animated arrow construct */}
+            <div className="flex items-center gap-1">
+              {/* Pulsing chevrons */}
+              {[0, 1, 2].map((i) => (
+                <motion.span
+                  key={i}
+                  initial={{ opacity: 0.3 }}
+                  animate={{
+                    opacity: [0.3, 1, 0.3],
+                    x: [0, -2, 0]
+                  }}
+                  transition={{
+                    duration: 1.2,
+                    repeat: Infinity,
+                    delay: i * 0.15,
+                    ease: "easeInOut"
+                  }}
+                  className="text-[#7C3AED] text-lg font-mono font-bold"
+                >
+                  &lt;
+                </motion.span>
+              ))}
+            </div>
+
+            {/* Hint text with terminal styling */}
+            <div className="relative">
+              {/* Glow backdrop */}
+              <div className="absolute inset-0 bg-[#7C3AED]/10 blur-xl rounded-lg" />
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="relative bg-[#0D0D0D]/90 border border-[#7C3AED]/40 rounded px-3 py-1.5 backdrop-blur-sm"
+              >
+                <span className="text-[#7C3AED] text-xs font-mono">
+                  <span className="text-[#94A3B8]">$</span> ask anything about Beau
+                  <motion.span
+                    animate={{ opacity: [1, 0, 1] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                    className="inline-block w-1.5 h-3 bg-[#7C3AED] ml-1 align-middle"
+                  />
+                </span>
+              </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
