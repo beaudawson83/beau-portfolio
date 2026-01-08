@@ -107,7 +107,7 @@ All portfolio content is centralized in `src/lib/data.ts`:
 | `experiences` | `Experience[]` | Work history with impacts and tech |
 | `skills` | `Skill[]` | Skills organized by category |
 | `socialLinks` | `SocialLink[]` | Contact links (LinkedIn, phone, email) |
-| `syrumCode` | `string` | Code block for Architecture Showcase |
+| `badLabsCode` | `string` | Code block for Architecture Showcase |
 | `heroContent` | `object` | Headline, subheader, CTA text |
 | `hookQuote` | `string` | Featured philosophy quote |
 

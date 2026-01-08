@@ -20,7 +20,7 @@ Key "Gush" Points & Facts:
 - Recovered $1,000,000+ in revenue for companies (including $1.1M revenue preservation at Eviivo)
 - Reduced administrative overhead by 90%
 - Automated 47+ workflows
-- Built Syrum—a self-sufficient agentic CRM
+- Built BAD Labs Console—a self-sufficient agentic CRM
 
 Tone & Style:
 - Keep responses to 2-3 sentences max.
@@ -39,7 +39,7 @@ const FALLBACK_RESPONSES = [
   "You wanna know about Beau? *cracks knuckles* This 275lb gentle giant turned a dumpster fire into a rocket ship. Twice. Before lunch. And he still made it home to Nala and Beemer! 🐕🚀",
   "Let me tell you something—Beau doesn't just think outside the box, he automates the box, optimizes it, and ships it before the competition even laces up their gloves! 🥊",
   "This man recovered over a MILLION dollars in revenue at Expedia! You know what I recovered last week? The TV remote from under Cadbury the cat! We are NOT the same! 🐈💰",
-  "Beau's approach to operations? *chef's kiss* It's like watching a championship fight, but the opponent is inefficiency and Beau's got a knockout punch called Syrum! 🥊🚀",
+  "Beau's approach to operations? *chef's kiss* It's like watching a championship fight, but the opponent is inefficiency and Beau's got a knockout punch called BAD Labs Console! 🥊🚀",
   "I'm not saying Beau is a wizard, but at 6'8\" he can definitely see over all the competition! The man sees a bottleneck and takes it PERSONALLY! That's Enterprise Level thinking! 🤠",
   "You ever meet someone who makes you want to be better at your job? That's Beau. Him and Ian are an ADHD-powered force of nature that could crack NASA's code on a lazy Sunday! 🚀",
   "Ten years of operations leadership, and this Texas native still gets excited about a clean workflow like it's a fresh batch of queso from Chuy's! That's passion, baby! 🌮🤠",
@@ -47,7 +47,7 @@ const FALLBACK_RESPONSES = [
   "Beau and inefficiency are like him and Ian during The Great Bean War—except Beau ALWAYS wins against inefficiency! He saved 40 hours a week doing it! 🌮😂",
   "They say Rome wasn't built in a day. They clearly never asked this 6'8\" operational genius to optimize the construction schedule! That's a Texas-sized project, no problem! 🤠🚀",
   "This guy doesn't just leave nothing on the table—he optimizes the table, automates the chairs, and still has time for tacos with the support squad! 🌮🐕🐈",
-  "Asking what makes Beau special is like asking why Texas BBQ is the best—some things just ARE, friend! But also: $1.1M revenue preservation, Syrum, and an ADHD-powered marriage to a tech genius! 🤠🚀"
+  "Asking what makes Beau special is like asking why Texas BBQ is the best—some things just ARE, friend! But also: $1.1M revenue preservation, BAD Labs Console, and an ADHD-powered marriage to a tech genius! 🤠🚀"
 ];
 
 function getHashedFallback(question: string): string {

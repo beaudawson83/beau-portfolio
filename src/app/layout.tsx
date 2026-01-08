@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     'CRM',
     'Automation',
     'BAD Labs',
-    'Syrum',
+    'BAD Labs Console',
     'Austin TX',
   ],
   authors: [{ name: 'Beau Dawson' }],

@@ -17,7 +17,7 @@ export const metrics: Metric[] = [
     label: 'ADMIN_OVERHEAD',
     value: '-90%',
     context: 'Agentic Workflows',
-    source: 'Syrum',
+    source: 'BAD Labs Console',
   },
   {
     label: 'CSAT_IMPACT',
@@ -93,7 +93,7 @@ export const skills: Skill[] = [
     category: 'AI & Automation',
     items: [
       'Agentic Coding',
-      'Syrum CRM Architecture',
+      'BAD Labs Console Architecture',
       'LLM Integration',
       'Micro-App Development',
     ],
@@ -135,10 +135,10 @@ export const socialLinks: SocialLink[] = [
   },
 ];
 
-export const syrumCode = `// BAD LABS // Founder & Principal Architect
+export const badLabsCode = `// BAD LABS // Founder & Principal Architect
 // EST: June 2025 // LAUNCH: Jan 2026
 
-class Syrum extends Agentic_CRM {
+class BADLabsConsole extends Agentic_CRM {
   constructor() {
     this.capabilities = [
       "Autonomous Agentic Workflows",

@@ -16,7 +16,7 @@ export default function ArchitectureShowcase() {
       content: (
         <>
           <span className="syntax-keyword">class</span>{' '}
-          <span className="syntax-class">Syrum</span>{' '}
+          <span className="syntax-class">BADLabsConsole</span>{' '}
           <span className="syntax-keyword">extends</span>{' '}
           <span className="syntax-class">Agentic_CRM</span> {'{'}
         </>
@@ -110,7 +110,7 @@ export default function ArchitectureShowcase() {
         >
           {/* Section header */}
           <div className="font-mono text-xs sm:text-sm 2xl:text-base text-[#7C3AED] mb-4 sm:mb-6 tracking-wider">
-            {'>'} PROJECT: SYRUM_CRM (v1.0)
+            {'>'} PROJECT: BAD_LABS_CONSOLE (v1.0)
           </div>
 
           {/* Code editor window */}
@@ -121,7 +121,7 @@ export default function ArchitectureShowcase() {
               <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
               <div className="w-3 h-3 rounded-full bg-[#28C840]" />
               <span className="ml-4 font-mono text-xs text-[#94A3B8]">
-                syrum.ts
+                bad-labs-console.ts
               </span>
             </div>
 
