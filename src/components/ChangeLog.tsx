@@ -14,8 +14,8 @@ export default function ChangeLog() {
   const legacyExperiences = experiences.filter((exp) => exp.isLegacy);
 
   return (
-    <section id="experience" className="py-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+    <section id="experience" className="py-16 sm:py-20 2xl:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16">
+      <div className="max-w-4xl 2xl:max-w-5xl mx-auto">
         <motion.div
           ref={ref}
           initial={{ opacity: 0 }}
@@ -23,7 +23,7 @@ export default function ChangeLog() {
           transition={{ duration: 0.5 }}
         >
           {/* Section header */}
-          <div className="font-mono text-sm text-[#7C3AED] mb-10 tracking-wider">
+          <div className="font-mono text-xs sm:text-sm 2xl:text-base text-[#7C3AED] mb-8 sm:mb-10 tracking-wider">
             {'>'} CHANGE_LOG // EXPERIENCE_TIMELINE
           </div>
 
@@ -45,15 +45,16 @@ export default function ChangeLog() {
                 <div className="absolute left-0 sm:left-4 top-1 w-2 h-2 -translate-x-1/2 rounded-full bg-[#7C3AED] border-2 border-[#111111]" />
 
                 {/* Year & Company */}
-                <div className="font-mono text-sm mb-2">
+                <div className="font-mono text-xs sm:text-sm 2xl:text-base mb-2">
                   <span className="text-[#94A3B8]">[{exp.yearRange}]</span>{' '}
                   <span className="text-white font-semibold">{exp.company}</span>{' '}
-                  <span className="text-[#94A3B8]">// {exp.role}</span>
+                  <span className="text-[#94A3B8] hidden sm:inline">// {exp.role}</span>
+                  <div className="text-[#94A3B8] sm:hidden text-[10px] mt-0.5">// {exp.role}</div>
                 </div>
 
                 {/* Impacts */}
                 {exp.impacts.map((impact, i) => (
-                  <div key={i} className="font-mono text-sm text-[#94A3B8] ml-2 mb-1">
+                  <div key={i} className="font-mono text-xs sm:text-sm 2xl:text-base text-[#94A3B8] ml-2 mb-1">
                     <span className="text-[#7C3AED]">{'>'}</span>{' '}
                     <span className="text-white">IMPACT:</span> {impact}
                   </div>
@@ -61,7 +62,7 @@ export default function ChangeLog() {
 
                 {/* Tech */}
                 {exp.tech?.map((tech, i) => (
-                  <div key={i} className="font-mono text-sm text-[#94A3B8] ml-2 mb-1">
+                  <div key={i} className="font-mono text-xs sm:text-sm 2xl:text-base text-[#94A3B8] ml-2 mb-1">
                     <span className="text-[#7C3AED]">{'>'}</span>{' '}
                     <span className="text-white">TECH:</span> {tech}
                   </div>

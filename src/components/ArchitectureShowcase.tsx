@@ -100,8 +100,8 @@ export default function ArchitectureShowcase() {
   ];
 
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+    <section className="py-16 sm:py-20 2xl:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16">
+      <div className="max-w-4xl 2xl:max-w-5xl mx-auto">
         <motion.div
           ref={ref}
           initial={{ opacity: 0, y: 30 }}
@@ -109,7 +109,7 @@ export default function ArchitectureShowcase() {
           transition={{ duration: 0.6 }}
         >
           {/* Section header */}
-          <div className="font-mono text-sm text-[#7C3AED] mb-6 tracking-wider">
+          <div className="font-mono text-xs sm:text-sm 2xl:text-base text-[#7C3AED] mb-4 sm:mb-6 tracking-wider">
             {'>'} PROJECT: SYRUM_CRM (v1.0)
           </div>
 
@@ -126,8 +126,8 @@ export default function ArchitectureShowcase() {
             </div>
 
             {/* Code block */}
-            <div className="p-4 sm:p-6 overflow-x-auto">
-              <pre className="font-mono text-sm leading-relaxed">
+            <div className="p-3 sm:p-4 lg:p-6 2xl:p-8 overflow-x-auto">
+              <pre className="font-mono text-xs sm:text-sm 2xl:text-base leading-relaxed">
                 <code>
                   {codeLines.map((line, index) => (
                     <motion.div

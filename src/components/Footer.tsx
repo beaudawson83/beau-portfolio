@@ -45,9 +45,9 @@ export default function Footer() {
   return (
     <footer
       id="contact"
-      className="py-20 px-4 sm:px-6 lg:px-8 border-t border-[#1F1F1F]"
+      className="py-16 sm:py-20 2xl:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16 border-t border-[#1F1F1F]"
     >
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl 2xl:max-w-5xl mx-auto">
         <motion.div
           ref={ref}
           initial={{ opacity: 0 }}
@@ -55,17 +55,17 @@ export default function Footer() {
           transition={{ duration: 0.5 }}
         >
           {/* Section header */}
-          <div className="font-mono text-sm text-[#7C3AED] mb-10 tracking-wider">
+          <div className="font-mono text-xs sm:text-sm 2xl:text-base text-[#7C3AED] mb-8 sm:mb-10 tracking-wider">
             {'>'} INPUT_OUTPUT // CONTACT
           </div>
 
           {/* Contact form - Terminal style */}
-          <form onSubmit={handleSubmit} className="space-y-6 mb-12">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 mb-10 sm:mb-12">
             {/* Name field */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <label
                 htmlFor="name"
-                className="font-mono text-sm text-[#94A3B8] whitespace-nowrap"
+                className="font-mono text-xs sm:text-sm 2xl:text-base text-[#94A3B8] whitespace-nowrap"
               >
                 {'>'} ENTER_NAME:
               </label>
@@ -77,7 +77,7 @@ export default function Footer() {
                   setFormData((prev) => ({ ...prev, name: e.target.value }))
                 }
                 required
-                className="flex-1 bg-[#1F1F1F] border border-[#1F1F1F] focus:border-[#7C3AED] px-4 py-2 font-mono text-sm text-white outline-none transition-colors"
+                className="flex-1 bg-[#1F1F1F] border border-[#1F1F1F] focus:border-[#7C3AED] px-3 sm:px-4 py-2 font-mono text-xs sm:text-sm 2xl:text-base text-white outline-none transition-colors"
                 placeholder="Your name"
               />
             </div>
@@ -86,7 +86,7 @@ export default function Footer() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <label
                 htmlFor="objective"
-                className="font-mono text-sm text-[#94A3B8] whitespace-nowrap"
+                className="font-mono text-xs sm:text-sm 2xl:text-base text-[#94A3B8] whitespace-nowrap"
               >
                 {'>'} SELECT_OBJECTIVE:
               </label>
@@ -99,7 +99,7 @@ export default function Footer() {
                     objective: e.target.value as 'full-time' | 'fractional',
                   }))
                 }
-                className="flex-1 bg-[#1F1F1F] border border-[#1F1F1F] focus:border-[#7C3AED] px-4 py-2 font-mono text-sm text-white outline-none transition-colors cursor-pointer"
+                className="flex-1 bg-[#1F1F1F] border border-[#1F1F1F] focus:border-[#7C3AED] px-3 sm:px-4 py-2 font-mono text-xs sm:text-sm 2xl:text-base text-white outline-none transition-colors cursor-pointer"
               >
                 <option value="full-time">Full-Time Director</option>
                 <option value="fractional">Fractional Deployment</option>
@@ -110,7 +110,7 @@ export default function Footer() {
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="message"
-                className="font-mono text-sm text-[#94A3B8]"
+                className="font-mono text-xs sm:text-sm 2xl:text-base text-[#94A3B8]"
               >
                 {'>'} MESSAGE_BODY:
               </label>
@@ -121,8 +121,8 @@ export default function Footer() {
                   setFormData((prev) => ({ ...prev, message: e.target.value }))
                 }
                 required
-                rows={5}
-                className="w-full bg-[#1F1F1F] border border-[#1F1F1F] focus:border-[#7C3AED] px-4 py-2 font-mono text-sm text-white outline-none transition-colors resize-none"
+                rows={4}
+                className="w-full bg-[#1F1F1F] border border-[#1F1F1F] focus:border-[#7C3AED] px-3 sm:px-4 py-2 font-mono text-xs sm:text-sm 2xl:text-base text-white outline-none transition-colors resize-none sm:rows-5"
                 placeholder="Your message..."
               />
             </div>
@@ -132,7 +132,7 @@ export default function Footer() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="font-mono text-sm tracking-wider bg-transparent hover:bg-[#1F1F1F] text-white px-6 py-3 border border-[#94A3B8] hover:border-[#7C3AED] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="font-mono text-xs sm:text-sm 2xl:text-base tracking-wider bg-transparent hover:bg-[#1F1F1F] text-white px-4 sm:px-6 py-2 sm:py-3 border border-[#94A3B8] hover:border-[#7C3AED] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isSubmitting ? '[ TRANSMITTING... ]' : '[ TRANSMIT ]'}
               </button>
@@ -160,14 +160,14 @@ export default function Footer() {
           </form>
 
           {/* Social links */}
-          <div className="flex flex-wrap gap-4 justify-center sm:justify-start">
+          <div className="flex flex-wrap gap-3 sm:gap-4 justify-center sm:justify-start">
             {socialLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.url}
                 target={link.type === 'linkedin' ? '_blank' : undefined}
                 rel={link.type === 'linkedin' ? 'noopener noreferrer' : undefined}
-                className="font-mono text-sm text-[#94A3B8] hover:text-[#7C3AED] transition-colors"
+                className="font-mono text-[10px] sm:text-sm 2xl:text-base text-[#94A3B8] hover:text-[#7C3AED] transition-colors"
               >
                 [ {link.label} ]
               </a>
@@ -175,8 +175,8 @@ export default function Footer() {
           </div>
 
           {/* Copyright */}
-          <div className="mt-12 pt-8 border-t border-[#1F1F1F]">
-            <p className="font-mono text-xs text-[#94A3B8]/60 text-center">
+          <div className="mt-10 sm:mt-12 pt-6 sm:pt-8 border-t border-[#1F1F1F]">
+            <p className="font-mono text-[10px] sm:text-xs text-[#94A3B8]/60 text-center">
               {new Date().getFullYear()} // BEAU_DAWSON // BAD_LABS
             </p>
           </div>

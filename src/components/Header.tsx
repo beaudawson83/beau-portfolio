@@ -10,8 +10,8 @@ export default function Header() {
       transition={{ duration: 0.5, ease: 'easeOut' }}
       className="fixed top-0 left-0 right-0 z-50 bg-[#111111]/95 backdrop-blur-sm border-b border-[#1F1F1F]"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-12 font-mono text-xs sm:text-sm tracking-wider">
+      <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-16">
+        <div className="flex items-center justify-between h-10 sm:h-12 font-mono text-[10px] sm:text-xs lg:text-sm tracking-wider">
           {/* Left side */}
           <div className="flex items-center gap-2">
             <span className="text-white font-semibold">BEAU DAWSON</span>
