@@ -66,15 +66,16 @@ export function useParticleSystem(
     return particles;
   }, []);
 
-  // Initialize data pulses
+  // Initialize data pulses - more pulses, faster speeds for robust energy
   const initDataPulses = useCallback(() => {
     const pulses: DataPulse[] = [];
     STRUCTURED_CONNECTIONS.forEach((_, i) => {
-      for (let j = 0; j < 2; j++) {
+      // 4 pulses per connection for dense energy flow
+      for (let j = 0; j < 4; j++) {
         pulses.push({
           connectionIndex: i,
-          progress: j * 0.5,
-          speed: 0.35 + Math.random() * 0.15,
+          progress: j * 0.25,
+          speed: 0.6 + Math.random() * 0.4, // Faster: 0.6-1.0 vs old 0.35-0.5
         });
       }
     });
@@ -182,16 +183,27 @@ export function useParticleSystem(
             return;
           }
 
-          // Synchronized gentle breathing
-          const breathe = Math.sin(Date.now() * 0.002) * 0.1;
-          p.radius = 6 * (1 + breathe);
+          const time = Date.now() * 0.001;
+
+          // Dynamic breathing with multiple frequencies for organic feel
+          const breathePrimary = Math.sin(time * 3 + p.id * 0.8) * 0.15;
+          const breatheSecondary = Math.sin(time * 5 + p.id * 1.2) * 0.08;
+          const breathe = breathePrimary + breatheSecondary;
+
+          // Output nodes (right side) pulse more dramatically to show receiving data
+          const isOutputNode = OUTPUT_ENDPOINT_INDICES.includes(idx);
+          const baseRadius = isOutputNode ? 7 : 6;
+          const pulseIntensity = isOutputNode ? 1.4 : 1;
+
+          p.radius = baseRadius * (1 + breathe * pulseIntensity);
 
           // Subtle micro-movement
-          p.x = p.targetX + Math.sin(Date.now() * 0.001 + p.id * 0.5) * 1;
-          p.y = p.targetY + Math.cos(Date.now() * 0.001 + p.id * 0.7) * 1;
+          p.x = p.targetX + Math.sin(time + p.id * 0.5) * 1.5;
+          p.y = p.targetY + Math.cos(time * 1.1 + p.id * 0.7) * 1.5;
 
+          // Pulsing opacity for energy effect
+          p.opacity = 0.85 + Math.sin(time * 4 + p.id) * 0.15;
           p.color = COLORS.CLARITY_NODE;
-          p.opacity = 1;
         }
       });
     },
@@ -407,34 +419,50 @@ export function useParticleSystem(
         }
 
       } else {
-        // Clarity - structured connections
-        ctx.strokeStyle = COLORS.CLARITY_CONNECTION;
-        ctx.lineWidth = 2;
+        // Clarity - structured connections with animated energy flow
+        const time = Date.now() * 0.001;
 
-        STRUCTURED_CONNECTIONS.forEach((conn) => {
+        // Draw connections with animated gradient effect
+        STRUCTURED_CONNECTIONS.forEach((conn, connIdx) => {
           const from = particles[conn.from];
           const to = particles[conn.to];
           if (!from || !to) return;
+
+          // Create gradient along connection
+          const gradient = ctx.createLinearGradient(from.x, from.y, to.x, to.y);
+          const flowPhase = (time * 2 + connIdx * 0.3) % 1;
+
+          // Animated flow effect along the connection
+          gradient.addColorStop(0, 'rgba(124, 58, 237, 0.3)');
+          gradient.addColorStop(Math.max(0, flowPhase - 0.2), 'rgba(124, 58, 237, 0.4)');
+          gradient.addColorStop(flowPhase, 'rgba(167, 139, 250, 0.9)');
+          gradient.addColorStop(Math.min(1, flowPhase + 0.2), 'rgba(124, 58, 237, 0.4)');
+          gradient.addColorStop(1, 'rgba(124, 58, 237, 0.3)');
+
+          ctx.strokeStyle = gradient;
+          ctx.lineWidth = 2.5;
 
           ctx.beginPath();
           ctx.moveTo(from.x, from.y);
           ctx.lineTo(to.x, to.y);
           ctx.stroke();
 
-          // Arrow
+          // Arrow with glow
           const angle = Math.atan2(to.y - from.y, to.x - from.x);
-          const arrowX = to.x - Math.cos(angle) * 10;
-          const arrowY = to.y - Math.sin(angle) * 10;
+          const arrowX = to.x - Math.cos(angle) * 12;
+          const arrowY = to.y - Math.sin(angle) * 12;
 
+          ctx.strokeStyle = COLORS.CLARITY_PULSE;
+          ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(arrowX, arrowY);
-          ctx.lineTo(arrowX - 5 * Math.cos(angle - Math.PI / 6), arrowY - 5 * Math.sin(angle - Math.PI / 6));
+          ctx.lineTo(arrowX - 6 * Math.cos(angle - Math.PI / 6), arrowY - 6 * Math.sin(angle - Math.PI / 6));
           ctx.moveTo(arrowX, arrowY);
-          ctx.lineTo(arrowX - 5 * Math.cos(angle + Math.PI / 6), arrowY - 5 * Math.sin(angle + Math.PI / 6));
+          ctx.lineTo(arrowX - 6 * Math.cos(angle + Math.PI / 6), arrowY - 6 * Math.sin(angle + Math.PI / 6));
           ctx.stroke();
         });
 
-        // Energy pulses - the hero effect
+        // Energy pulses - bigger, brighter, with longer trails
         pulses.forEach((pulse) => {
           const conn = STRUCTURED_CONNECTIONS[pulse.connectionIndex];
           if (!conn) return;
@@ -446,37 +474,81 @@ export function useParticleSystem(
           const x = from.x + (to.x - from.x) * pulse.progress;
           const y = from.y + (to.y - from.y) * pulse.progress;
 
-          // Glowing pulse
+          // Outer glow halo
           ctx.beginPath();
-          ctx.arc(x, y, 4, 0, Math.PI * 2);
-          ctx.fillStyle = COLORS.CLARITY_PULSE;
-          ctx.shadowBlur = 15;
+          ctx.arc(x, y, 8, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(167, 139, 250, 0.2)';
+          ctx.fill();
+
+          // Main glowing pulse - larger and brighter
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, Math.PI * 2);
+          ctx.fillStyle = '#C4B5FD'; // Brighter purple
+          ctx.shadowBlur = 20;
           ctx.shadowColor = COLORS.CLARITY_PULSE;
           ctx.fill();
 
-          // Trail
-          for (let t = 1; t <= 3; t++) {
-            const trailProgress = Math.max(0, pulse.progress - t * 0.05);
+          // Bright core
+          ctx.beginPath();
+          ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#EDE9FE'; // Near white core
+          ctx.fill();
+
+          // Longer trail with 5 segments
+          for (let t = 1; t <= 5; t++) {
+            const trailProgress = Math.max(0, pulse.progress - t * 0.04);
             const tx = from.x + (to.x - from.x) * trailProgress;
             const ty = from.y + (to.y - from.y) * trailProgress;
+            const trailSize = 4 - t * 0.6;
+            const trailOpacity = 0.5 - t * 0.08;
+
             ctx.beginPath();
-            ctx.arc(tx, ty, 3 - t * 0.5, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(167, 139, 250, ${0.4 - t * 0.1})`;
+            ctx.arc(tx, ty, trailSize, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(167, 139, 250, ${trailOpacity})`;
             ctx.fill();
           }
 
           ctx.shadowBlur = 0;
         });
+
+        // Add ambient energy particles floating near connections
+        for (let i = 0; i < 20; i++) {
+          const sparkle = Math.sin(time * 6 + i * 2) * 0.5 + 0.5;
+          const x = width * (0.15 + (i % 5) * 0.2) + Math.sin(time * 2 + i) * 15;
+          const y = height * (0.25 + Math.floor(i / 5) * 0.2) + Math.cos(time * 1.8 + i) * 15;
+
+          ctx.beginPath();
+          ctx.arc(x, y, 1.5 * sparkle, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(167, 139, 250, ${0.3 * sparkle})`;
+          ctx.fill();
+        }
       }
 
       // Draw particles
-      particles.forEach((p) => {
+      particles.forEach((p, idx) => {
         if (p.opacity < 0.05) return;
 
-        // Glow
+        // Glow intensity based on phase
         if (phase === 'clarity') {
-          ctx.shadowBlur = 12;
-          ctx.shadowColor = 'rgba(124, 58, 237, 0.5)';
+          const isOutputNode = OUTPUT_ENDPOINT_INDICES.includes(idx);
+          const time = Date.now() * 0.001;
+          const pulseGlow = Math.sin(time * 4 + idx) * 0.3 + 0.7;
+
+          // Outer glow ring for all clarity nodes
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius * 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(124, 58, 237, ${0.15 * pulseGlow})`;
+          ctx.fill();
+
+          // Second glow layer
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius * 1.8, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(167, 139, 250, ${0.25 * pulseGlow})`;
+          ctx.fill();
+
+          // Stronger shadow for output nodes
+          ctx.shadowBlur = isOutputNode ? 25 : 18;
+          ctx.shadowColor = isOutputNode ? 'rgba(167, 139, 250, 0.8)' : 'rgba(124, 58, 237, 0.6)';
         } else if (phase === 'chaos') {
           ctx.shadowBlur = 6;
           ctx.shadowColor = 'rgba(239, 68, 68, 0.4)';
@@ -490,6 +562,15 @@ export function useParticleSystem(
         ctx.fillStyle = p.color;
         ctx.globalAlpha = p.opacity;
         ctx.fill();
+
+        // Bright center for clarity nodes
+        if (phase === 'clarity' && idx < CLARITY_NODE_COUNT) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius * 0.4, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(237, 233, 254, 0.8)'; // Bright core
+          ctx.fill();
+        }
+
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
       });
