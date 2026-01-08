@@ -253,38 +253,66 @@ export function useParticleSystem(
       }));
 
       if (phase === 'chaos') {
-        // Draw chaotic connections - tangled web (background)
-        ctx.strokeStyle = 'rgba(239, 68, 68, 0.12)';
+        const time = Date.now() * 0.001;
+
+        // Draw chaotic connections - tangled web between ALL particles
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.08)';
         ctx.lineWidth = 1;
 
-        // Connect nearby particles with curved lines
+        // Connect nearby particles with curved lines (the messy network)
         for (let i = 0; i < particles.length; i++) {
           for (let j = i + 1; j < particles.length; j++) {
             const p1 = particles[i];
             const p2 = particles[j];
             const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
 
-            // Only connect nearby particles
-            if (dist < 120 && dist > 20) {
-              const opacity = (1 - dist / 120) * 0.15;
+            if (dist < 100 && dist > 15) {
+              const opacity = (1 - dist / 100) * 0.12;
               ctx.strokeStyle = `rgba(239, 68, 68, ${opacity})`;
 
               ctx.beginPath();
               ctx.moveTo(p1.x, p1.y);
-
-              // Curved connection
               const midX = (p1.x + p2.x) / 2;
               const midY = (p1.y + p2.y) / 2;
-              const curveOffset = Math.sin(Date.now() * 0.002 + i + j) * 20;
-
+              const curveOffset = Math.sin(time * 2 + i + j) * 15;
               ctx.quadraticCurveTo(midX + curveOffset, midY + curveOffset, p2.x, p2.y);
               ctx.stroke();
             }
           }
         }
 
-        // Draw bright connections from chaos to endpoints (the frantic energy paths)
-        chaosPulses.forEach((pulse) => {
+        // WASTED ENERGY: Pulses going between random particles (not to outputs)
+        // This represents the 77% wasted effort - energy going nowhere useful
+        for (let i = 0; i < 25; i++) {
+          const pulseTime = (time * 0.8 + i * 0.15) % 1;
+          const fromIdx = Math.floor((i * 7) % particles.length);
+          const toIdx = Math.floor((i * 11 + 5) % particles.length);
+
+          if (fromIdx === toIdx) continue;
+
+          const from = particles[fromIdx];
+          const to = particles[toIdx];
+          if (!from || !to) continue;
+
+          // Only draw if not going to output nodes (wasted energy)
+          if (OUTPUT_ENDPOINT_INDICES.includes(toIdx % CLARITY_NODE_COUNT)) continue;
+
+          const x = from.x + (to.x - from.x) * pulseTime;
+          const y = from.y + (to.y - from.y) * pulseTime;
+
+          // Dim wasted pulse
+          ctx.beginPath();
+          ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(239, 68, 68, ${0.4 + Math.sin(time * 3 + i) * 0.2})`;
+          ctx.shadowBlur = 6;
+          ctx.shadowColor = 'rgba(239, 68, 68, 0.5)';
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+
+        // THE 23% THAT REACHES OUTPUTS: Fewer pulses actually reaching the buckets
+        // Only a fraction of chaosPulses are shown going to endpoints
+        chaosPulses.slice(0, 5).forEach((pulse) => {
           const fromParticle = particles[pulse.fromParticleIndex];
           if (!fromParticle) return;
 
@@ -292,90 +320,76 @@ export function useParticleSystem(
           const toPos = endpointPositions[endpointIdx];
           if (!toPos) return;
 
-          // Bright connection line
-          ctx.strokeStyle = `rgba(239, 68, 68, ${CHAOS_PULSE_CONFIG.CONNECTION_BRIGHTNESS * pulse.opacity})`;
+          // Connection line to output
+          ctx.strokeStyle = `rgba(239, 68, 68, ${0.3 * pulse.opacity})`;
           ctx.lineWidth = 1.5;
           ctx.beginPath();
           ctx.moveTo(fromParticle.x, fromParticle.y);
-
-          // Curved path for visual interest
           const midX = (fromParticle.x + toPos.x) / 2;
           const midY = (fromParticle.y + toPos.y) / 2;
-          const curveOffset = Math.sin(Date.now() * 0.003 + pulse.fromParticleIndex) * 30;
-
+          const curveOffset = Math.sin(time * 3 + pulse.fromParticleIndex) * 25;
           ctx.quadraticCurveTo(midX, midY + curveOffset, toPos.x, toPos.y);
           ctx.stroke();
-        });
 
-        // Draw the frantic pulses racing to endpoints
-        chaosPulses.forEach((pulse) => {
-          const fromParticle = particles[pulse.fromParticleIndex];
-          if (!fromParticle) return;
-
-          const endpointIdx = OUTPUT_ENDPOINT_INDICES.indexOf(pulse.toEndpointIndex);
-          const toPos = endpointPositions[endpointIdx];
-          if (!toPos) return;
-
-          // Calculate pulse position along curved path
+          // Pulse traveling to output
           const t = pulse.progress;
-          const midX = (fromParticle.x + toPos.x) / 2;
-          const midY = (fromParticle.y + toPos.y) / 2;
-          const curveOffset = Math.sin(Date.now() * 0.003 + pulse.fromParticleIndex) * 30;
-
-          // Quadratic bezier position
           const x = (1-t)*(1-t)*fromParticle.x + 2*(1-t)*t*midX + t*t*toPos.x;
           const y = (1-t)*(1-t)*fromParticle.y + 2*(1-t)*t*(midY + curveOffset) + t*t*toPos.y;
 
-          // Glowing pulse
           ctx.beginPath();
-          ctx.arc(x, y, 3, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(239, 68, 68, ${CHAOS_PULSE_CONFIG.PULSE_BRIGHTNESS * pulse.opacity})`;
+          ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(239, 68, 68, ${0.8 * pulse.opacity})`;
           ctx.shadowBlur = 10;
           ctx.shadowColor = 'rgba(239, 68, 68, 0.8)';
           ctx.fill();
 
-          // Short trail
+          // Trail
           for (let tr = 1; tr <= 2; tr++) {
             const trailT = Math.max(0, t - tr * 0.06);
             const tx = (1-trailT)*(1-trailT)*fromParticle.x + 2*(1-trailT)*trailT*midX + trailT*trailT*toPos.x;
             const ty = (1-trailT)*(1-trailT)*fromParticle.y + 2*(1-trailT)*trailT*(midY + curveOffset) + trailT*trailT*toPos.y;
             ctx.beginPath();
-            ctx.arc(tx, ty, 2 - tr * 0.5, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(239, 68, 68, ${0.4 - tr * 0.15})`;
+            ctx.arc(tx, ty, 2.5 - tr * 0.5, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(239, 68, 68, ${0.35 - tr * 0.12})`;
             ctx.fill();
           }
           ctx.shadowBlur = 0;
         });
 
-        // Draw endpoint nodes (visible during chaos to show where energy goes)
+        // Draw the 3 output buckets (dimmer in chaos - not receiving much)
         endpointPositions.forEach((pos, idx) => {
-          // Outer glow - pulsing to show receiving energy
-          const pulse = Math.sin(Date.now() * 0.005 + idx) * 0.3 + 0.7;
+          const pulse = Math.sin(time * 4 + idx) * 0.2 + 0.5;
+
+          // Outer glow - weak
           ctx.beginPath();
-          ctx.arc(pos.x, pos.y, 10 * pulse, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+          ctx.arc(pos.x, pos.y, 8 * pulse, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.1)';
           ctx.fill();
 
           // Core node
           ctx.beginPath();
           ctx.arc(pos.x, pos.y, 5, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = 'rgba(239, 68, 68, 0.6)';
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.6)';
+          ctx.shadowBlur = 6;
+          ctx.shadowColor = 'rgba(239, 68, 68, 0.4)';
           ctx.fill();
           ctx.shadowBlur = 0;
         });
 
-        // Scattered energy particles (wasted energy effect)
-        const time = Date.now() * 0.001;
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
-        for (let i = 0; i < 15; i++) {
-          const x = (Math.sin(time * 2 + i * 3) * 0.5 + 0.5) * width;
-          const y = (Math.cos(time * 1.7 + i * 2.5) * 0.5 + 0.5) * height;
-          const size = 1.5 + Math.sin(time * 5 + i) * 0.5;
+        // Scattered energy dissipating into nothing (wasted energy fading out)
+        for (let i = 0; i < 20; i++) {
+          const fadePhase = (time * 1.5 + i * 0.3) % 1;
+          const fade = 1 - fadePhase;
+
+          // Random positions across the canvas
+          const baseX = ((i * 137) % 100) / 100 * width;
+          const baseY = ((i * 89) % 100) / 100 * height;
+          const driftX = Math.sin(time + i) * 30 * fadePhase;
+          const driftY = -fadePhase * 40 + Math.cos(time * 1.3 + i) * 15;
 
           ctx.beginPath();
-          ctx.arc(x, y, size, 0, Math.PI * 2);
+          ctx.arc(baseX + driftX, baseY + driftY, 2 * fade, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(239, 68, 68, ${0.35 * fade})`;
           ctx.fill();
         }
 
@@ -419,59 +433,25 @@ export function useParticleSystem(
         }
 
       } else {
-        // Clarity - well-oiled corporate machine with conveyor belt connections
+        // Clarity - same bubbles, but organized with logical energy flow
         const time = Date.now() * 0.001;
 
-        // Draw conveyor-belt style connections (thick lines with dashes moving)
-        STRUCTURED_CONNECTIONS.forEach((conn, connIdx) => {
+        // Draw structured connections between nodes (subtle lines)
+        ctx.strokeStyle = 'rgba(124, 58, 237, 0.25)';
+        ctx.lineWidth = 1.5;
+        STRUCTURED_CONNECTIONS.forEach((conn) => {
           const from = particles[conn.from];
           const to = particles[conn.to];
           if (!from || !to) return;
 
-          // Conveyor belt track (outer)
-          ctx.strokeStyle = 'rgba(45, 45, 55, 0.8)';
-          ctx.lineWidth = 8;
-          ctx.lineCap = 'round';
           ctx.beginPath();
           ctx.moveTo(from.x, from.y);
           ctx.lineTo(to.x, to.y);
           ctx.stroke();
-
-          // Inner track
-          ctx.strokeStyle = 'rgba(30, 30, 40, 0.9)';
-          ctx.lineWidth = 5;
-          ctx.beginPath();
-          ctx.moveTo(from.x, from.y);
-          ctx.lineTo(to.x, to.y);
-          ctx.stroke();
-
-          // Moving dashes (conveyor belt effect)
-          ctx.strokeStyle = 'rgba(124, 58, 237, 0.6)';
-          ctx.lineWidth = 3;
-          ctx.setLineDash([4, 12]);
-          ctx.lineDashOffset = -time * 40 - connIdx * 8;
-          ctx.beginPath();
-          ctx.moveTo(from.x, from.y);
-          ctx.lineTo(to.x, to.y);
-          ctx.stroke();
-          ctx.setLineDash([]);
-
-          // Arrow indicator at end
-          const angle = Math.atan2(to.y - from.y, to.x - from.x);
-          const arrowDist = 18;
-          const arrowX = to.x - Math.cos(angle) * arrowDist;
-          const arrowY = to.y - Math.sin(angle) * arrowDist;
-
-          ctx.fillStyle = 'rgba(124, 58, 237, 0.5)';
-          ctx.beginPath();
-          ctx.moveTo(arrowX + Math.cos(angle) * 6, arrowY + Math.sin(angle) * 6);
-          ctx.lineTo(arrowX - 5 * Math.cos(angle - Math.PI / 5), arrowY - 5 * Math.sin(angle - Math.PI / 5));
-          ctx.lineTo(arrowX - 5 * Math.cos(angle + Math.PI / 5), arrowY - 5 * Math.sin(angle + Math.PI / 5));
-          ctx.closePath();
-          ctx.fill();
         });
 
-        // Draw data packets moving along connections (like items on conveyor)
+        // Draw energy pulses flowing along connections (left to right, logical flow)
+        // These are the main energy - 95% reaches outputs
         pulses.forEach((pulse) => {
           const conn = STRUCTURED_CONNECTIONS[pulse.connectionIndex];
           if (!conn) return;
@@ -483,105 +463,91 @@ export function useParticleSystem(
           const x = from.x + (to.x - from.x) * pulse.progress;
           const y = from.y + (to.y - from.y) * pulse.progress;
 
-          // Data packet (small rounded rectangle)
-          const packetW = 10;
-          const packetH = 6;
-
-          // Glow
-          ctx.shadowBlur = 12;
-          ctx.shadowColor = 'rgba(167, 139, 250, 0.8)';
-
-          // Packet body
-          ctx.fillStyle = '#A78BFA';
+          // Glowing energy pulse (circular, same style as chaos)
           ctx.beginPath();
-          ctx.roundRect(x - packetW/2, y - packetH/2, packetW, packetH, 2);
+          ctx.arc(x, y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#A78BFA';
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = 'rgba(167, 139, 250, 0.8)';
           ctx.fill();
 
-          // Bright stripe
+          // Bright core
+          ctx.beginPath();
+          ctx.arc(x, y, 2, 0, Math.PI * 2);
           ctx.fillStyle = '#DDD6FE';
-          ctx.fillRect(x - packetW/2 + 2, y - 1, packetW - 4, 2);
+          ctx.fill();
+
+          // Trail
+          for (let t = 1; t <= 3; t++) {
+            const trailProgress = Math.max(0, pulse.progress - t * 0.05);
+            const tx = from.x + (to.x - from.x) * trailProgress;
+            const ty = from.y + (to.y - from.y) * trailProgress;
+            ctx.beginPath();
+            ctx.arc(tx, ty, 3 - t * 0.7, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(167, 139, 250, ${0.5 - t * 0.12})`;
+            ctx.fill();
+          }
 
           ctx.shadowBlur = 0;
         });
 
-        // Draw column labels
-        const columnLabels = ['INPUT', 'PROCESS', 'CORE', 'VALIDATE', 'OUTPUT'];
-        const columnX = [0.12, 0.32, 0.52, 0.72, 0.92];
-        ctx.font = '9px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(100, 100, 120, 0.5)';
-        columnLabels.forEach((label, i) => {
-          ctx.fillText(label, width * columnX[i], 16);
-        });
+        // Small amount of ambient energy between nearby nodes (the 5% inefficiency)
+        for (let i = 0; i < 5; i++) {
+          const sparkle = Math.sin(time * 4 + i * 2.5) * 0.5 + 0.5;
+          // Random positions near the nodes but not on the main paths
+          const nodeIdx = Math.floor((time * 0.5 + i) % CLARITY_NODE_COUNT);
+          const node = particles[nodeIdx];
+          if (!node) continue;
+
+          const offsetX = Math.sin(time * 3 + i * 1.7) * 25;
+          const offsetY = Math.cos(time * 2.5 + i * 2.1) * 25;
+
+          ctx.beginPath();
+          ctx.arc(node.x + offsetX, node.y + offsetY, 1.5 * sparkle, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(167, 139, 250, ${0.25 * sparkle})`;
+          ctx.fill();
+        }
       }
 
-      // Draw particles/nodes
+      // Draw particles/nodes - same circular bubbles for all phases
       particles.forEach((p, idx) => {
         if (p.opacity < 0.05) return;
 
-        // Different rendering for clarity phase - rectangular machine nodes
         if (phase === 'clarity') {
+          // Clarity - same circular bubbles, just organized
           if (idx >= CLARITY_NODE_COUNT) return;
 
           const isOutputNode = OUTPUT_ENDPOINT_INDICES.includes(idx);
-          const isInputNode = idx < 3;
           const time = Date.now() * 0.001;
-          const pulseGlow = Math.sin(time * 3 + idx) * 0.15 + 0.85;
+          const pulseGlow = Math.sin(time * 3 + idx) * 0.2 + 0.8;
 
-          // Node dimensions - rectangular
-          const nodeW = isOutputNode || isInputNode ? 28 : 24;
-          const nodeH = isOutputNode || isInputNode ? 20 : 18;
-
-          // Outer glow
-          ctx.shadowBlur = 15;
-          ctx.shadowColor = isOutputNode
-            ? 'rgba(34, 197, 94, 0.6)'
-            : isInputNode
-              ? 'rgba(59, 130, 246, 0.5)'
-              : 'rgba(124, 58, 237, 0.5)';
-
-          // Node background
-          ctx.fillStyle = 'rgba(25, 25, 35, 0.95)';
+          // Outer glow ring
           ctx.beginPath();
-          ctx.roundRect(p.x - nodeW/2, p.y - nodeH/2, nodeW, nodeH, 4);
+          ctx.arc(p.x, p.y, p.radius * 2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(124, 58, 237, ${0.15 * pulseGlow})`;
           ctx.fill();
 
-          // Node border
-          ctx.strokeStyle = isOutputNode
-            ? `rgba(34, 197, 94, ${0.7 * pulseGlow})`
-            : isInputNode
-              ? `rgba(59, 130, 246, ${0.6 * pulseGlow})`
-              : `rgba(124, 58, 237, ${0.6 * pulseGlow})`;
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
+          // Main bubble with glow
+          ctx.shadowBlur = isOutputNode ? 20 : 12;
+          ctx.shadowColor = 'rgba(124, 58, 237, 0.6)';
 
-          // Activity indicator (blinking light)
-          const blinkPhase = (time * 2 + idx * 0.5) % 1;
-          const blinkOn = blinkPhase < 0.7;
-          ctx.fillStyle = isOutputNode
-            ? (blinkOn ? 'rgba(34, 197, 94, 0.9)' : 'rgba(34, 197, 94, 0.3)')
-            : isInputNode
-              ? (blinkOn ? 'rgba(59, 130, 246, 0.9)' : 'rgba(59, 130, 246, 0.3)')
-              : (blinkOn ? 'rgba(167, 139, 250, 0.9)' : 'rgba(167, 139, 250, 0.3)');
           ctx.beginPath();
-          ctx.arc(p.x + nodeW/2 - 5, p.y - nodeH/2 + 5, 2, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.opacity;
           ctx.fill();
 
-          // Internal detail lines (circuit-like)
-          ctx.strokeStyle = isOutputNode
-            ? 'rgba(34, 197, 94, 0.25)'
-            : isInputNode
-              ? 'rgba(59, 130, 246, 0.2)'
-              : 'rgba(124, 58, 237, 0.2)';
-          ctx.lineWidth = 1;
+          // Bright center highlight
           ctx.beginPath();
-          ctx.moveTo(p.x - nodeW/2 + 4, p.y);
-          ctx.lineTo(p.x + nodeW/2 - 4, p.y);
-          ctx.stroke();
+          ctx.arc(p.x, p.y, p.radius * 0.4, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(237, 233, 254, 0.7)';
+          ctx.fill();
 
+          ctx.globalAlpha = 1;
           ctx.shadowBlur = 0;
+
         } else if (phase === 'chaos') {
-          // Chaos - scattered circles
+          // Chaos - same circular bubbles, scattered
           ctx.shadowBlur = 6;
           ctx.shadowColor = 'rgba(239, 68, 68, 0.4)';
 
@@ -593,6 +559,7 @@ export function useParticleSystem(
 
           ctx.globalAlpha = 1;
           ctx.shadowBlur = 0;
+
         } else {
           // Transition
           ctx.shadowBlur = 8;
