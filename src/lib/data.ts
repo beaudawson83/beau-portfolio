@@ -154,9 +154,9 @@ class BADLabsConsole extends Agentic_CRM {
 }`;
 
 export const heroContent = {
-  headline: "Systems shouldn't just run. They should accelerate.",
+  headline: "Operations is leverage. Most companies leave it on the table.",
   subheader:
-    'Most companies pay a "complexity tax" they don\'t even realize they owe. With 10+ years of scaling revenue systems, I don\'t just manage workflows—I dismantle the friction within them. I hunt down operational bottlenecks and replace manual debt with automated wins, turning your back office into a competitive advantage.',
+    'Every manual process, every workaround, every "that\'s just how we do it" — it\'s money you\'re not making. I find those gaps and I close them. Not with band-aids, but with systems designed to scale: automation, AI, architecture that compounds. In 10+ years I\'ve turned cost centers into profit engines. If your operations aren\'t accelerating your business, you\'re subsidizing your competitors.',
   primaryCTA: '> INITIATE_CONTACT',
   secondaryCTA: '[ VIEW_SYSTEM_LOGS ]',
 };

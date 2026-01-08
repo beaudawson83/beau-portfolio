@@ -48,3 +48,11 @@ export interface DataPulse {
   progress: number;
   speed: number;
 }
+
+export interface ChaosPulse {
+  fromParticleIndex: number;
+  toEndpointIndex: number;
+  progress: number;
+  speed: number;
+  opacity: number;
+}

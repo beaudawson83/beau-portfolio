@@ -1,10 +1,12 @@
 import { useRef, useEffect, useCallback } from 'react';
-import { Particle, Phase, DataPulse } from './types';
+import { Particle, Phase, DataPulse, ChaosPulse } from './types';
 import {
   COLORS,
   STRUCTURED_POSITIONS,
   STRUCTURED_CONNECTIONS,
   CLARITY_NODE_COUNT,
+  OUTPUT_ENDPOINT_INDICES,
+  CHAOS_PULSE_CONFIG,
   interpolateColor,
 } from './constants';
 
@@ -23,6 +25,7 @@ export function useParticleSystem(
 ) {
   const particlesRef = useRef<Particle[]>([]);
   const dataPulsesRef = useRef<DataPulse[]>([]);
+  const chaosPulsesRef = useRef<ChaosPulse[]>([]);
   const animationRef = useRef<number | undefined>(undefined);
   const lastTimeRef = useRef<number>(0);
   const dimensionsRef = useRef({ width: 0, height: 0 });
@@ -75,6 +78,21 @@ export function useParticleSystem(
         });
       }
     });
+    return pulses;
+  }, []);
+
+  // Initialize chaos pulses - frantic energy racing to endpoints
+  const initChaosPulses = useCallback(() => {
+    const pulses: ChaosPulse[] = [];
+    for (let i = 0; i < CHAOS_PULSE_CONFIG.PULSE_COUNT; i++) {
+      pulses.push({
+        fromParticleIndex: Math.floor(Math.random() * CHAOS_PARTICLE_COUNT),
+        toEndpointIndex: OUTPUT_ENDPOINT_INDICES[Math.floor(Math.random() * OUTPUT_ENDPOINT_INDICES.length)],
+        progress: Math.random(), // Stagger start positions
+        speed: CHAOS_PULSE_CONFIG.MIN_SPEED + Math.random() * (CHAOS_PULSE_CONFIG.MAX_SPEED - CHAOS_PULSE_CONFIG.MIN_SPEED),
+        opacity: 0.5 + Math.random() * 0.5,
+      });
+    }
     return pulses;
   }, []);
 
@@ -192,15 +210,38 @@ export function useParticleSystem(
     });
   }, []);
 
+  // Update chaos pulses - frantic pulses to endpoints during chaos
+  const updateChaosPulses = useCallback((pulses: ChaosPulse[], particles: Particle[], dt: number, phase: Phase) => {
+    if (phase !== 'chaos') return;
+
+    pulses.forEach((pulse) => {
+      pulse.progress += pulse.speed * dt;
+      if (pulse.progress > 1) {
+        // Reset with new random source particle
+        pulse.progress = 0;
+        pulse.fromParticleIndex = Math.floor(Math.random() * Math.min(particles.length, CHAOS_PARTICLE_COUNT));
+        pulse.toEndpointIndex = OUTPUT_ENDPOINT_INDICES[Math.floor(Math.random() * OUTPUT_ENDPOINT_INDICES.length)];
+        pulse.speed = CHAOS_PULSE_CONFIG.MIN_SPEED + Math.random() * (CHAOS_PULSE_CONFIG.MAX_SPEED - CHAOS_PULSE_CONFIG.MIN_SPEED);
+        pulse.opacity = 0.5 + Math.random() * 0.5;
+      }
+    });
+  }, []);
+
   // Render
   const render = useCallback(
-    (ctx: CanvasRenderingContext2D, particles: Particle[], pulses: DataPulse[], phase: Phase, width: number, height: number) => {
+    (ctx: CanvasRenderingContext2D, particles: Particle[], pulses: DataPulse[], chaosPulses: ChaosPulse[], phase: Phase, width: number, height: number) => {
       // Clear
       ctx.fillStyle = COLORS.BACKGROUND;
       ctx.fillRect(0, 0, width, height);
 
+      // Get endpoint target positions (right side)
+      const endpointPositions = OUTPUT_ENDPOINT_INDICES.map(idx => ({
+        x: (STRUCTURED_POSITIONS[idx].x / 100) * width,
+        y: (STRUCTURED_POSITIONS[idx].y / 100) * height,
+      }));
+
       if (phase === 'chaos') {
-        // Draw chaotic connections - tangled web
+        // Draw chaotic connections - tangled web (background)
         ctx.strokeStyle = 'rgba(239, 68, 68, 0.12)';
         ctx.lineWidth = 1;
 
@@ -229,6 +270,89 @@ export function useParticleSystem(
             }
           }
         }
+
+        // Draw bright connections from chaos to endpoints (the frantic energy paths)
+        chaosPulses.forEach((pulse) => {
+          const fromParticle = particles[pulse.fromParticleIndex];
+          if (!fromParticle) return;
+
+          const endpointIdx = OUTPUT_ENDPOINT_INDICES.indexOf(pulse.toEndpointIndex);
+          const toPos = endpointPositions[endpointIdx];
+          if (!toPos) return;
+
+          // Bright connection line
+          ctx.strokeStyle = `rgba(239, 68, 68, ${CHAOS_PULSE_CONFIG.CONNECTION_BRIGHTNESS * pulse.opacity})`;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(fromParticle.x, fromParticle.y);
+
+          // Curved path for visual interest
+          const midX = (fromParticle.x + toPos.x) / 2;
+          const midY = (fromParticle.y + toPos.y) / 2;
+          const curveOffset = Math.sin(Date.now() * 0.003 + pulse.fromParticleIndex) * 30;
+
+          ctx.quadraticCurveTo(midX, midY + curveOffset, toPos.x, toPos.y);
+          ctx.stroke();
+        });
+
+        // Draw the frantic pulses racing to endpoints
+        chaosPulses.forEach((pulse) => {
+          const fromParticle = particles[pulse.fromParticleIndex];
+          if (!fromParticle) return;
+
+          const endpointIdx = OUTPUT_ENDPOINT_INDICES.indexOf(pulse.toEndpointIndex);
+          const toPos = endpointPositions[endpointIdx];
+          if (!toPos) return;
+
+          // Calculate pulse position along curved path
+          const t = pulse.progress;
+          const midX = (fromParticle.x + toPos.x) / 2;
+          const midY = (fromParticle.y + toPos.y) / 2;
+          const curveOffset = Math.sin(Date.now() * 0.003 + pulse.fromParticleIndex) * 30;
+
+          // Quadratic bezier position
+          const x = (1-t)*(1-t)*fromParticle.x + 2*(1-t)*t*midX + t*t*toPos.x;
+          const y = (1-t)*(1-t)*fromParticle.y + 2*(1-t)*t*(midY + curveOffset) + t*t*toPos.y;
+
+          // Glowing pulse
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(239, 68, 68, ${CHAOS_PULSE_CONFIG.PULSE_BRIGHTNESS * pulse.opacity})`;
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = 'rgba(239, 68, 68, 0.8)';
+          ctx.fill();
+
+          // Short trail
+          for (let tr = 1; tr <= 2; tr++) {
+            const trailT = Math.max(0, t - tr * 0.06);
+            const tx = (1-trailT)*(1-trailT)*fromParticle.x + 2*(1-trailT)*trailT*midX + trailT*trailT*toPos.x;
+            const ty = (1-trailT)*(1-trailT)*fromParticle.y + 2*(1-trailT)*trailT*(midY + curveOffset) + trailT*trailT*toPos.y;
+            ctx.beginPath();
+            ctx.arc(tx, ty, 2 - tr * 0.5, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(239, 68, 68, ${0.4 - tr * 0.15})`;
+            ctx.fill();
+          }
+          ctx.shadowBlur = 0;
+        });
+
+        // Draw endpoint nodes (visible during chaos to show where energy goes)
+        endpointPositions.forEach((pos, idx) => {
+          // Outer glow - pulsing to show receiving energy
+          const pulse = Math.sin(Date.now() * 0.005 + idx) * 0.3 + 0.7;
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 10 * pulse, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+          ctx.fill();
+
+          // Core node
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 5, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = 'rgba(239, 68, 68, 0.6)';
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        });
 
         // Scattered energy particles (wasted energy effect)
         const time = Date.now() * 0.001;
@@ -404,6 +528,7 @@ export function useParticleSystem(
       dimensionsRef.current = { width: rect.width, height: rect.height };
       particlesRef.current = initParticles(rect.width, rect.height);
       dataPulsesRef.current = initDataPulses();
+      chaosPulsesRef.current = initChaosPulses();
       chaosPositionsRef.current = [];
     };
 
@@ -423,7 +548,8 @@ export function useParticleSystem(
 
       updateParticles(particlesRef.current, options.phase, dt, width, height);
       updateDataPulses(dataPulsesRef.current, dt, options.phase);
-      render(ctx, particlesRef.current, dataPulsesRef.current, options.phase, width, height);
+      updateChaosPulses(chaosPulsesRef.current, particlesRef.current, dt, options.phase);
+      render(ctx, particlesRef.current, dataPulsesRef.current, chaosPulsesRef.current, options.phase, width, height);
 
       animationRef.current = requestAnimationFrame(animate);
     };
@@ -437,15 +563,16 @@ export function useParticleSystem(
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [canvasRef, options.phase, options.isInView, initParticles, initDataPulses, updateParticles, updateDataPulses, render]);
+  }, [canvasRef, options.phase, options.isInView, initParticles, initDataPulses, initChaosPulses, updateParticles, updateDataPulses, updateChaosPulses, render]);
 
   const resetParticles = useCallback(() => {
     const { width, height } = dimensionsRef.current;
     if (width && height) {
       particlesRef.current = initParticles(width, height);
+      chaosPulsesRef.current = initChaosPulses();
       chaosPositionsRef.current = [];
     }
-  }, [initParticles]);
+  }, [initParticles, initChaosPulses]);
 
   return { resetParticles };
 }

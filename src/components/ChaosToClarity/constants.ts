@@ -49,6 +49,18 @@ export const PARTICLE_COUNTS = {
 // Final node count after consolidation
 export const CLARITY_NODE_COUNT = 12;
 
+// Output endpoint indices (right side nodes that receive data)
+export const OUTPUT_ENDPOINT_INDICES = [9, 10, 11];
+
+// Chaos pulse settings - frantic energy to endpoints
+export const CHAOS_PULSE_CONFIG = {
+  PULSE_COUNT: 15,           // Many pulses showing wasted energy
+  MIN_SPEED: 0.8,            // Fast - frantic pace
+  MAX_SPEED: 1.5,            // Very fast
+  CONNECTION_BRIGHTNESS: 0.45, // Brighter than normal chaos connections
+  PULSE_BRIGHTNESS: 0.8,     // Bright pulses
+};
+
 // Structured positions for clarity state (percentage-based)
 // Forms a clean processing pipeline: inputs -> processing -> hub -> outputs
 export const STRUCTURED_POSITIONS: StructuredNode[] = [
