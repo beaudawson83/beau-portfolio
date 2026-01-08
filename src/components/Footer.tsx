@@ -3,6 +3,7 @@
 import { motion, useInView } from 'framer-motion';
 import { useRef, useState, FormEvent } from 'react';
 import { socialLinks } from '@/lib/data';
+import { ContactObjective, OBJECTIVE_LABELS } from '@/types';
 
 export default function Footer() {
   const ref = useRef<HTMLDivElement>(null);
@@ -10,7 +11,7 @@ export default function Footer() {
 
   const [formData, setFormData] = useState({
     name: '',
-    objective: 'full-time' as 'full-time' | 'fractional',
+    objective: 'full-time' as ContactObjective,
     message: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,14 +25,15 @@ export default function Footer() {
     setSubmitStatus('idle');
 
     try {
-      // Create mailto link as fallback (can be replaced with API call)
-      const subject = encodeURIComponent(
-        `Portfolio Contact: ${formData.objective === 'full-time' ? 'Full-Time Director' : 'Fractional Deployment'}`
-      );
-      const body = encodeURIComponent(
-        `Name: ${formData.name}\nObjective: ${formData.objective === 'full-time' ? 'Full-Time Director' : 'Fractional Deployment'}\n\nMessage:\n${formData.message}`
-      );
-      window.location.href = `mailto:beau.dawson83@gmail.com?subject=${subject}&body=${body}`;
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
 
       setSubmitStatus('success');
       setFormData({ name: '', objective: 'full-time', message: '' });
@@ -96,13 +98,16 @@ export default function Footer() {
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    objective: e.target.value as 'full-time' | 'fractional',
+                    objective: e.target.value as ContactObjective,
                   }))
                 }
                 className="flex-1 bg-[#1F1F1F] border border-[#1F1F1F] focus:border-[#7C3AED] px-3 sm:px-4 py-2 font-mono text-xs sm:text-sm 2xl:text-base text-white outline-none transition-colors cursor-pointer"
               >
-                <option value="full-time">Full-Time Director</option>
-                <option value="fractional">Fractional Deployment</option>
+                {(Object.keys(OBJECTIVE_LABELS) as ContactObjective[]).map((key) => (
+                  <option key={key} value={key}>
+                    {OBJECTIVE_LABELS[key]}
+                  </option>
+                ))}
               </select>
             </div>
 

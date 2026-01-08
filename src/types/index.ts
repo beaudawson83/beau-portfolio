@@ -19,9 +19,26 @@ export interface Skill {
   items: string[];
 }
 
+export type ContactObjective =
+  | 'full-time'
+  | 'fractional'
+  | 'project'
+  | 'consulting'
+  | 'speaking'
+  | 'connecting';
+
+export const OBJECTIVE_LABELS: Record<ContactObjective, string> = {
+  'full-time': 'Full-Time Director',
+  'fractional': 'Fractional Deployment',
+  'project': 'Project-Based Engagement',
+  'consulting': 'Consulting / Advisory',
+  'speaking': 'Speaking / Workshop',
+  'connecting': 'Just Connecting',
+};
+
 export interface ContactFormData {
   name: string;
-  objective: 'full-time' | 'fractional';
+  objective: ContactObjective;
   message: string;
 }
 
