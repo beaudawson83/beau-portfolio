@@ -16,9 +16,9 @@ export default function Hero() {
   };
 
   return (
-    <section className="min-h-screen flex items-center pt-16 pb-12 px-4 sm:px-6 lg:px-8 2xl:px-16">
+    <section className="min-h-screen flex items-center pt-14 sm:pt-16 pb-8 sm:pb-12 px-4 sm:px-6 lg:px-8 2xl:px-16">
       <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 2xl:gap-24 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 md:gap-12 lg:gap-16 2xl:gap-24 items-center">
           {/* Left: Text Block */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -26,13 +26,13 @@ export default function Hero() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="order-2 lg:order-1"
           >
-            <h1 className="text-2xl sm:text-3xl lg:text-5xl 2xl:text-6xl font-bold leading-tight mb-4 sm:mb-6">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl 2xl:text-6xl font-bold leading-tight mb-3 sm:mb-4 md:mb-6">
               {heroContent.headline}
             </h1>
-            <p className="text-base sm:text-lg lg:text-xl 2xl:text-2xl text-[#94A3B8] leading-relaxed mb-6 sm:mb-8 max-w-xl 2xl:max-w-2xl">
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl 2xl:text-2xl text-[#94A3B8] leading-relaxed mb-5 sm:mb-6 md:mb-8 max-w-xl 2xl:max-w-2xl">
               {heroContent.subheader}
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
               <Button variant="primary" onClick={scrollToContact}>
                 {heroContent.primaryCTA}
               </Button>
@@ -41,7 +41,7 @@ export default function Hero() {
               </Button>
             </div>
 
-            {/* Ask Beau Terminal */}
+            {/* Ask Beau Terminal - Desktop */}
             <div className="hidden lg:block">
               <AskBeau />
             </div>
@@ -54,8 +54,8 @@ export default function Hero() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="order-1 lg:order-2 flex justify-center lg:justify-end"
           >
-            <div className="relative w-48 h-48 sm:w-72 sm:h-72 lg:w-96 lg:h-96 2xl:w-[28rem] 2xl:h-[28rem]">
-              {/* Placeholder for headshot - replace with actual image */}
+            <div className="relative w-40 h-40 sm:w-56 sm:h-56 md:w-72 md:h-72 lg:w-96 lg:h-96 2xl:w-[28rem] 2xl:h-[28rem]">
+              {/* Headshot with border effects */}
               <div className="relative w-full h-full rounded-sm overflow-hidden border border-[#1F1F1F] scanlines">
                 <Image
                   src="/beau.jpg"
@@ -65,15 +65,25 @@ export default function Hero() {
                   priority
                 />
 
-                {/* Corner accents */}
-                <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#7C3AED]" />
-                <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#7C3AED]" />
-                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#7C3AED]" />
-                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#7C3AED]" />
+                {/* Corner accents - responsive sizing */}
+                <div className="absolute top-0 left-0 w-3 h-3 sm:w-4 sm:h-4 border-t-2 border-l-2 border-[#7C3AED]" />
+                <div className="absolute top-0 right-0 w-3 h-3 sm:w-4 sm:h-4 border-t-2 border-r-2 border-[#7C3AED]" />
+                <div className="absolute bottom-0 left-0 w-3 h-3 sm:w-4 sm:h-4 border-b-2 border-l-2 border-[#7C3AED]" />
+                <div className="absolute bottom-0 right-0 w-3 h-3 sm:w-4 sm:h-4 border-b-2 border-r-2 border-[#7C3AED]" />
               </div>
             </div>
           </motion.div>
         </div>
+
+        {/* Ask Beau Terminal - Mobile/Tablet (below hero content) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="lg:hidden mt-8 sm:mt-10"
+        >
+          <AskBeau />
+        </motion.div>
       </div>
     </section>
   );

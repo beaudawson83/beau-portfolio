@@ -108,7 +108,7 @@ function MiniSparkline({ data, color = '#7C3AED' }: { data: number[]; color?: st
     .join(' ');
 
   return (
-    <svg viewBox="0 0 100 100" className="w-16 h-6" preserveAspectRatio="none">
+    <svg viewBox="0 0 100 100" className="w-12 sm:w-16 h-5 sm:h-6" preserveAspectRatio="none">
       <polyline
         fill="none"
         stroke={color}
@@ -303,20 +303,20 @@ function DepartmentCard({ department, delay }: { department: Department; delay: 
       className={`bg-[#0D0D0D] rounded-lg border ${statusColors[department.status]} border-[#2A2A2A] overflow-hidden hover:border-[#3A3A3A] transition-colors`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-[#1A1A1A] border-b border-[#2A2A2A]">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{department.icon}</span>
-          <span className="font-mono text-xs text-white uppercase tracking-wider">{department.name}</span>
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 bg-[#1A1A1A] border-b border-[#2A2A2A]">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="text-base sm:text-lg">{department.icon}</span>
+          <span className="font-mono text-[10px] sm:text-xs text-white uppercase tracking-wider">{department.name}</span>
         </div>
         <StatusDot status={department.status} />
       </div>
 
       {/* Headline Metric */}
-      <div className="px-4 py-3 border-b border-[#2A2A2A]">
+      <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-[#2A2A2A]">
         <div className="flex items-end justify-between">
           <div>
-            <p className="font-mono text-[10px] text-[#666] uppercase mb-1">{department.headline}</p>
-            <p className="text-2xl font-bold text-white">{department.headlineValue}</p>
+            <p className="font-mono text-[9px] sm:text-[10px] text-[#666] uppercase mb-0.5 sm:mb-1">{department.headline}</p>
+            <p className="text-xl sm:text-2xl font-bold text-white">{department.headlineValue}</p>
           </div>
           <MiniSparkline
             data={sparkData}
@@ -326,20 +326,20 @@ function DepartmentCard({ department, delay }: { department: Department; delay: 
       </div>
 
       {/* Metrics */}
-      <div className="p-4 space-y-3">
+      <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
         {metrics.map((metric) => (
           <div key={metric.label} className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <ProgressRing
                 value={(metric.value / metric.target) * 100}
-                size={24}
+                size={20}
                 strokeWidth={2}
                 status={metric.status}
               />
-              <span className="font-mono text-[10px] text-[#94A3B8] uppercase">{metric.label}</span>
+              <span className="font-mono text-[9px] sm:text-[10px] text-[#94A3B8] uppercase">{metric.label}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-white">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="font-mono text-[10px] sm:text-xs text-white">
                 <AnimatedValue value={metric.value} suffix={metric.unit} decimals={metric.unit === '%' ? 1 : 0} />
               </span>
               <TrendIndicator trend={metric.trend} />
@@ -364,27 +364,27 @@ function ProducerCard({ producer, rank, delay }: { producer: Producer; rank: num
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4, delay }}
-      className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-[#1A1A1A] transition-colors"
+      className="flex items-center gap-2 sm:gap-3 py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-[#1A1A1A] transition-colors"
     >
       {/* Rank */}
-      <div className={`w-6 h-6 rounded-full ${rankBgs[rank]} flex items-center justify-center`}>
-        <span className={`font-mono text-xs font-bold ${rankColors[rank]}`}>{rank + 1}</span>
+      <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full ${rankBgs[rank]} flex items-center justify-center flex-shrink-0`}>
+        <span className={`font-mono text-[10px] sm:text-xs font-bold ${rankColors[rank]}`}>{rank + 1}</span>
       </div>
 
       {/* Avatar */}
-      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] flex items-center justify-center text-white text-xs font-bold">
+      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] flex items-center justify-center text-white text-[10px] sm:text-xs font-bold flex-shrink-0">
         {producer.initials}
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-white font-medium truncate">{producer.name}</p>
-        <p className="text-[10px] text-[#666] font-mono uppercase">{producer.department}</p>
+        <p className="text-xs sm:text-sm text-white font-medium truncate">{producer.name}</p>
+        <p className="text-[9px] sm:text-[10px] text-[#666] font-mono uppercase">{producer.department}</p>
       </div>
 
       {/* Metric */}
-      <div className="text-right">
-        <p className="text-sm font-bold text-white">{producer.value}</p>
+      <div className="text-right flex-shrink-0">
+        <p className="text-xs sm:text-sm font-bold text-white">{producer.value}</p>
         <div className="flex items-center justify-end gap-1">
           <TrendIndicator trend={producer.trend > 0 ? 'up' : 'down'} value={Math.abs(producer.trend)} />
         </div>
@@ -401,15 +401,15 @@ function TopProducers({ producers }: { producers: Producer[] }) {
       transition={{ duration: 0.5, delay: 0.6 }}
       className="bg-[#0D0D0D] rounded-lg border border-[#2A2A2A] overflow-hidden"
     >
-      <div className="flex items-center justify-between px-4 py-3 bg-[#1A1A1A] border-b border-[#2A2A2A]">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">🏆</span>
-          <span className="font-mono text-xs text-white uppercase tracking-wider">Top Producers</span>
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 bg-[#1A1A1A] border-b border-[#2A2A2A]">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="text-base sm:text-lg">🏆</span>
+          <span className="font-mono text-[10px] sm:text-xs text-white uppercase tracking-wider">Top Producers</span>
         </div>
-        <span className="font-mono text-[10px] text-[#666]">THIS WEEK</span>
+        <span className="font-mono text-[9px] sm:text-[10px] text-[#666]">THIS WEEK</span>
       </div>
 
-      <div className="p-2">
+      <div className="p-1.5 sm:p-2">
         {producers.map((producer, index) => (
           <ProducerCard
             key={producer.id}
@@ -452,7 +452,7 @@ function GlobalMetrics() {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
+      className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6"
     >
       {[
         { label: 'Active_Users', value: metrics.activeUsers, prefix: '', suffix: '', color: 'text-emerald-400' },
@@ -462,10 +462,10 @@ function GlobalMetrics() {
       ].map((metric) => (
         <div
           key={metric.label}
-          className="bg-[#0D0D0D] rounded-lg border border-[#2A2A2A] p-4 text-center"
+          className="bg-[#0D0D0D] rounded-lg border border-[#2A2A2A] p-2.5 sm:p-3 md:p-4 text-center"
         >
-          <p className="font-mono text-[10px] text-[#666] uppercase mb-2">{metric.label}</p>
-          <p className={`text-xl font-bold ${metric.color}`}>
+          <p className="font-mono text-[8px] sm:text-[9px] md:text-[10px] text-[#666] uppercase mb-1 sm:mb-2">{metric.label}</p>
+          <p className={`text-base sm:text-lg md:text-xl font-bold ${metric.color}`}>
             <AnimatedValue
               value={metric.value}
               prefix={metric.prefix}
@@ -528,18 +528,18 @@ function ActivityFeed() {
       transition={{ duration: 0.5, delay: 0.8 }}
       className="bg-[#0D0D0D] rounded-lg border border-[#2A2A2A] overflow-hidden"
     >
-      <div className="flex items-center justify-between px-4 py-3 bg-[#1A1A1A] border-b border-[#2A2A2A]">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">📡</span>
-          <span className="font-mono text-xs text-white uppercase tracking-wider">Live Activity</span>
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 bg-[#1A1A1A] border-b border-[#2A2A2A]">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="text-base sm:text-lg">📡</span>
+          <span className="font-mono text-[10px] sm:text-xs text-white uppercase tracking-wider">Live Activity</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[10px] text-[#666]">LIVE</span>
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="font-mono text-[9px] sm:text-[10px] text-[#666]">LIVE</span>
+          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
         </div>
       </div>
 
-      <div className="p-3 space-y-2">
+      <div className="p-2 sm:p-3 space-y-1 sm:space-y-2">
         <AnimatePresence mode="popLayout">
           {visibleActivities.map((activity) => (
             <motion.div
@@ -548,14 +548,14 @@ function ActivityFeed() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.3 }}
-              className="flex items-center gap-3 py-2 px-2 rounded hover:bg-[#1A1A1A] transition-colors"
+              className="flex items-center gap-2 sm:gap-3 py-1.5 sm:py-2 px-1.5 sm:px-2 rounded hover:bg-[#1A1A1A] transition-colors"
             >
-              <span className={`text-sm ${typeColors[activity.type as keyof typeof typeColors]}`}>
+              <span className={`text-xs sm:text-sm flex-shrink-0 ${typeColors[activity.type as keyof typeof typeColors]}`}>
                 {typeIcons[activity.type as keyof typeof typeIcons]}
               </span>
-              <span className="font-mono text-[10px] text-[#666] w-16">{activity.dept}</span>
-              <span className="text-xs text-[#94A3B8] flex-1 truncate">{activity.message}</span>
-              <span className="font-mono text-[10px] text-[#444]">{activity.time}</span>
+              <span className="font-mono text-[8px] sm:text-[10px] text-[#666] w-12 sm:w-16 flex-shrink-0">{activity.dept}</span>
+              <span className="text-[10px] sm:text-xs text-[#94A3B8] flex-1 truncate">{activity.message}</span>
+              <span className="font-mono text-[8px] sm:text-[10px] text-[#444] flex-shrink-0">{activity.time}</span>
             </motion.div>
           ))}
         </AnimatePresence>
@@ -590,22 +590,22 @@ function SystemStatusFooter() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5, delay: 1 }}
-      className="mt-6 flex flex-wrap items-center justify-center gap-6 text-xs font-mono text-[#666]"
+      className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4 md:gap-6 text-[9px] sm:text-[10px] md:text-xs font-mono text-[#666]"
     >
-      <div className="flex items-center gap-2">
-        <span className="uppercase">System_Uptime:</span>
+      <div className="flex items-center gap-1 sm:gap-2">
+        <span className="uppercase">Uptime:</span>
         <span className="text-white">{days}d {hours}h {minutes}m {secs.toString().padStart(2, '0')}s</span>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="uppercase">Last_Sync:</span>
+      <div className="flex items-center gap-1 sm:gap-2">
+        <span className="uppercase">Sync:</span>
         <span className="text-emerald-400">0.3s ago</span>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="uppercase">Data_Sources:</span>
-        <span className="text-white">12 connected</span>
+      <div className="flex items-center gap-1 sm:gap-2 hidden sm:flex">
+        <span className="uppercase">Sources:</span>
+        <span className="text-white">12</span>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="uppercase">API_Health:</span>
+      <div className="flex items-center gap-1 sm:gap-2">
+        <span className="uppercase">API:</span>
         <span className="text-emerald-400">100%</span>
       </div>
     </motion.div>
@@ -719,22 +719,22 @@ export default function SystemMonitor() {
   ];
 
   return (
-    <section ref={ref} className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16 bg-[#0A0A0A]">
+    <section ref={ref} className="py-12 sm:py-16 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16 bg-[#0A0A0A]">
       <div className="max-w-7xl 2xl:max-w-[1800px] mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center mb-8"
+          className="text-center mb-6 sm:mb-8"
         >
-          <h2 className="font-mono text-[#94A3B8] text-sm sm:text-base mb-4">
+          <h2 className="font-mono text-[#94A3B8] text-xs sm:text-sm md:text-base mb-3 sm:mb-4">
             // SYSTEM_MONITOR
           </h2>
-          <p className="text-xl sm:text-2xl lg:text-3xl font-semibold mb-2">
+          <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold mb-2">
             Operations Command Center
           </p>
-          <p className="text-sm text-[#666] font-mono">
+          <p className="text-xs sm:text-sm text-[#666] font-mono">
             One dashboard to rule them all
           </p>
         </motion.div>
@@ -748,7 +748,7 @@ export default function SystemMonitor() {
             <GlobalMetrics />
 
             {/* Department Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
               {departments.map((dept, index) => (
                 <DepartmentCard
                   key={dept.id}
@@ -759,7 +759,7 @@ export default function SystemMonitor() {
             </div>
 
             {/* Bottom Row: Producers + Activity Feed */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <TopProducers producers={producers} />
               <ActivityFeed />
             </div>

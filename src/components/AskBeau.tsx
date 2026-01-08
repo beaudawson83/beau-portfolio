@@ -212,7 +212,7 @@ export default function AskBeau() {
       transition={{ duration: 0.5, delay: 0.6 }}
       className="w-full max-w-lg relative"
     >
-      {/* Terminal-style hint - positioned outside right of terminal */}
+      {/* Terminal-style hint - positioned outside right of terminal (desktop only) */}
       <AnimatePresence>
         {showHint && messages.length === 0 && !hasReachedLimit && (
           <motion.div
@@ -274,17 +274,17 @@ export default function AskBeau() {
       {/* Terminal window */}
       <div className="bg-[#0D0D0D] rounded-lg border border-[#2A2A2A] overflow-hidden shadow-2xl">
         {/* Terminal header */}
-        <div className="flex items-center gap-2 px-4 py-3 bg-[#1A1A1A] border-b border-[#2A2A2A]">
-          <div className="flex gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
-            <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
-            <div className="w-3 h-3 rounded-full bg-[#27CA40]" />
+        <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-[#1A1A1A] border-b border-[#2A2A2A]">
+          <div className="flex gap-1.5 sm:gap-2">
+            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#FF5F56]" />
+            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#FFBD2E]" />
+            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#27CA40]" />
           </div>
-          <span className="text-xs text-[#666] font-mono ml-2">beau@system ~ </span>
+          <span className="text-[10px] sm:text-xs text-[#666] font-mono ml-1.5 sm:ml-2">beau@system ~ </span>
         </div>
 
         {/* Terminal content */}
-        <div className="p-4 font-mono text-sm relative overflow-hidden">
+        <div className="p-3 sm:p-4 font-mono text-xs sm:text-sm relative overflow-hidden">
           {/* Scanline effect overlay */}
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] opacity-30" />
 
@@ -391,7 +391,7 @@ export default function AskBeau() {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 text-[#94A3B8]"
+                    className="mt-3 sm:mt-4 text-[#94A3B8] text-[11px] sm:text-sm"
                   >
                     <span className="text-[#7C3AED]">$ </span>
                     That&apos;s a wrap, partner! 🤠 You&apos;ve hit the {MAX_QUESTIONS}-question limit. Refresh the page to start a new round, or better yet—reach out to the real Beau! 🥊
@@ -401,7 +401,7 @@ export default function AskBeau() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="mt-4 relative"
+                    className="mt-3 sm:mt-4 relative"
                   >
                     {/* Ready flash effect */}
                     {showReady && (
@@ -416,30 +416,30 @@ export default function AskBeau() {
                     {/* Input with glow effect */}
                     <form
                       onSubmit={handleSubmit}
-                      className={`flex items-center gap-2 p-2 -m-2 rounded-lg transition-all duration-300 ${
+                      className={`flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 -m-1.5 sm:-m-2 rounded-lg transition-all duration-300 ${
                         showGlow && messages.length === 0
                           ? 'animate-pulse-glow'
                           : ''
                       }`}
                     >
-                      <span className="text-[#7C3AED]">$ ask-beau&gt;</span>
+                      <span className="text-[#7C3AED] text-[10px] sm:text-sm whitespace-nowrap">$ ask-beau&gt;</span>
                       <input
                         ref={inputRef}
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onFocus={() => setShowHint(false)}
-                        placeholder="Ask anything about Beau..."
+                        placeholder="Ask anything..."
                         disabled={isLoading}
-                        className="flex-1 bg-transparent text-white placeholder-[#666] outline-none font-mono text-sm"
+                        className="flex-1 min-w-0 bg-transparent text-white placeholder-[#666] outline-none font-mono text-[11px] sm:text-sm"
                         maxLength={200}
                       />
                       <button
                         type="submit"
                         disabled={isLoading || !input.trim()}
-                        className="text-[#7C3AED] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="text-[#7C3AED] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-[10px] sm:text-sm whitespace-nowrap flex-shrink-0"
                       >
-                        [{MAX_QUESTIONS - questionCount} left]
+                        [{MAX_QUESTIONS - questionCount}]
                       </button>
                     </form>
                   </motion.div>

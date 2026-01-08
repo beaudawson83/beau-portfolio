@@ -56,14 +56,14 @@ export default function TelemetryGrid() {
   const isInView = useInView(ref, { once: true, margin: '-100px' });
 
   return (
-    <section className="py-12 sm:py-16 2xl:py-20 px-4 sm:px-6 lg:px-8 2xl:px-16 border-y border-[#1F1F1F]">
+    <section className="py-8 sm:py-12 md:py-16 2xl:py-20 px-4 sm:px-6 lg:px-8 2xl:px-16 border-y border-[#1F1F1F]">
       <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto">
         <motion.div
           ref={ref}
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.5 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-0 lg:divide-x lg:divide-[#1F1F1F]"
+          className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 md:gap-0 md:divide-x md:divide-[#1F1F1F]"
         >
           {metrics.map((metric, index) => (
             <motion.div
@@ -71,23 +71,23 @@ export default function TelemetryGrid() {
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="lg:px-8 2xl:px-12 first:lg:pl-0 last:lg:pr-0 text-center lg:text-left"
+              className="md:px-6 lg:px-8 2xl:px-12 first:md:pl-0 last:md:pr-0 text-center md:text-left"
             >
               {/* Label */}
-              <div className="font-mono text-[10px] sm:text-xs 2xl:text-sm tracking-wider text-[#94A3B8] mb-1 sm:mb-2">
+              <div className="font-mono text-[9px] sm:text-[10px] md:text-xs 2xl:text-sm tracking-wider text-[#94A3B8] mb-1 sm:mb-2">
                 {metric.label}
               </div>
 
               {/* Value */}
-              <div className="font-mono text-xl sm:text-2xl lg:text-3xl 2xl:text-4xl font-bold text-[#7C3AED] mb-1 sm:mb-2">
+              <div className="font-mono text-lg sm:text-xl md:text-2xl lg:text-3xl 2xl:text-4xl font-bold text-[#7C3AED] mb-1 sm:mb-2">
                 <AnimatedValue value={metric.value} inView={isInView} />
               </div>
 
               {/* Context */}
-              <div className="text-xs sm:text-sm 2xl:text-base text-[#94A3B8] mb-1">{metric.context}</div>
+              <div className="text-[11px] sm:text-xs md:text-sm 2xl:text-base text-[#94A3B8] mb-1 leading-snug">{metric.context}</div>
 
               {/* Source */}
-              <div className="font-mono text-[10px] sm:text-xs text-[#94A3B8]/60">
+              <div className="font-mono text-[9px] sm:text-[10px] md:text-xs text-[#94A3B8]/60">
                 // {metric.source}
               </div>
             </motion.div>

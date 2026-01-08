@@ -51,7 +51,7 @@ export default function ChaosToClarity() {
     phase === 'chaos' ? '#EF4444' : phase === 'clarity' ? '#10B981' : '#94A3B8';
 
   return (
-    <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16 overflow-hidden">
+    <section className="py-12 sm:py-16 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16 overflow-hidden">
       <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto">
         {/* Header */}
         <motion.div
@@ -59,15 +59,15 @@ export default function ChaosToClarity() {
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-10 md:mb-12"
         >
-          <h2 className="font-mono text-[#94A3B8] text-sm sm:text-base mb-4">
+          <h2 className="font-mono text-[#94A3B8] text-xs sm:text-sm md:text-base mb-3 sm:mb-4">
             // PROCESS_OPTIMIZATION
           </h2>
-          <p className="text-xl sm:text-2xl lg:text-3xl font-semibold mb-2">
+          <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold mb-2">
             From Manual Chaos to Automated Clarity
           </p>
-          <p className="text-[#94A3B8] text-sm sm:text-base max-w-xl mx-auto">
+          <p className="text-[#94A3B8] text-xs sm:text-sm md:text-base max-w-xl mx-auto px-4">
             See how inefficient workflows transform into streamlined, automated processes
           </p>
         </motion.div>
@@ -81,20 +81,20 @@ export default function ChaosToClarity() {
         >
           <div className="bg-[#0D0D0D] rounded-lg border border-[#2A2A2A] overflow-hidden">
             {/* Terminal Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[#1A1A1A] border-b border-[#2A2A2A]">
-              <div className="flex items-center gap-3">
-                <div className="flex gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-[#EF4444]/60" />
-                  <span className="w-3 h-3 rounded-full bg-[#F59E0B]/60" />
-                  <span className="w-3 h-3 rounded-full bg-[#10B981]/60" />
+            <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 bg-[#1A1A1A] border-b border-[#2A2A2A]">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex gap-1 sm:gap-1.5">
+                  <span className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-[#EF4444]/60" />
+                  <span className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-[#F59E0B]/60" />
+                  <span className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-[#10B981]/60" />
                 </div>
-                <span className="font-mono text-sm text-white uppercase tracking-wider">
+                <span className="font-mono text-[10px] sm:text-xs md:text-sm text-white uppercase tracking-wider">
                   Workflow_Transform
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <motion.span
-                  className={`font-mono text-xs uppercase px-2 py-1 rounded transition-colors duration-300 ${
+                  className={`font-mono text-[9px] sm:text-[10px] md:text-xs uppercase px-1.5 sm:px-2 py-0.5 sm:py-1 rounded transition-colors duration-300 ${
                     phase === 'chaos'
                       ? 'bg-red-900/50 text-red-400'
                       : phase === 'transition'
@@ -111,8 +111,8 @@ export default function ChaosToClarity() {
               </div>
             </div>
 
-            {/* Canvas Animation Area */}
-            <div className="relative aspect-[2/1] min-h-[300px]">
+            {/* Canvas Animation Area - Better mobile aspect ratio */}
+            <div className="relative aspect-[4/3] sm:aspect-[3/2] md:aspect-[2/1] min-h-[220px] sm:min-h-[260px] md:min-h-[300px]">
               <canvas
                 ref={canvasRef}
                 className="absolute inset-0 w-full h-full"
@@ -166,7 +166,7 @@ export default function ChaosToClarity() {
             </div>
 
             {/* Control Bar */}
-            <div className="px-4 py-3 bg-[#1A1A1A] border-t border-[#2A2A2A] flex items-center justify-center gap-3">
+            <div className="px-3 sm:px-4 py-2 sm:py-3 bg-[#1A1A1A] border-t border-[#2A2A2A] flex items-center justify-center gap-2 sm:gap-3">
               <AnimatePresence mode="wait">
                 {phase === 'chaos' && (
                   <motion.button
@@ -177,12 +177,13 @@ export default function ChaosToClarity() {
                     transition={{ duration: 0.2 }}
                     onClick={handleActivate}
                     disabled={isActivating}
-                    className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 border border-violet-400/50 rounded font-mono text-xs uppercase tracking-wider text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-violet-600 hover:bg-violet-500 active:bg-violet-700 border border-violet-400/50 rounded font-mono text-[10px] sm:text-xs uppercase tracking-wider text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    Activate Beau Protocol
+                    <span className="hidden sm:inline">Activate Beau Protocol</span>
+                    <span className="sm:hidden">Activate</span>
                   </motion.button>
                 )}
 
@@ -192,10 +193,10 @@ export default function ChaosToClarity() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded font-mono text-xs uppercase tracking-wider text-[#94A3B8]"
+                    className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-[#2A2A2A] border border-[#3A3A3A] rounded font-mono text-[10px] sm:text-xs uppercase tracking-wider text-[#94A3B8]"
                   >
                     <motion.div
-                      className="w-3 h-3 border-2 border-violet-400/30 border-t-violet-400 rounded-full"
+                      className="w-2.5 h-2.5 sm:w-3 sm:h-3 border-2 border-violet-400/30 border-t-violet-400 rounded-full"
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                     />
@@ -211,9 +212,9 @@ export default function ChaosToClarity() {
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
                     onClick={handleReset}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#2A2A2A] hover:bg-[#3A3A3A] border border-[#3A3A3A] hover:border-[#4A4A4A] rounded font-mono text-xs uppercase tracking-wider text-[#94A3B8] hover:text-white transition-all duration-200"
+                    className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-[#2A2A2A] hover:bg-[#3A3A3A] active:bg-[#4A4A4A] border border-[#3A3A3A] hover:border-[#4A4A4A] rounded font-mono text-[10px] sm:text-xs uppercase tracking-wider text-[#94A3B8] hover:text-white transition-all duration-200"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                     Reset Demo
@@ -223,13 +224,13 @@ export default function ChaosToClarity() {
             </div>
 
             {/* Footer Stats */}
-            <div className="px-4 py-3 bg-[#1A1A1A] border-t border-[#2A2A2A] grid grid-cols-3 gap-4 text-center">
+            <div className="px-3 sm:px-4 py-2 sm:py-3 bg-[#1A1A1A] border-t border-[#2A2A2A] grid grid-cols-3 gap-2 sm:gap-4 text-center">
               <div>
-                <div className="font-mono text-xs text-[#666] uppercase mb-1">
+                <div className="font-mono text-[9px] sm:text-[10px] md:text-xs text-[#666] uppercase mb-0.5 sm:mb-1">
                   Efficiency
                 </div>
                 <motion.div
-                  className="font-mono text-sm font-medium"
+                  className="font-mono text-xs sm:text-sm font-medium"
                   animate={{ color: statColor }}
                   transition={{ duration: 0.3 }}
                 >
@@ -237,11 +238,11 @@ export default function ChaosToClarity() {
                 </motion.div>
               </div>
               <div>
-                <div className="font-mono text-xs text-[#666] uppercase mb-1">
+                <div className="font-mono text-[9px] sm:text-[10px] md:text-xs text-[#666] uppercase mb-0.5 sm:mb-1">
                   Bottlenecks
                 </div>
                 <motion.div
-                  className="font-mono text-sm font-medium"
+                  className="font-mono text-xs sm:text-sm font-medium"
                   animate={{ color: statColor }}
                   transition={{ duration: 0.3 }}
                 >
@@ -249,11 +250,11 @@ export default function ChaosToClarity() {
                 </motion.div>
               </div>
               <div>
-                <div className="font-mono text-xs text-[#666] uppercase mb-1">
+                <div className="font-mono text-[9px] sm:text-[10px] md:text-xs text-[#666] uppercase mb-0.5 sm:mb-1">
                   Automation
                 </div>
                 <motion.div
-                  className="font-mono text-sm font-medium"
+                  className="font-mono text-xs sm:text-sm font-medium"
                   animate={{ color: statColor }}
                   transition={{ duration: 0.3 }}
                 >
