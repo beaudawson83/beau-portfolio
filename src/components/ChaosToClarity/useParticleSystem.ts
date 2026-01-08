@@ -376,37 +376,40 @@ export function useParticleSystem(
           ctx.shadowBlur = 0;
         });
 
-        // Draw the 3 output receivers (customer expectations - distinct from worker bubbles)
+        // Draw the 3 output receivers (customer expectations - amber/gold, distinct from red bubbles)
         endpointPositions.forEach((pos, idx) => {
           const pulse = Math.sin(time * 4 + idx) * 0.15 + 0.85;
 
-          // Receiver dish shape - concave arc facing left (receiving from the system)
-          ctx.strokeStyle = `rgba(239, 68, 68, ${0.5 * pulse})`;
+          // Soft cup/funnel shape - open and receptive
+          // Outer funnel rim
+          ctx.strokeStyle = `rgba(251, 191, 36, ${0.4 * pulse})`;
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(pos.x + 8, pos.y, 12, Math.PI * 0.6, Math.PI * 1.4);
+          ctx.moveTo(pos.x - 6, pos.y - 12);
+          ctx.quadraticCurveTo(pos.x + 12, pos.y, pos.x - 6, pos.y + 12);
           ctx.stroke();
 
-          // Inner receiver arc
-          ctx.strokeStyle = `rgba(239, 68, 68, ${0.3 * pulse})`;
+          // Inner funnel
+          ctx.strokeStyle = `rgba(251, 191, 36, ${0.25 * pulse})`;
           ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.arc(pos.x + 5, pos.y, 8, Math.PI * 0.65, Math.PI * 1.35);
+          ctx.moveTo(pos.x - 4, pos.y - 8);
+          ctx.quadraticCurveTo(pos.x + 8, pos.y, pos.x - 4, pos.y + 8);
           ctx.stroke();
 
-          // Collection point (where energy lands)
+          // Collection basin (where energy gathers)
           ctx.beginPath();
-          ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(239, 68, 68, ${0.6 * pulse})`;
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = 'rgba(239, 68, 68, 0.5)';
+          ctx.arc(pos.x - 2, pos.y, 5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(251, 191, 36, ${0.35 * pulse})`;
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = 'rgba(251, 191, 36, 0.4)';
           ctx.fill();
           ctx.shadowBlur = 0;
 
-          // Small indicator light (dim - not receiving much)
+          // Small indicator light (dim amber - waiting for more)
           ctx.beginPath();
-          ctx.arc(pos.x + 10, pos.y - 8, 2, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(239, 68, 68, ${0.3 + Math.sin(time * 6 + idx) * 0.2})`;
+          ctx.arc(pos.x + 6, pos.y - 10, 2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(251, 191, 36, ${0.25 + Math.sin(time * 5 + idx) * 0.15})`;
           ctx.fill();
         });
 
@@ -556,39 +559,41 @@ export function useParticleSystem(
           const pulseGlow = Math.sin(time * 3 + idx) * 0.2 + 0.8;
 
           if (isOutputNode) {
-            // Output nodes: Draw as receivers (customer expectations)
-            // Receiver dish shape - concave arc facing left
-            ctx.strokeStyle = `rgba(34, 197, 94, ${0.7 * pulseGlow})`;
+            // Output nodes: Draw as receivers (customer expectations) - soft funnel shape
+            // Outer funnel rim - open and welcoming
+            ctx.strokeStyle = `rgba(34, 197, 94, ${0.6 * pulseGlow})`;
             ctx.lineWidth = 2.5;
             ctx.beginPath();
-            ctx.arc(p.x + 10, p.y, 14, Math.PI * 0.6, Math.PI * 1.4);
+            ctx.moveTo(p.x - 8, p.y - 14);
+            ctx.quadraticCurveTo(p.x + 14, p.y, p.x - 8, p.y + 14);
             ctx.stroke();
 
-            // Inner receiver arc
-            ctx.strokeStyle = `rgba(34, 197, 94, ${0.5 * pulseGlow})`;
+            // Inner funnel
+            ctx.strokeStyle = `rgba(34, 197, 94, ${0.4 * pulseGlow})`;
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(p.x + 6, p.y, 9, Math.PI * 0.65, Math.PI * 1.35);
+            ctx.moveTo(p.x - 5, p.y - 9);
+            ctx.quadraticCurveTo(p.x + 10, p.y, p.x - 5, p.y + 9);
             ctx.stroke();
 
-            // Collection point (brightly lit - receiving lots of energy)
+            // Collection basin (brightly lit - receiving lots of energy)
             ctx.beginPath();
-            ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(34, 197, 94, ${0.9 * pulseGlow})`;
-            ctx.shadowBlur = 15;
+            ctx.arc(p.x - 2, p.y, 6, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(34, 197, 94, ${0.8 * pulseGlow})`;
+            ctx.shadowBlur = 18;
             ctx.shadowColor = 'rgba(34, 197, 94, 0.7)';
             ctx.fill();
 
             // Bright core
             ctx.beginPath();
-            ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+            ctx.arc(p.x - 2, p.y, 3, 0, Math.PI * 2);
             ctx.fillStyle = 'rgba(187, 247, 208, 0.9)';
             ctx.fill();
 
-            // Indicator light (bright - receiving well)
+            // Indicator light (bright green - actively receiving)
             ctx.beginPath();
-            ctx.arc(p.x + 12, p.y - 10, 2.5, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(34, 197, 94, ${0.7 + Math.sin(time * 5 + idx) * 0.3})`;
+            ctx.arc(p.x + 8, p.y - 12, 3, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(34, 197, 94, ${0.8 + Math.sin(time * 5 + idx) * 0.2})`;
             ctx.fill();
 
             ctx.shadowBlur = 0;
