@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Button from './ui/Button';
-import TerminalAnimation from './TerminalAnimation';
+import AskBeau from './AskBeau';
 import { heroContent } from '@/lib/data';
 
 export default function Hero() {
@@ -41,9 +41,9 @@ export default function Hero() {
               </Button>
             </div>
 
-            {/* Terminal Animation */}
+            {/* Ask Beau Terminal */}
             <div className="hidden lg:block">
-              <TerminalAnimation />
+              <AskBeau />
             </div>
           </motion.div>
 
