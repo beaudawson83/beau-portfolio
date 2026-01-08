@@ -6,7 +6,6 @@ import {
   STRUCTURED_CONNECTIONS,
   CLARITY_NODE_COUNT,
   interpolateColor,
-  getChaosColor,
 } from './constants';
 
 interface UseParticleSystemOptions {
@@ -14,6 +13,9 @@ interface UseParticleSystemOptions {
   phase: Phase;
   isInView: boolean;
 }
+
+// More particles for visual density in chaos
+const CHAOS_PARTICLE_COUNT = 40;
 
 export function useParticleSystem(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -26,28 +28,33 @@ export function useParticleSystem(
   const dimensionsRef = useRef({ width: 0, height: 0 });
   const phaseStartTimeRef = useRef<number>(Date.now());
   const prevPhaseRef = useRef<Phase>(options.phase);
+  const chaosPositionsRef = useRef<{x: number, y: number}[]>([]);
 
-  // Initialize particles - one per final node position
+  // Initialize particles for chaos state - more particles, scattered
   const initParticles = useCallback((width: number, height: number) => {
     const particles: Particle[] = [];
 
-    // Create exactly CLARITY_NODE_COUNT particles (one per final position)
-    for (let i = 0; i < CLARITY_NODE_COUNT; i++) {
-      const target = STRUCTURED_POSITIONS[i];
+    for (let i = 0; i < CHAOS_PARTICLE_COUNT; i++) {
+      // Assign to a final node group (for transition)
+      const groupIndex = i % CLARITY_NODE_COUNT;
+      const target = STRUCTURED_POSITIONS[groupIndex];
+
+      const startX = Math.random() * width;
+      const startY = Math.random() * height;
 
       particles.push({
         id: i,
-        x: Math.random() * width,
-        y: Math.random() * height,
-        prevX: Math.random() * width,
-        prevY: Math.random() * height,
+        x: startX,
+        y: startY,
+        prevX: startX + (Math.random() - 0.5) * 10,
+        prevY: startY + (Math.random() - 0.5) * 10,
         targetX: (target.x / 100) * width,
         targetY: (target.y / 100) * height,
-        radius: 3,
-        baseRadius: 3,
-        color: getChaosColor(),
+        radius: 2.5 + Math.random() * 2,
+        baseRadius: 2.5 + Math.random() * 2,
+        color: '#EF4444',
         trail: [],
-        group: i,
+        group: groupIndex,
         merged: false,
         opacity: 1,
       });
@@ -56,109 +63,114 @@ export function useParticleSystem(
     return particles;
   }, []);
 
-  // Initialize data pulses - these are the "energy" flowing through
+  // Initialize data pulses
   const initDataPulses = useCallback(() => {
     const pulses: DataPulse[] = [];
-    // Create multiple pulses per connection for more visible energy flow
     STRUCTURED_CONNECTIONS.forEach((_, i) => {
-      // 2-3 pulses per connection, staggered
       for (let j = 0; j < 2; j++) {
         pulses.push({
           connectionIndex: i,
-          progress: j * 0.5, // Stagger them
-          speed: 0.4 + Math.random() * 0.15,
+          progress: j * 0.5,
+          speed: 0.35 + Math.random() * 0.15,
         });
       }
     });
     return pulses;
   }, []);
 
-  // Update particles based on current phase
+  // Update particles
   const updateParticles = useCallback(
     (particles: Particle[], phase: Phase, dt: number, width: number, height: number) => {
       const phaseTime = Date.now() - phaseStartTimeRef.current;
 
-      particles.forEach((p) => {
-        // Trail management
+      particles.forEach((p, idx) => {
         if (phase === 'chaos') {
-          p.trail.unshift({ x: p.x, y: p.y, alpha: 0.5 });
-          if (p.trail.length > 6) p.trail.pop();
-          p.trail.forEach((t) => (t.alpha *= 0.8));
+          // Organic drifting motion with noise-like behavior
+          const time = Date.now() * 0.001;
+          const uniqueOffset = p.id * 0.7;
+
+          // Multiple sine waves for organic movement
+          const driftX = Math.sin(time * 0.8 + uniqueOffset) * 2 +
+                        Math.sin(time * 1.3 + uniqueOffset * 2) * 1.5 +
+                        Math.cos(time * 0.5 + uniqueOffset * 0.5) * 1;
+
+          const driftY = Math.cos(time * 0.9 + uniqueOffset) * 2 +
+                        Math.sin(time * 1.1 + uniqueOffset * 1.5) * 1.5 +
+                        Math.sin(time * 0.6 + uniqueOffset * 0.8) * 1;
+
+          // Base position that slowly wanders
+          const wanderX = Math.sin(time * 0.2 + p.id) * width * 0.3;
+          const wanderY = Math.cos(time * 0.15 + p.id * 0.8) * height * 0.3;
+
+          // Center bias with wandering
+          const centerX = width * 0.5 + wanderX;
+          const centerY = height * 0.5 + wanderY;
+
+          // Spread particles in an organic cluster
+          const angle = (p.id / CHAOS_PARTICLE_COUNT) * Math.PI * 2 + time * 0.3;
+          const radius = 80 + Math.sin(time + p.id) * 40;
+
+          p.x = centerX + Math.cos(angle) * radius + driftX * 15;
+          p.y = centerY + Math.sin(angle) * radius + driftY * 15;
+
+          // Keep in bounds with soft margins
+          const margin = 40;
+          p.x = Math.max(margin, Math.min(width - margin, p.x));
+          p.y = Math.max(margin, Math.min(height - margin, p.y));
+
+          // Pulsing size
+          p.radius = p.baseRadius * (0.8 + Math.sin(time * 3 + p.id) * 0.3);
+
+          // Color variation in red/orange spectrum
+          const hue = 0 + Math.sin(time * 2 + p.id) * 15;
+          p.color = `hsl(${hue}, 70%, 55%)`;
+          p.opacity = 0.7 + Math.sin(time * 2 + p.id * 0.5) * 0.3;
+
         } else if (phase === 'transition') {
-          // Keep trails during transition but let them fade
-          p.trail.forEach((t) => (t.alpha *= 0.9));
-          if (p.trail.length > 0 && p.trail[p.trail.length - 1].alpha < 0.05) {
-            p.trail.pop();
+          // Store starting position at beginning of transition
+          if (phaseTime < 50) {
+            chaosPositionsRef.current[idx] = { x: p.x, y: p.y };
           }
-        } else {
-          p.trail = [];
-        }
 
-        if (phase === 'chaos') {
-          // Smooth turbulent motion using velocity
-          const vx = p.x - p.prevX;
-          const vy = p.y - p.prevY;
-
-          // Add random acceleration
-          const ax = (Math.random() - 0.5) * 400;
-          const ay = (Math.random() - 0.5) * 400;
-
-          p.prevX = p.x;
-          p.prevY = p.y;
-
-          // Apply velocity with damping + acceleration
-          p.x += vx * 0.95 + ax * dt * dt;
-          p.y += vy * 0.95 + ay * dt * dt;
-
-          // Soft boundary bounce
-          const margin = 20;
-          if (p.x < margin) { p.x = margin; p.prevX = p.x + Math.abs(vx) * 0.3; }
-          if (p.x > width - margin) { p.x = width - margin; p.prevX = p.x - Math.abs(vx) * 0.3; }
-          if (p.y < margin) { p.y = margin; p.prevY = p.y + Math.abs(vy) * 0.3; }
-          if (p.y > height - margin) { p.y = height - margin; p.prevY = p.y - Math.abs(vy) * 0.3; }
-
-          // Pulsing size and color
-          p.radius = 3 + Math.sin(Date.now() * 0.01 + p.id * 0.5) * 1;
-          p.color = getChaosColor();
-          p.opacity = 1;
-
-        } else if (phase === 'transition') {
-          // Smooth eased movement toward target
-          const transitionDuration = 1500; // 1.5 seconds
+          const startPos = chaosPositionsRef.current[idx] || { x: p.x, y: p.y };
+          const transitionDuration = 1500;
           const progress = Math.min(1, phaseTime / transitionDuration);
 
-          // Ease out cubic for smooth deceleration
-          const eased = 1 - Math.pow(1 - progress, 3);
+          // Ease out expo for dramatic deceleration
+          const eased = 1 - Math.pow(1 - progress, 4);
 
-          // Store original chaos position on first frame of transition
-          if (phaseTime < 50) {
-            p.prevX = p.x;
-            p.prevY = p.y;
-          }
-
-          // Interpolate from chaos position to target
-          const startX = p.prevX;
-          const startY = p.prevY;
-          p.x = startX + (p.targetX - startX) * eased;
-          p.y = startY + (p.targetY - startY) * eased;
+          // Particles converge to their group's target position
+          // Multiple particles per group converge to same point
+          p.x = startPos.x + (p.targetX - startPos.x) * eased;
+          p.y = startPos.y + (p.targetY - startPos.y) * eased;
 
           // Color transition
-          p.color = interpolateColor(COLORS.CHAOS_NODE, COLORS.CLARITY_NODE, eased);
+          p.color = interpolateColor('#EF4444', COLORS.CLARITY_NODE, eased);
 
-          // Size transition - grow slightly then settle
-          const sizeProgress = Math.sin(progress * Math.PI);
-          p.radius = 3 + sizeProgress * 2 + progress * 3; // End at 6
+          // Size: converge to uniform
+          p.radius = p.baseRadius + (5 - p.baseRadius) * eased;
 
-          p.opacity = 1;
+          // Fade out duplicate particles in same group (keep only first 12)
+          if (idx >= CLARITY_NODE_COUNT) {
+            p.opacity = Math.max(0, 1 - eased * 1.5);
+          } else {
+            p.opacity = 1;
+          }
 
         } else {
-          // Clarity phase - stable positions with subtle breathing
-          const breathe = Math.sin(Date.now() * 0.002) * 0.12;
+          // Clarity - only show first 12 particles (one per node)
+          if (idx >= CLARITY_NODE_COUNT) {
+            p.opacity = 0;
+            return;
+          }
+
+          // Synchronized gentle breathing
+          const breathe = Math.sin(Date.now() * 0.002) * 0.1;
           p.radius = 6 * (1 + breathe);
 
-          // Very subtle position drift
-          p.x = p.targetX + Math.sin(Date.now() * 0.0008 + p.id) * 1.5;
-          p.y = p.targetY + Math.cos(Date.now() * 0.0008 + p.id * 1.3) * 1.5;
+          // Subtle micro-movement
+          p.x = p.targetX + Math.sin(Date.now() * 0.001 + p.id * 0.5) * 1;
+          p.y = p.targetY + Math.cos(Date.now() * 0.001 + p.id * 0.7) * 1;
 
           p.color = COLORS.CLARITY_NODE;
           p.opacity = 1;
@@ -168,97 +180,100 @@ export function useParticleSystem(
     []
   );
 
-  // Update data pulses - the "energy" flowing through connections
+  // Update data pulses
   const updateDataPulses = useCallback((pulses: DataPulse[], dt: number, phase: Phase) => {
     pulses.forEach((pulse) => {
       if (phase === 'clarity') {
-        // Steady, coordinated flow
         pulse.progress += pulse.speed * dt;
         if (pulse.progress > 1) {
           pulse.progress = 0;
-        }
-      } else if (phase === 'chaos') {
-        // Erratic, wasteful energy
-        pulse.progress += (pulse.speed * 2 + Math.random() * 0.5) * dt;
-        if (pulse.progress > 1 || Math.random() < 0.01) {
-          pulse.progress = Math.random(); // Random reset - energy being lost
         }
       }
     });
   }, []);
 
-  // Render everything to canvas
+  // Render
   const render = useCallback(
     (ctx: CanvasRenderingContext2D, particles: Particle[], pulses: DataPulse[], phase: Phase, width: number, height: number) => {
-      // Clear canvas
+      // Clear
       ctx.fillStyle = COLORS.BACKGROUND;
       ctx.fillRect(0, 0, width, height);
 
-      // Draw connections first (behind particles)
       if (phase === 'chaos') {
-        // Chaotic connections - random pairs, flickering
-        ctx.strokeStyle = 'rgba(239, 68, 68, 0.15)';
+        // Draw chaotic connections - tangled web
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.12)';
         ctx.lineWidth = 1;
 
-        for (let i = 0; i < 20; i++) {
-          const p1 = particles[Math.floor(Math.random() * particles.length)];
-          const p2 = particles[Math.floor(Math.random() * particles.length)];
-          if (p1 === p2) continue;
+        // Connect nearby particles with curved lines
+        for (let i = 0; i < particles.length; i++) {
+          for (let j = i + 1; j < particles.length; j++) {
+            const p1 = particles[i];
+            const p2 = particles[j];
+            const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
 
-          const midX = (p1.x + p2.x) / 2;
-          const midY = (p1.y + p2.y) / 2;
+            // Only connect nearby particles
+            if (dist < 120 && dist > 20) {
+              const opacity = (1 - dist / 120) * 0.15;
+              ctx.strokeStyle = `rgba(239, 68, 68, ${opacity})`;
 
-          ctx.beginPath();
-          ctx.moveTo(p1.x, p1.y);
-          ctx.quadraticCurveTo(
-            midX + (Math.random() - 0.5) * 60,
-            midY + (Math.random() - 0.5) * 60,
-            p2.x,
-            p2.y
-          );
-          ctx.stroke();
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+
+              // Curved connection
+              const midX = (p1.x + p2.x) / 2;
+              const midY = (p1.y + p2.y) / 2;
+              const curveOffset = Math.sin(Date.now() * 0.002 + i + j) * 20;
+
+              ctx.quadraticCurveTo(midX + curveOffset, midY + curveOffset, p2.x, p2.y);
+              ctx.stroke();
+            }
+          }
         }
 
-        // Draw chaotic energy pulses - scattered, wasted
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.6)';
-        pulses.forEach((pulse) => {
-          // Random positions - energy going nowhere
-          const x = Math.random() * width;
-          const y = Math.random() * height;
+        // Scattered energy particles (wasted energy effect)
+        const time = Date.now() * 0.001;
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+        for (let i = 0; i < 15; i++) {
+          const x = (Math.sin(time * 2 + i * 3) * 0.5 + 0.5) * width;
+          const y = (Math.cos(time * 1.7 + i * 2.5) * 0.5 + 0.5) * height;
+          const size = 1.5 + Math.sin(time * 5 + i) * 0.5;
+
           ctx.beginPath();
-          ctx.arc(x, y, 2, 0, Math.PI * 2);
+          ctx.arc(x, y, size, 0, Math.PI * 2);
           ctx.fill();
-        });
+        }
 
       } else if (phase === 'transition') {
-        // Fading chaotic connections
+        // Fading chaos connections
         const phaseTime = Date.now() - phaseStartTimeRef.current;
-        const fadeOut = Math.max(0, 1 - phaseTime / 800);
+        const fadeOut = Math.max(0, 1 - phaseTime / 600);
 
         if (fadeOut > 0) {
-          ctx.strokeStyle = `rgba(239, 68, 68, ${0.1 * fadeOut})`;
+          ctx.strokeStyle = `rgba(239, 68, 68, ${0.08 * fadeOut})`;
           ctx.lineWidth = 1;
-          for (let i = 0; i < 10; i++) {
-            const p1 = particles[Math.floor(Math.random() * particles.length)];
-            const p2 = particles[Math.floor(Math.random() * particles.length)];
-            if (p1 === p2) continue;
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
+
+          for (let i = 0; i < particles.length; i += 3) {
+            for (let j = i + 1; j < particles.length; j += 3) {
+              const p1 = particles[i];
+              const p2 = particles[j];
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.stroke();
+            }
           }
         }
 
         // Forming structured connections
-        const fadeIn = Math.min(1, phaseTime / 1200);
-        if (fadeIn > 0.2) {
-          ctx.strokeStyle = `rgba(124, 58, 237, ${0.4 * (fadeIn - 0.2) / 0.8})`;
+        const fadeIn = Math.min(1, (phaseTime - 400) / 800);
+        if (fadeIn > 0) {
+          ctx.strokeStyle = `rgba(124, 58, 237, ${0.5 * fadeIn})`;
           ctx.lineWidth = 1.5;
 
           STRUCTURED_CONNECTIONS.forEach((conn) => {
             const from = particles[conn.from];
             const to = particles[conn.to];
-            if (!from || !to) return;
+            if (!from || !to || from.opacity < 0.3 || to.opacity < 0.3) return;
 
             ctx.beginPath();
             ctx.moveTo(from.x, from.y);
@@ -268,7 +283,7 @@ export function useParticleSystem(
         }
 
       } else {
-        // Clarity - clean structured connections
+        // Clarity - structured connections
         ctx.strokeStyle = COLORS.CLARITY_CONNECTION;
         ctx.lineWidth = 2;
 
@@ -282,26 +297,20 @@ export function useParticleSystem(
           ctx.lineTo(to.x, to.y);
           ctx.stroke();
 
-          // Arrow head
+          // Arrow
           const angle = Math.atan2(to.y - from.y, to.x - from.x);
           const arrowX = to.x - Math.cos(angle) * 10;
           const arrowY = to.y - Math.sin(angle) * 10;
 
           ctx.beginPath();
           ctx.moveTo(arrowX, arrowY);
-          ctx.lineTo(
-            arrowX - 5 * Math.cos(angle - Math.PI / 6),
-            arrowY - 5 * Math.sin(angle - Math.PI / 6)
-          );
+          ctx.lineTo(arrowX - 5 * Math.cos(angle - Math.PI / 6), arrowY - 5 * Math.sin(angle - Math.PI / 6));
           ctx.moveTo(arrowX, arrowY);
-          ctx.lineTo(
-            arrowX - 5 * Math.cos(angle + Math.PI / 6),
-            arrowY - 5 * Math.sin(angle + Math.PI / 6)
-          );
+          ctx.lineTo(arrowX - 5 * Math.cos(angle + Math.PI / 6), arrowY - 5 * Math.sin(angle + Math.PI / 6));
           ctx.stroke();
         });
 
-        // HERO MOMENT: Data pulses flowing through - coordinated energy
+        // Energy pulses - the hero effect
         pulses.forEach((pulse) => {
           const conn = STRUCTURED_CONNECTIONS[pulse.connectionIndex];
           if (!conn) return;
@@ -313,46 +322,40 @@ export function useParticleSystem(
           const x = from.x + (to.x - from.x) * pulse.progress;
           const y = from.y + (to.y - from.y) * pulse.progress;
 
-          // Glowing energy pulse
+          // Glowing pulse
           ctx.beginPath();
           ctx.arc(x, y, 4, 0, Math.PI * 2);
           ctx.fillStyle = COLORS.CLARITY_PULSE;
-          ctx.shadowBlur = 12;
+          ctx.shadowBlur = 15;
           ctx.shadowColor = COLORS.CLARITY_PULSE;
           ctx.fill();
 
-          // Trailing glow
-          const trailX = from.x + (to.x - from.x) * Math.max(0, pulse.progress - 0.1);
-          const trailY = from.y + (to.y - from.y) * Math.max(0, pulse.progress - 0.1);
-          ctx.beginPath();
-          ctx.arc(trailX, trailY, 2, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(167, 139, 250, 0.4)';
-          ctx.fill();
+          // Trail
+          for (let t = 1; t <= 3; t++) {
+            const trailProgress = Math.max(0, pulse.progress - t * 0.05);
+            const tx = from.x + (to.x - from.x) * trailProgress;
+            const ty = from.y + (to.y - from.y) * trailProgress;
+            ctx.beginPath();
+            ctx.arc(tx, ty, 3 - t * 0.5, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(167, 139, 250, ${0.4 - t * 0.1})`;
+            ctx.fill();
+          }
 
           ctx.shadowBlur = 0;
         });
       }
 
-      // Draw particle trails (chaos phase)
-      particles.forEach((p) => {
-        p.trail.forEach((point) => {
-          if (point.alpha < 0.05) return;
-          ctx.beginPath();
-          ctx.arc(point.x, point.y, p.radius * 0.5, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(239, 68, 68, ${point.alpha * 0.4})`;
-          ctx.fill();
-        });
-      });
-
       // Draw particles
       particles.forEach((p) => {
-        // Glow effect
+        if (p.opacity < 0.05) return;
+
+        // Glow
         if (phase === 'clarity') {
           ctx.shadowBlur = 12;
-          ctx.shadowColor = COLORS.CLARITY_GLOW;
+          ctx.shadowColor = 'rgba(124, 58, 237, 0.5)';
         } else if (phase === 'chaos') {
           ctx.shadowBlur = 6;
-          ctx.shadowColor = 'rgba(239, 68, 68, 0.5)';
+          ctx.shadowColor = 'rgba(239, 68, 68, 0.4)';
         } else {
           ctx.shadowBlur = 8;
           ctx.shadowColor = p.color;
@@ -370,20 +373,19 @@ export function useParticleSystem(
     []
   );
 
-  // Handle phase changes
+  // Phase change handler
   useEffect(() => {
     if (prevPhaseRef.current !== options.phase) {
       phaseStartTimeRef.current = Date.now();
       prevPhaseRef.current = options.phase;
 
-      // Initialize data pulses at start
       if (dataPulsesRef.current.length === 0) {
         dataPulsesRef.current = initDataPulses();
       }
     }
   }, [options.phase, initDataPulses]);
 
-  // Main animation effect
+  // Main animation
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -391,7 +393,6 @@ export function useParticleSystem(
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Handle resize
     const updateDimensions = () => {
       const rect = canvas.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
@@ -401,16 +402,14 @@ export function useParticleSystem(
       ctx.scale(dpr, dpr);
 
       dimensionsRef.current = { width: rect.width, height: rect.height };
-
-      // Initialize particles
       particlesRef.current = initParticles(rect.width, rect.height);
       dataPulsesRef.current = initDataPulses();
+      chaosPositionsRef.current = [];
     };
 
     updateDimensions();
     window.addEventListener('resize', updateDimensions);
 
-    // Animation loop
     const animate = (currentTime: number) => {
       if (!options.isInView) {
         animationRef.current = requestAnimationFrame(animate);
@@ -422,11 +421,8 @@ export function useParticleSystem(
 
       const { width, height } = dimensionsRef.current;
 
-      // Update
       updateParticles(particlesRef.current, options.phase, dt, width, height);
       updateDataPulses(dataPulsesRef.current, dt, options.phase);
-
-      // Render
       render(ctx, particlesRef.current, dataPulsesRef.current, options.phase, width, height);
 
       animationRef.current = requestAnimationFrame(animate);
@@ -441,22 +437,13 @@ export function useParticleSystem(
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [
-    canvasRef,
-    options.phase,
-    options.isInView,
-    initParticles,
-    initDataPulses,
-    updateParticles,
-    updateDataPulses,
-    render,
-  ]);
+  }, [canvasRef, options.phase, options.isInView, initParticles, initDataPulses, updateParticles, updateDataPulses, render]);
 
-  // Reinitialize on cycle reset
   const resetParticles = useCallback(() => {
     const { width, height } = dimensionsRef.current;
     if (width && height) {
       particlesRef.current = initParticles(width, height);
+      chaosPositionsRef.current = [];
     }
   }, [initParticles]);
 

@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, useInView } from 'framer-motion';
+import { useState, useRef, useCallback } from 'react';
+import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { Phase } from './types';
-import { TIMING, getOptimalParticleCount } from './constants';
 import { useParticleSystem } from './useParticleSystem';
 
 export default function ChaosToClarity() {
@@ -12,46 +11,34 @@ export default function ChaosToClarity() {
   const isInView = useInView(containerRef, { once: false, margin: '-100px' });
 
   const [phase, setPhase] = useState<Phase>('chaos');
-  const [particleCount, setParticleCount] = useState(50);
-
-  // Get optimal particle count on mount
-  useEffect(() => {
-    setParticleCount(getOptimalParticleCount());
-  }, []);
+  const [isActivating, setIsActivating] = useState(false);
 
   // Use particle system
   const { resetParticles } = useParticleSystem(canvasRef, {
-    particleCount,
+    particleCount: 12,
     phase,
     isInView,
   });
 
-  // Phase cycling
-  useEffect(() => {
-    if (!isInView) {
-      setPhase('chaos');
-      return;
-    }
+  // Handle button click - trigger the transformation
+  const handleActivate = useCallback(() => {
+    if (phase !== 'chaos' || isActivating) return;
 
-    const transitionTimer = setTimeout(() => {
-      setPhase('transition');
-    }, TIMING.TRANSITION_START);
+    setIsActivating(true);
+    setPhase('transition');
 
-    const clarityTimer = setTimeout(() => {
+    // Transition to clarity after animation
+    setTimeout(() => {
       setPhase('clarity');
-    }, TIMING.CLARITY_START);
+      setIsActivating(false);
+    }, 1800);
+  }, [phase, isActivating]);
 
-    const resetTimer = setTimeout(() => {
-      setPhase('chaos');
-      resetParticles();
-    }, TIMING.CYCLE_DURATION);
-
-    return () => {
-      clearTimeout(transitionTimer);
-      clearTimeout(clarityTimer);
-      clearTimeout(resetTimer);
-    };
-  }, [isInView, resetParticles]);
+  // Reset to chaos
+  const handleReset = useCallback(() => {
+    setPhase('chaos');
+    resetParticles();
+  }, [resetParticles]);
 
   // Stats based on phase
   const stats = {
@@ -81,7 +68,7 @@ export default function ChaosToClarity() {
             From Manual Chaos to Automated Clarity
           </p>
           <p className="text-[#94A3B8] text-sm sm:text-base max-w-xl mx-auto">
-            Watch inefficient workflows transform into streamlined, automated processes
+            See how inefficient workflows transform into streamlined, automated processes
           </p>
         </motion.div>
 
@@ -114,19 +101,11 @@ export default function ChaosToClarity() {
                         ? 'bg-yellow-900/50 text-yellow-400'
                         : 'bg-emerald-900/50 text-emerald-400'
                   }`}
-                  initial={{ scale: 1 }}
-                  animate={{
-                    scale: phase === 'transition' ? [1, 1.05, 1] : 1,
-                  }}
-                  transition={{
-                    duration: 0.5,
-                    repeat: phase === 'transition' ? Infinity : 0,
-                  }}
                 >
                   {phase === 'chaos'
-                    ? 'ANALYZING'
+                    ? 'INEFFICIENT'
                     : phase === 'transition'
-                      ? 'OPTIMIZING'
+                      ? 'OPTIMIZING...'
                       : 'OPTIMIZED'}
                 </motion.span>
               </div>
@@ -139,6 +118,80 @@ export default function ChaosToClarity() {
                 className="absolute inset-0 w-full h-full"
                 style={{ background: '#0D0D0D' }}
               />
+
+              {/* Center Button / Status */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <AnimatePresence mode="wait">
+                  {phase === 'chaos' && (
+                    <motion.button
+                      key="activate"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.2 }}
+                      transition={{ duration: 0.3 }}
+                      onClick={handleActivate}
+                      className="pointer-events-auto relative group"
+                    >
+                      {/* Outer glow ring */}
+                      <motion.div
+                        className="absolute inset-0 rounded-full bg-violet-500/20 blur-xl"
+                        animate={{
+                          scale: [1, 1.2, 1],
+                          opacity: [0.3, 0.6, 0.3],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: 'easeInOut',
+                        }}
+                      />
+                      {/* Button */}
+                      <div className="relative px-6 py-3 bg-gradient-to-r from-violet-600 to-violet-500 rounded-full font-mono text-sm uppercase tracking-wider text-white shadow-lg shadow-violet-500/30 group-hover:shadow-violet-500/50 group-hover:scale-105 transition-all duration-200 border border-violet-400/30">
+                        <span className="flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          Activate Beau Protocols
+                        </span>
+                      </div>
+                    </motion.button>
+                  )}
+
+                  {phase === 'transition' && (
+                    <motion.div
+                      key="transitioning"
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="flex flex-col items-center gap-3"
+                    >
+                      {/* Spinning ring */}
+                      <motion.div
+                        className="w-16 h-16 rounded-full border-2 border-violet-500/30 border-t-violet-500"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      />
+                      <span className="font-mono text-sm text-violet-400 uppercase tracking-wider">
+                        Optimizing...
+                      </span>
+                    </motion.div>
+                  )}
+
+                  {phase === 'clarity' && (
+                    <motion.button
+                      key="reset"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.5, delay: 0.3 }}
+                      onClick={handleReset}
+                      className="pointer-events-auto font-mono text-xs text-[#666] hover:text-[#999] uppercase tracking-wider transition-colors"
+                    >
+                      [ Reset Demo ]
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
 
               {/* Phase Labels */}
               <div className="absolute bottom-4 left-4 right-4 flex justify-between pointer-events-none">
