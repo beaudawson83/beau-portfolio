@@ -20,6 +20,8 @@ export default function AskBeau() {
   const [showCursor, setShowCursor] = useState(true);
   const [questionCount, setQuestionCount] = useState(0);
   const [hasReachedLimit, setHasReachedLimit] = useState(false);
+  const [showHint, setShowHint] = useState(true);
+  const [showGlow, setShowGlow] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Load question count from session storage on mount
@@ -38,6 +40,14 @@ export default function AskBeau() {
       setShowCursor(prev => !prev);
     }, 530);
     return () => clearInterval(cursorInterval);
+  }, []);
+
+  // Stop glow animation after 3 seconds
+  useEffect(() => {
+    const glowTimer = setTimeout(() => {
+      setShowGlow(false);
+    }, 3000);
+    return () => clearTimeout(glowTimer);
   }, []);
 
   // Typewriter effect for responses
@@ -203,26 +213,57 @@ export default function AskBeau() {
               That&apos;s a wrap, partner! 🤠 You&apos;ve hit the {MAX_QUESTIONS}-question limit. Refresh the page to start a new round, or better yet—reach out to the real Beau! 🥊
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="mt-4 flex items-center gap-2">
-              <span className="text-[#7C3AED]">$ ask-beau&gt;</span>
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask anything about Beau..."
-                disabled={isLoading}
-                className="flex-1 bg-transparent text-white placeholder-[#666] outline-none font-mono text-sm"
-                maxLength={200}
-              />
-              <button
-                type="submit"
-                disabled={isLoading || !input.trim()}
-                className="text-[#7C3AED] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            <div className="mt-4 relative">
+              {/* Bouncing hint arrow */}
+              <AnimatePresence>
+                {showHint && messages.length === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute -top-8 left-0 right-0 flex justify-center"
+                  >
+                    <motion.span
+                      animate={{ y: [0, -6, 0] }}
+                      transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
+                      className="text-[#7C3AED] text-xs flex items-center gap-1"
+                    >
+                      <span>👇</span> Ask me anything about Beau!
+                    </motion.span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Input with glow effect */}
+              <form
+                onSubmit={handleSubmit}
+                className={`flex items-center gap-2 p-2 -m-2 rounded-lg transition-all duration-300 ${
+                  showGlow && messages.length === 0
+                    ? 'animate-pulse-glow'
+                    : ''
+                }`}
               >
-                [{MAX_QUESTIONS - questionCount} left]
-              </button>
-            </form>
+                <span className="text-[#7C3AED]">$ ask-beau&gt;</span>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onFocus={() => setShowHint(false)}
+                  placeholder="Ask anything about Beau..."
+                  disabled={isLoading}
+                  className="flex-1 bg-transparent text-white placeholder-[#666] outline-none font-mono text-sm"
+                  maxLength={200}
+                />
+                <button
+                  type="submit"
+                  disabled={isLoading || !input.trim()}
+                  className="text-[#7C3AED] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  [{MAX_QUESTIONS - questionCount} left]
+                </button>
+              </form>
+            </div>
           )}
         </div>
       </div>
