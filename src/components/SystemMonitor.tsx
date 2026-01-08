@@ -709,13 +709,13 @@ export default function SystemMonitor() {
     { id: '3', severity: 'warning', department: 'SUPPORT', message: 'FCR rate declining - intervention recommended', timestamp: new Date() },
   ];
 
-  // Top producers
+  // Top producers (Ender's Game universe)
   const producers: Producer[] = [
-    { id: '1', name: 'Sarah Chen', initials: 'SC', department: 'Sales', metric: 'Revenue', value: '$412K', trend: 23, avatar: '' },
-    { id: '2', name: 'Marcus Johnson', initials: 'MJ', department: 'Support', metric: 'Tickets', value: '847', trend: 15, avatar: '' },
-    { id: '3', name: 'Emily Rodriguez', initials: 'ER', department: 'Success', metric: 'NRR', value: '124%', trend: 8, avatar: '' },
-    { id: '4', name: 'David Kim', initials: 'DK', department: 'Onboarding', metric: 'TTV', value: '11 days', trend: -12, avatar: '' },
-    { id: '5', name: 'Alex Thompson', initials: 'AT', department: 'Marketing', metric: 'MQLs', value: '234', trend: 31, avatar: '' },
+    { id: '1', name: 'Ender Wiggin', initials: 'EW', department: 'Sales', metric: 'Revenue', value: '$412K', trend: 23, avatar: '' },
+    { id: '2', name: 'Petra Arkanian', initials: 'PA', department: 'Support', metric: 'Tickets', value: '847', trend: 15, avatar: '' },
+    { id: '3', name: 'Bean Delphiki', initials: 'BD', department: 'Success', metric: 'NRR', value: '124%', trend: 8, avatar: '' },
+    { id: '4', name: 'Hyrum Graff', initials: 'HG', department: 'Onboarding', metric: 'TTV', value: '11 days', trend: -12, avatar: '' },
+    { id: '5', name: 'Mazer Rackham', initials: 'MR', department: 'Marketing', metric: 'MQLs', value: '234', trend: 31, avatar: '' },
   ];
 
   return (
