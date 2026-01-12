@@ -5,6 +5,7 @@ export interface CornerPosition {
   className: string;
 }
 
+// Legacy type - kept for reference, no longer used
 export interface FakePage {
   id: string;
   agency: string;
@@ -19,4 +20,18 @@ export interface LoginState {
   password: string;
   status: 'idle' | 'authenticating' | 'denied' | 'granted';
   attempts: number;
+}
+
+// New login screen system
+export type LoginScreenPhase = 'idle' | 'typing' | 'authenticating' | 'granted';
+
+export interface LoginScreenProps {
+  onPhaseChange?: (phase: LoginScreenPhase) => void;
+  onComplete: () => void;
+}
+
+export interface ScreenConfig {
+  id: string;
+  name: string;
+  component: React.ComponentType<LoginScreenProps>;
 }
