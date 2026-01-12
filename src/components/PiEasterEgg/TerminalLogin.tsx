@@ -9,9 +9,10 @@ import { getRandomQuote } from './starTrekQuotes';
 interface TerminalLoginProps {
   isActive: boolean;
   onClose: () => void;
+  onSuccess: () => void;
 }
 
-export default function TerminalLogin({ isActive, onClose }: TerminalLoginProps) {
+export default function TerminalLogin({ isActive, onClose, onSuccess }: TerminalLoginProps) {
   const [state, setState] = useState<TerminalLoginState>({
     phase: 'code-challenge',
     strikes: 0,
@@ -292,6 +293,9 @@ export default function TerminalLogin({ isActive, onClose }: TerminalLoginProps)
                 key="granted"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
+                onAnimationComplete={() => {
+                  setTimeout(() => onSuccess(), 1500);
+                }}
                 className="text-center py-12"
               >
                 <motion.div
@@ -307,7 +311,7 @@ export default function TerminalLogin({ isActive, onClose }: TerminalLoginProps)
                   {'>'} WELCOME, OPERATOR
                 </div>
                 <div className="text-green-500/40 text-xs mt-8">
-                  [DASHBOARD COMING SOON]
+                  [INITIALIZING DASHBOARD...]
                 </div>
               </motion.div>
             )}

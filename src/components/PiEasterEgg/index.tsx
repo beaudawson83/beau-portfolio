@@ -6,6 +6,7 @@ import { EasterEggPhase } from './types';
 import PiSymbol from './PiSymbol';
 import HackingSequence from './HackingSequence';
 import TerminalLogin from './TerminalLogin';
+import Dashboard from './Dashboard';
 
 export default function PiEasterEgg() {
   const [phase, setPhase] = useState<EasterEggPhase>('idle');
@@ -22,6 +23,10 @@ export default function PiEasterEgg() {
     setPhase('idle');
   }, []);
 
+  const handleLoginSuccess = useCallback(() => {
+    setPhase('dashboard');
+  }, []);
+
   return (
     <>
       {phase === 'idle' && <PiSymbol onClick={handlePiClick} />}
@@ -34,7 +39,13 @@ export default function PiEasterEgg() {
 
       <AnimatePresence>
         {phase === 'login' && (
-          <TerminalLogin isActive={true} onClose={handleClose} />
+          <TerminalLogin isActive={true} onClose={handleClose} onSuccess={handleLoginSuccess} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {phase === 'dashboard' && (
+          <Dashboard onClose={handleClose} />
         )}
       </AnimatePresence>
     </>

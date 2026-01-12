@@ -1,4 +1,4 @@
-export type EasterEggPhase = 'idle' | 'hacking' | 'login';
+export type EasterEggPhase = 'idle' | 'hacking' | 'login' | 'dashboard';
 
 export interface CornerPosition {
   corner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
