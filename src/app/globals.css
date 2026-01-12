@@ -136,3 +136,58 @@ body {
 .animate-pulse-glow {
   animation: input-pulse-glow 1.5s ease-in-out infinite;
 }
+
+/* Pi Easter Egg - CRT flicker effect */
+@keyframes crt-flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.8; }
+  94% { opacity: 1; }
+  97% { opacity: 0.9; }
+}
+
+.crt-flicker {
+  animation: crt-flicker 3s infinite;
+}
+
+/* Pi Easter Egg - Glitch text effect */
+@keyframes glitch-text {
+  0%, 100% {
+    text-shadow: 2px 0 #ff0000, -2px 0 #00ff00;
+    transform: translateX(0);
+  }
+  25% {
+    text-shadow: -2px 0 #ff0000, 2px 0 #00ff00;
+    transform: translateX(-2px);
+  }
+  50% {
+    text-shadow: 2px 0 #ff0000, -2px 0 #00ff00;
+    transform: translateX(2px);
+  }
+  75% {
+    text-shadow: -2px 0 #ff0000, 2px 0 #00ff00;
+    transform: translateX(-1px);
+  }
+}
+
+.glitch-text {
+  animation: glitch-text 0.3s infinite;
+}
+
+/* Pi Easter Egg - Classified stamp */
+.stamp-classified {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  border: 3px solid #dc2626;
+  color: #dc2626;
+  background: rgba(0, 0, 0, 0.8);
+  transform: rotate(-5deg);
+}
+
+/* Pi Easter Egg - Redacted text */
+.redacted {
+  background-color: #94A3B8;
+  color: #94A3B8;
+  user-select: none;
+}

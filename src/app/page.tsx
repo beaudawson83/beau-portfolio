@@ -8,6 +8,7 @@ import SystemKernel from '@/components/SystemKernel';
 import SystemMonitor from '@/components/SystemMonitor';
 import HookSection from '@/components/HookSection';
 import Footer from '@/components/Footer';
+import PiEasterEgg from '@/components/PiEasterEgg';
 
 export default function Home() {
   return (
@@ -24,6 +25,7 @@ export default function Home() {
         <HookSection />
       </main>
       <Footer />
+      <PiEasterEgg />
     </>
   );
 }
