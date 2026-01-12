@@ -5,7 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import { EasterEggPhase } from './types';
 import PiSymbol from './PiSymbol';
 import HackingSequence from './HackingSequence';
-import ClassifiedLogin from './ClassifiedLogin';
+import TerminalLogin from './TerminalLogin';
 
 export default function PiEasterEgg() {
   const [phase, setPhase] = useState<EasterEggPhase>('idle');
@@ -34,7 +34,7 @@ export default function PiEasterEgg() {
 
       <AnimatePresence>
         {phase === 'login' && (
-          <ClassifiedLogin isActive={true} onClose={handleClose} />
+          <TerminalLogin isActive={true} onClose={handleClose} />
         )}
       </AnimatePresence>
     </>

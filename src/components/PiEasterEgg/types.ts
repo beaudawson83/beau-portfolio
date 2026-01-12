@@ -22,6 +22,36 @@ export interface LoginState {
   attempts: number;
 }
 
+// Terminal Login Types
+export type TerminalPhase = 'code-challenge' | 'quote-challenge' | 'granted' | 'denied';
+
+export interface CodeChallenge {
+  prompt: string;
+  answer: string;
+}
+
+export interface QuoteOption {
+  label: string;
+  text: string;
+}
+
+export interface StarTrekQuote {
+  id: string;
+  partial: string;
+  options: QuoteOption[];
+  correctAnswer: string;
+  character: string;
+  source: string;
+}
+
+export interface TerminalLoginState {
+  phase: TerminalPhase;
+  strikes: number;
+  currentCode: CodeChallenge | null;
+  currentQuote: StarTrekQuote | null;
+  userInput: string;
+}
+
 // New login screen system
 export type LoginScreenPhase = 'idle' | 'typing' | 'authenticating' | 'granted';
 
