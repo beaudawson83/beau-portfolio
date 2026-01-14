@@ -8,8 +8,9 @@ This file provides context for AI coding assistants (Claude, Cursor, Copilot, et
 
 **Beau Dawson Portfolio** - A professional portfolio website for an Operations Director and AI Architect. The site uses a "System Architecture" theme with mission-critical dashboard aesthetics, industrial minimalism, and terminal-inspired UI patterns.
 
-**Stack:** Next.js 16 + React 19 + TypeScript + Tailwind CSS 4 + Framer Motion
+**Stack:** Next.js 16.1.1 + React 19.2.3 + TypeScript 5.x + Tailwind CSS 4.x + Framer Motion 12.x
 **Deployment:** Vercel (automatic via GitHub)
+**Live URL:** Deployed on Vercel
 
 ---
 
@@ -45,6 +46,10 @@ This file provides context for AI coding assistants (Claude, Cursor, Copilot, et
 | `src/app/layout.tsx` | Fonts, metadata, SEO | SEO updates, adding scripts |
 | `src/app/page.tsx` | Page composition | Adding/removing sections |
 | `src/components/*.tsx` | Individual sections | UI/layout changes |
+| `src/components/PiEasterEgg/*` | Hidden Easter egg feature | Easter egg behavior |
+| `src/components/ChaosToClarity/*` | Particle animation system | Animation config |
+| `src/lib/analytics.ts` | GA4 tracking utilities | Analytics events |
+| `src/hooks/useTrackSection.ts` | Section visibility tracking | Tracking behavior |
 | `src/app/api/contact/route.ts` | Contact form email handler | Email template, Resend config |
 | `src/app/api/ask-beau/route.ts` | AI chatbot endpoint | Gemini config, system prompt, fallback responses |
 
@@ -297,6 +302,25 @@ npm run lint     # Run ESLint
 - **Environment Variables Required:**
   - `GEMINI_API_KEY` - Google Gemini API key for "Ask Beau" chatbot
   - `RESEND_API_KEY` - Resend API key for contact form emails
+  - `NEXT_PUBLIC_GA_MEASUREMENT_ID` - Google Analytics 4 Measurement ID (optional, has fallback)
+
+---
+
+## Analytics Integration
+
+The portfolio includes comprehensive GA4 tracking via `src/lib/analytics.ts`:
+
+**Tracked Events:**
+- Section visibility (Hero, TelemetryGrid, ChangeLog, etc.)
+- Contact form interactions (start, submit, success, error)
+- CTA button clicks with location context
+- Social link clicks
+- Easter egg discovery and phases
+- Chatbot interactions (open, messages, limit reached)
+- Device and session info
+- Scroll depth and engagement milestones
+
+**Custom Hook:** `useTrackSectionWithRef` - Tracks section visibility using IntersectionObserver
 
 ---
 
@@ -335,3 +359,50 @@ POST /api/ask-beau
 - System prompt with Beau's background and expertise
 - Deterministic fallback responses when API unavailable/rate-limited
 - Response length capped at ~150 words for conciseness
+
+---
+
+## Easter Egg Feature (PiEasterEgg)
+
+A hidden interactive feature triggered by clicking the π symbol in the footer.
+
+**Location:** `src/components/PiEasterEgg/`
+
+**Phases:**
+1. **Idle** - π symbol visible but inactive
+2. **Hacking** - Fake "hacking" animation with 8 different agency login screens
+3. **Login** - Two-step challenge (code puzzle + Star Trek quote)
+4. **Dashboard** - Success screen after completing challenges
+
+**Files:**
+- `index.tsx` - Main state machine
+- `PiSymbol.tsx` - Clickable trigger
+- `HackingSequence.tsx` - Multi-screen hacking animation
+- `TerminalLogin.tsx` - Challenge screens
+- `Dashboard.tsx` - Success state
+- `screens/*.tsx` - Individual fake login screens (8 total)
+- `codeChallenge.ts` - Programming puzzle logic
+- `starTrekQuotes.ts` - Quote database for challenge
+
+---
+
+## Component Architecture
+
+**Section Components:** All use consistent patterns:
+- `'use client'` directive for Framer Motion compatibility
+- `useInView` hook for scroll-triggered animations
+- `useTrackSectionWithRef` for analytics integration
+- Staggered animation delays (index * 0.1s)
+
+**Page Composition Order:** (from `src/app/page.tsx`)
+1. Header (fixed)
+2. Hero (with AskBeau chatbot)
+3. TelemetryGrid (metrics with count-up)
+4. ChaosToClarity (particle animation)
+5. ArchitectureShowcase (code display)
+6. ChangeLog (experience timeline)
+7. SystemKernel (skills grid)
+8. SystemMonitor (chart visualization)
+9. HookSection (philosophy quote)
+10. Footer (contact form)
+11. PiEasterEgg (hidden overlay)

@@ -47,3 +47,24 @@ export interface SocialLink {
   url: string;
   type: 'linkedin' | 'phone' | 'email';
 }
+
+// ============================================
+// Chatbot Types (AskBeau component and API)
+// ============================================
+
+export interface ChatMessage {
+  type: 'question' | 'response';
+  text: string;
+}
+
+export interface ConversationMessage {
+  role: 'user' | 'assistant';
+  text: string;
+}
+
+// Boot sequence for terminal animation
+export interface BootLine {
+  type: 'command' | 'output';
+  text: string;
+  highlight?: boolean;
+}

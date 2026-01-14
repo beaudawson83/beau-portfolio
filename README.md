@@ -73,10 +73,16 @@ src/
 │   ├── Footer.tsx        # Contact form + social links
 │   ├── AskBeau.tsx       # AI chatbot component
 │   ├── TerminalAnimation.tsx  # Terminal typing effect
+│   ├── AnalyticsProvider.tsx  # GA4 integration wrapper
+│   ├── GoogleAnalytics.tsx    # Analytics script injection
+│   ├── PiEasterEgg/      # Hidden Easter egg feature (14 files)
 │   └── ui/
 │       └── Button.tsx    # Reusable button component
+├── hooks/
+│   └── useTrackSection.ts  # Section visibility tracking hook
 ├── lib/
-│   └── data.ts           # All content data (single source of truth)
+│   ├── data.ts           # All content data (single source of truth)
+│   └── analytics.ts      # GA4 tracking utilities (35+ events)
 └── types/
     └── index.ts          # TypeScript interfaces
 ```
@@ -161,6 +167,7 @@ Copy `.env.example` to `.env.local` and configure:
 |----------|----------|-------------|
 | `GEMINI_API_KEY` | Yes | Google Gemini API key for "Ask Beau" AI chatbot. Get free key at [aistudio.google.com](https://aistudio.google.com/app/apikey) |
 | `RESEND_API_KEY` | Yes | Resend API key for contact form emails. Get key at [resend.com](https://resend.com/api-keys) |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | No | Google Analytics 4 Measurement ID. Get from [analytics.google.com](https://analytics.google.com) (Admin > Data Streams > Web). Falls back to hardcoded ID if not set. |
 
 ---
 
@@ -182,10 +189,31 @@ npx vercel --prod    # Deploy to production
 
 ---
 
+## Analytics
+
+Comprehensive Google Analytics 4 integration tracking:
+
+- Section visibility and scroll depth
+- Contact form interactions
+- CTA and social link clicks
+- Easter egg discovery
+- Chatbot usage
+- Device and session data
+
+See `src/lib/analytics.ts` for all tracked events.
+
+---
+
 ## Browser Support
 
 - Chrome, Firefox, Safari, Edge (latest versions)
 - Responsive: mobile-first with `sm`, `md`, `lg`, `2xl` breakpoints
+
+---
+
+## Hidden Features
+
+**Easter Egg:** Click the π symbol in the footer to discover a hidden interactive feature with multiple phases including a hacking simulation and login challenges.
 
 ---
 

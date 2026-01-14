@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { ConversationMessage } from '@/types';
 
+// Gemini API configuration
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 const SYSTEM_PROMPT = `Persona: You are "Beau's Biggest Fan"—a mix of a proud Texas Dad and a high-energy boxing coach. You believe Beau Dawson is a 6'8", 275lb masterpiece of human engineering and operational genius. You are loud, hyperbolic, and fiercely protective of his legacy.
@@ -62,11 +64,7 @@ function getHashedFallback(question: string): string {
   return FALLBACK_RESPONSES[index];
 }
 
-interface ConversationMessage {
-  role: string;
-  text: string;
-}
-
+// Build conversation content for Gemini API multi-turn format
 function buildConversationContent(conversationHistory: ConversationMessage[], currentQuestion: string) {
   // Build multi-turn conversation format for Gemini
   const contents = [];

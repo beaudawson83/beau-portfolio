@@ -56,7 +56,9 @@ export const event = ({ action, category, label, value, ...params }: GTagEvent):
 // Pre-defined Event Tracking Functions
 // ============================================
 
+// --------------------------------------------
 // Contact Form Events
+// --------------------------------------------
 export const trackContactFormStart = (): void => {
   event({
     action: 'form_start',
@@ -92,7 +94,9 @@ export const trackContactFormError = (objective: string): void => {
   });
 };
 
-// Navigation Events
+// --------------------------------------------
+// Navigation & Link Events
+// --------------------------------------------
 export const trackNavClick = (destination: string): void => {
   event({
     action: 'navigation_click',
@@ -101,7 +105,6 @@ export const trackNavClick = (destination: string): void => {
   });
 };
 
-// Social Link Events
 export const trackSocialClick = (platform: string, url: string): void => {
   event({
     action: 'social_click',
@@ -111,7 +114,9 @@ export const trackSocialClick = (platform: string, url: string): void => {
   });
 };
 
-// Section Visibility Events (for scroll tracking)
+// --------------------------------------------
+// Engagement & Scroll Events
+// --------------------------------------------
 export const trackSectionView = (sectionName: string): void => {
   event({
     action: 'section_view',
@@ -120,7 +125,6 @@ export const trackSectionView = (sectionName: string): void => {
   });
 };
 
-// CTA Button Clicks
 export const trackCTAClick = (ctaName: string, location: string): void => {
   event({
     action: 'cta_click',
@@ -130,7 +134,6 @@ export const trackCTAClick = (ctaName: string, location: string): void => {
   });
 };
 
-// External Link Clicks
 export const trackExternalLink = (url: string, linkText: string): void => {
   event({
     action: 'external_link_click',
@@ -140,7 +143,9 @@ export const trackExternalLink = (url: string, linkText: string): void => {
   });
 };
 
-// File Downloads (if applicable)
+// --------------------------------------------
+// Media & Download Events
+// --------------------------------------------
 export const trackDownload = (fileName: string, fileType: string): void => {
   event({
     action: 'file_download',
@@ -150,7 +155,6 @@ export const trackDownload = (fileName: string, fileType: string): void => {
   });
 };
 
-// Search Events (if search is added)
 export const trackSearch = (searchTerm: string): void => {
   event({
     action: 'search',
@@ -159,7 +163,6 @@ export const trackSearch = (searchTerm: string): void => {
   });
 };
 
-// Video/Media Events (if applicable)
 export const trackVideoPlay = (videoTitle: string): void => {
   event({
     action: 'video_start',
@@ -168,7 +171,17 @@ export const trackVideoPlay = (videoTitle: string): void => {
   });
 };
 
-// Error Tracking
+export const trackImageView = (imageName: string): void => {
+  event({
+    action: 'image_view',
+    category: 'Media',
+    label: imageName,
+  });
+};
+
+// --------------------------------------------
+// Error & UX Issue Tracking
+// --------------------------------------------
 export const trackError = (errorMessage: string, errorLocation: string): void => {
   event({
     action: 'exception',
@@ -178,7 +191,6 @@ export const trackError = (errorMessage: string, errorLocation: string): void =>
   });
 };
 
-// Time on Page (call when user leaves)
 export const trackTimeOnPage = (seconds: number, pagePath: string): void => {
   event({
     action: 'time_on_page',
@@ -188,7 +200,6 @@ export const trackTimeOnPage = (seconds: number, pagePath: string): void => {
   });
 };
 
-// Scroll Depth Tracking
 export const trackScrollDepth = (percentage: number, pagePath: string): void => {
   event({
     action: 'scroll_depth',
@@ -198,7 +209,9 @@ export const trackScrollDepth = (percentage: number, pagePath: string): void => 
   });
 };
 
-// Easter Egg Discovery (for your PiEasterEgg component)
+// --------------------------------------------
+// Easter Egg Events
+// --------------------------------------------
 export const trackEasterEggDiscovery = (eggName: string): void => {
   event({
     action: 'easter_egg_found',
@@ -207,7 +220,9 @@ export const trackEasterEggDiscovery = (eggName: string): void => {
   });
 };
 
+// --------------------------------------------
 // AskBeau Chatbot Events
+// --------------------------------------------
 export const trackChatbotOpen = (): void => {
   event({
     action: 'chatbot_open',
@@ -241,7 +256,6 @@ export const trackChatbotLimitReached = (): void => {
   });
 };
 
-// Easter Egg Phase Tracking
 export const trackEasterEggPhase = (phase: string): void => {
   event({
     action: 'easter_egg_phase',
@@ -258,7 +272,6 @@ export const trackEasterEggLogin = (screenType: string, success: boolean): void 
   });
 };
 
-// Legacy Experience Toggle
 export const trackLegacyToggle = (expanded: boolean): void => {
   event({
     action: 'legacy_experience_toggle',
@@ -267,7 +280,9 @@ export const trackLegacyToggle = (expanded: boolean): void => {
   });
 };
 
-// User Session Info
+// --------------------------------------------
+// Session & Device Events
+// --------------------------------------------
 export const trackSessionStart = (): void => {
   const sessionData = {
     screen_width: window.innerWidth,
@@ -287,11 +302,9 @@ export const trackSessionStart = (): void => {
   });
 };
 
-// Track viewport/device info
 export const trackDeviceInfo = (): void => {
   const isMobile = window.innerWidth < 768;
   const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
-  const isDesktop = window.innerWidth >= 1024;
 
   event({
     action: 'device_info',
@@ -303,7 +316,9 @@ export const trackDeviceInfo = (): void => {
   });
 };
 
-// Track user engagement score (based on interactions)
+// --------------------------------------------
+// User Interaction Events
+// --------------------------------------------
 export const trackEngagementMilestone = (
   milestone: 'low' | 'medium' | 'high' | 'very_high',
   interactionCount: number
@@ -316,7 +331,6 @@ export const trackEngagementMilestone = (
   });
 };
 
-// Track copy events (if user copies text)
 export const trackTextCopy = (copiedText: string, location: string): void => {
   event({
     action: 'text_copy',
@@ -326,16 +340,6 @@ export const trackTextCopy = (copiedText: string, location: string): void => {
   });
 };
 
-// Track image interactions
-export const trackImageView = (imageName: string): void => {
-  event({
-    action: 'image_view',
-    category: 'Media',
-    label: imageName,
-  });
-};
-
-// Track rage clicks (multiple clicks in same area)
 export const trackRageClick = (elementInfo: string): void => {
   event({
     action: 'rage_click',
@@ -344,7 +348,6 @@ export const trackRageClick = (elementInfo: string): void => {
   });
 };
 
-// Track page visibility changes
 export const trackVisibilityChange = (isVisible: boolean, timeHidden?: number): void => {
   event({
     action: isVisible ? 'page_visible' : 'page_hidden',

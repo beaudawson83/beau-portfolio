@@ -8,21 +8,13 @@ import {
   trackChatbotMessage,
   trackChatbotLimitReached,
 } from '@/lib/analytics';
+import type { ChatMessage, BootLine } from '@/types';
 
-interface Message {
-  type: 'question' | 'response';
-  text: string;
-}
-
-interface BootLine {
-  type: 'command' | 'output';
-  text: string;
-  highlight?: boolean;
-}
-
+// Configuration
 const MAX_QUESTIONS = 10;
 const QUESTION_COUNT_KEY = 'askBeau_questionCount';
 
+// Boot sequence displayed on terminal load
 const bootSequence: BootLine[] = [
   { type: 'command', text: '$ beau --status' },
   { type: 'output', text: '> ROLE: Operations Director & AI Architect' },
@@ -34,7 +26,7 @@ const bootSequence: BootLine[] = [
 
 export default function AskBeau() {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [displayedResponse, setDisplayedResponse] = useState('');
@@ -207,7 +199,7 @@ export default function AskBeau() {
       trackChatbotMessage('bot');
       setMessages(prev => [...prev, { type: 'response', text: data.response }]);
       incrementQuestionCount();
-    } catch (error) {
+    } catch {
       setMessages(prev => [...prev, {
         type: 'response',
         text: "Whoa there, partner! 🤠 Even Beau's biggest fan needs a moment to catch his breath. Try again in a sec!"
