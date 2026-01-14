@@ -4,10 +4,21 @@ import { motion, useInView } from 'framer-motion';
 import { useRef, useState, FormEvent } from 'react';
 import { socialLinks } from '@/lib/data';
 import { ContactObjective, OBJECTIVE_LABELS } from '@/types';
+import {
+  trackContactFormStart,
+  trackContactFormSubmit,
+  trackContactFormSuccess,
+  trackContactFormError,
+  trackSocialClick,
+} from '@/lib/analytics';
+import { useTrackSectionWithRef } from '@/hooks/useTrackSection';
 
 export default function Footer() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-50px' });
+
+  // Track when contact section becomes visible
+  useTrackSectionWithRef(ref, 'Footer_Contact');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -18,11 +29,23 @@ export default function Footer() {
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>(
     'idle'
   );
+  const [hasStartedForm, setHasStartedForm] = useState(false);
+
+  // Track when user starts filling the form
+  const handleFormInteraction = () => {
+    if (!hasStartedForm) {
+      trackContactFormStart();
+      setHasStartedForm(true);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitStatus('idle');
+
+    // Track form submission attempt
+    trackContactFormSubmit(formData.objective);
 
     try {
       const response = await fetch('/api/contact', {
@@ -35,13 +58,23 @@ export default function Footer() {
         throw new Error('Failed to send message');
       }
 
+      // Track successful submission
+      trackContactFormSuccess(formData.objective);
       setSubmitStatus('success');
       setFormData({ name: '', objective: 'full-time', message: '' });
+      setHasStartedForm(false);
     } catch {
+      // Track form error
+      trackContactFormError(formData.objective);
       setSubmitStatus('error');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Handle social link clicks with tracking
+  const handleSocialClick = (label: string, url: string) => {
+    trackSocialClick(label, url);
   };
 
   return (
@@ -75,6 +108,7 @@ export default function Footer() {
                 type="text"
                 id="name"
                 value={formData.name}
+                onFocus={handleFormInteraction}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, name: e.target.value }))
                 }
@@ -122,6 +156,7 @@ export default function Footer() {
               <textarea
                 id="message"
                 value={formData.message}
+                onFocus={handleFormInteraction}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, message: e.target.value }))
                 }
@@ -172,6 +207,7 @@ export default function Footer() {
                 href={link.url}
                 target={link.type === 'linkedin' ? '_blank' : undefined}
                 rel={link.type === 'linkedin' ? 'noopener noreferrer' : undefined}
+                onClick={() => handleSocialClick(link.label, link.url)}
                 className="font-mono text-[9px] sm:text-[10px] md:text-sm 2xl:text-base text-[#94A3B8] hover:text-[#7C3AED] transition-colors"
               >
                 [ {link.label} ]

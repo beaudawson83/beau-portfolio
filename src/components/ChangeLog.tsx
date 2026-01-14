@@ -4,14 +4,25 @@ import { motion, useInView } from 'framer-motion';
 import { useRef, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { experiences } from '@/lib/data';
+import { useTrackSectionWithRef } from '@/hooks/useTrackSection';
+import { trackLegacyToggle } from '@/lib/analytics';
 
 export default function ChangeLog() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
   const [showLegacy, setShowLegacy] = useState(false);
 
+  // Track when this section becomes visible
+  useTrackSectionWithRef(ref, 'ChangeLog_Experience');
+
   const mainExperiences = experiences.filter((exp) => !exp.isLegacy);
   const legacyExperiences = experiences.filter((exp) => exp.isLegacy);
+
+  const handleLegacyToggle = () => {
+    const newState = !showLegacy;
+    setShowLegacy(newState);
+    trackLegacyToggle(newState);
+  };
 
   return (
     <section id="experience" className="py-12 sm:py-16 md:py-20 2xl:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16">
@@ -82,7 +93,7 @@ export default function ChangeLog() {
                 <div className="absolute left-0 sm:left-3 md:left-4 top-4 sm:top-5 w-2 h-2 -translate-x-1/2 rounded-full bg-[#1F1F1F] border border-[#94A3B8]" />
 
                 <button
-                  onClick={() => setShowLegacy(!showLegacy)}
+                  onClick={handleLegacyToggle}
                   className="flex items-center gap-1.5 sm:gap-2 font-mono text-xs sm:text-sm text-[#94A3B8] hover:text-white transition-colors cursor-pointer"
                 >
                   {showLegacy ? (

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
+import { useTrackSectionWithRef } from '@/hooks/useTrackSection';
 
 // ============================================================================
 // TYPES
@@ -617,8 +618,11 @@ function SystemStatusFooter() {
 // ============================================================================
 
 export default function SystemMonitor() {
-  const ref = useRef(null);
+  const ref = useRef<HTMLElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+
+  // Track when this section becomes visible
+  useTrackSectionWithRef(ref, 'SystemMonitor_Dashboard');
 
   // Department data
   const departments: Department[] = [

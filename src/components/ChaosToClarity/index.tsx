@@ -4,11 +4,16 @@ import { useState, useRef, useCallback } from 'react';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { Phase } from './types';
 import { useParticleSystem } from './useParticleSystem';
+import { useTrackSectionWithRef } from '@/hooks/useTrackSection';
+import { trackCTAClick } from '@/lib/analytics';
 
 export default function ChaosToClarity() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isInView = useInView(containerRef, { once: false, margin: '-100px' });
+
+  // Track when this section becomes visible
+  useTrackSectionWithRef(containerRef, 'ChaosToClarity_ProcessOptimization');
 
   const [phase, setPhase] = useState<Phase>('chaos');
   const [isActivating, setIsActivating] = useState(false);
@@ -23,6 +28,9 @@ export default function ChaosToClarity() {
   // Handle button click - trigger the transformation
   const handleActivate = useCallback(() => {
     if (phase !== 'chaos' || isActivating) return;
+
+    // Track the CTA click
+    trackCTAClick('Activate Beau Protocol', 'ChaosToClarity');
 
     setIsActivating(true);
     setPhase('transition');

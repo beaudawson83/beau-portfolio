@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
+import GoogleAnalytics from '@/components/GoogleAnalytics';
+import AnalyticsProvider from '@/components/AnalyticsProvider';
 import './globals.css';
 
 const inter = Inter({
@@ -58,10 +60,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
+      <head>
+        <GoogleAnalytics />
+      </head>
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-[#111111] text-white`}
       >
-        {children}
+        <AnalyticsProvider>{children}</AnalyticsProvider>
       </body>
     </html>
   );

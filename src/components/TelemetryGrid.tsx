@@ -3,6 +3,7 @@
 import { motion, useInView } from 'framer-motion';
 import { useRef, useEffect, useState } from 'react';
 import { metrics } from '@/lib/data';
+import { useTrackSectionWithRef } from '@/hooks/useTrackSection';
 
 function AnimatedValue({ value, inView }: { value: string; inView: boolean }) {
   const [displayValue, setDisplayValue] = useState(value);
@@ -54,6 +55,9 @@ function AnimatedValue({ value, inView }: { value: string; inView: boolean }) {
 export default function TelemetryGrid() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+
+  // Track when this section becomes visible
+  useTrackSectionWithRef(ref, 'TelemetryGrid');
 
   return (
     <section className="py-8 sm:py-12 md:py-16 2xl:py-20 px-4 sm:px-6 lg:px-8 2xl:px-16 border-y border-[#1F1F1F]">

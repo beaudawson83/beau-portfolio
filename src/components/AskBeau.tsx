@@ -2,6 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  trackChatbotOpen,
+  trackChatbotQuestion,
+  trackChatbotMessage,
+  trackChatbotLimitReached,
+} from '@/lib/analytics';
 
 interface Message {
   type: 'question' | 'response';
@@ -157,6 +163,7 @@ export default function AskBeau() {
     }
     if (newCount >= MAX_QUESTIONS) {
       setHasReachedLimit(true);
+      trackChatbotLimitReached();
     }
   };
 
@@ -173,6 +180,10 @@ export default function AskBeau() {
 
     const question = input.trim();
     if (!question || isLoading || hasReachedLimit) return;
+
+    // Track the question being asked
+    trackChatbotQuestion(question);
+    trackChatbotMessage('user');
 
     // Add question to messages
     setMessages(prev => [...prev, { type: 'question', text: question }]);
@@ -192,6 +203,8 @@ export default function AskBeau() {
 
       const data = await response.json();
 
+      // Track bot response
+      trackChatbotMessage('bot');
       setMessages(prev => [...prev, { type: 'response', text: data.response }]);
       incrementQuestionCount();
     } catch (error) {
@@ -201,6 +214,14 @@ export default function AskBeau() {
       }]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Track when user focuses on input (shows intent to use chatbot)
+  const handleInputFocus = () => {
+    setShowHint(false);
+    if (messages.length === 0) {
+      trackChatbotOpen();
     }
   };
 
@@ -428,7 +449,7 @@ export default function AskBeau() {
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        onFocus={() => setShowHint(false)}
+                        onFocus={handleInputFocus}
                         placeholder="Ask anything..."
                         disabled={isLoading}
                         className="flex-1 min-w-0 bg-transparent text-white placeholder-[#666] outline-none font-mono text-[11px] sm:text-sm"

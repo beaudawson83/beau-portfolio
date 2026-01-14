@@ -7,23 +7,29 @@ import PiSymbol from './PiSymbol';
 import HackingSequence from './HackingSequence';
 import TerminalLogin from './TerminalLogin';
 import Dashboard from './Dashboard';
+import { trackEasterEggDiscovery, trackEasterEggPhase } from '@/lib/analytics';
 
 export default function PiEasterEgg() {
   const [phase, setPhase] = useState<EasterEggPhase>('idle');
 
   const handlePiClick = useCallback(() => {
+    trackEasterEggDiscovery('Pi Symbol Found');
+    trackEasterEggPhase('hacking_started');
     setPhase('hacking');
   }, []);
 
   const handleHackingComplete = useCallback(() => {
+    trackEasterEggPhase('hacking_complete');
     setPhase('login');
   }, []);
 
   const handleClose = useCallback(() => {
+    trackEasterEggPhase('closed');
     setPhase('idle');
   }, []);
 
   const handleLoginSuccess = useCallback(() => {
+    trackEasterEggPhase('dashboard_accessed');
     setPhase('dashboard');
   }, []);
 

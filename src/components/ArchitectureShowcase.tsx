@@ -2,10 +2,14 @@
 
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
+import { useTrackSectionWithRef } from '@/hooks/useTrackSection';
 
 export default function ArchitectureShowcase() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+
+  // Track when this section becomes visible
+  useTrackSectionWithRef(ref, 'ArchitectureShowcase_BADLabs');
 
   const codeLines = [
     { type: 'comment', content: '// BAD LABS // Founder & Principal Architect' },

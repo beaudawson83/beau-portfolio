@@ -3,10 +3,14 @@
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import { hookQuote } from '@/lib/data';
+import { useTrackSectionWithRef } from '@/hooks/useTrackSection';
 
 export default function HookSection() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+
+  // Track when this section becomes visible
+  useTrackSectionWithRef(ref, 'HookSection_Quote');
 
   // Split the quote to highlight "complexity tax"
   const parts = hookQuote.split("'complexity tax'");

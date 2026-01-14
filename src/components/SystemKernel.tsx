@@ -3,10 +3,14 @@
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import { skills } from '@/lib/data';
+import { useTrackSectionWithRef } from '@/hooks/useTrackSection';
 
 export default function SystemKernel() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+
+  // Track when this section becomes visible
+  useTrackSectionWithRef(ref, 'SystemKernel_Skills');
 
   return (
     <section className="py-16 sm:py-20 2xl:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16 border-t border-[#1F1F1F]">

@@ -1,17 +1,31 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Button from './ui/Button';
 import AskBeau from './AskBeau';
 import { heroContent } from '@/lib/data';
+import { trackCTAClick, trackSectionView } from '@/lib/analytics';
 
 export default function Hero() {
+  const hasTrackedView = useRef(false);
+
+  // Track hero section view on mount (it's always visible first)
+  useEffect(() => {
+    if (!hasTrackedView.current) {
+      hasTrackedView.current = true;
+      trackSectionView('Hero');
+    }
+  }, []);
+
   const scrollToContact = () => {
+    trackCTAClick('Connect With Me', 'Hero');
     document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const scrollToExperience = () => {
+    trackCTAClick('View Experience', 'Hero');
     document.getElementById('experience')?.scrollIntoView({ behavior: 'smooth' });
   };
 
