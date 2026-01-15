@@ -1,22 +1,55 @@
 'use client';
 
 import { useRef, useMemo, useEffect, useState } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { Phase } from './types';
-import {
-  STRUCTURED_POSITIONS,
-  STRUCTURED_CONNECTIONS,
-  CLARITY_NODE_COUNT,
-  OUTPUT_ENDPOINT_INDICES,
-} from './constants';
 
-// Reduced particle counts for performance (was 500/200)
-const PARTICLE_COUNT = 200;
-const CONNECTION_PARTICLE_COUNT = 80;
+// Configuration
+const EFFORT_PARTICLES = 120;      // Total "effort" particles
+const STORM_COUNT = 4;             // Number of chaos storm centers
+const PULSE_COUNT = 60;            // Energy pulses for both phases
 
-// Custom shader for particles with glow
+// Business flow structure for clarity phase
+const BUSINESS_NODES = {
+  // Customer journey - left to right flow
+  inputs: [
+    { x: -4.5, y: 2, label: 'LEADS' },
+    { x: -4.5, y: 0, label: 'REQUESTS' },
+    { x: -4.5, y: -2, label: 'DATA' },
+  ],
+  processing: [
+    { x: -1.5, y: 1, label: 'QUALIFY' },
+    { x: -1.5, y: -1, label: 'PROCESS' },
+  ],
+  core: [
+    { x: 1.5, y: 0, label: 'BEAU_PROTOCOL' },
+  ],
+  outputs: [
+    { x: 4.5, y: 1.5, label: 'REVENUE' },
+    { x: 4.5, y: 0, label: 'CUSTOMER' },
+    { x: 4.5, y: -1.5, label: 'VALUE' },
+  ],
+};
+
+// Connections for clarity flow
+const FLOW_CONNECTIONS = [
+  // Inputs to processing
+  { from: { x: -4.5, y: 2 }, to: { x: -1.5, y: 1 } },
+  { from: { x: -4.5, y: 0 }, to: { x: -1.5, y: 1 } },
+  { from: { x: -4.5, y: 0 }, to: { x: -1.5, y: -1 } },
+  { from: { x: -4.5, y: -2 }, to: { x: -1.5, y: -1 } },
+  // Processing to core
+  { from: { x: -1.5, y: 1 }, to: { x: 1.5, y: 0 } },
+  { from: { x: -1.5, y: -1 }, to: { x: 1.5, y: 0 } },
+  // Core to outputs
+  { from: { x: 1.5, y: 0 }, to: { x: 4.5, y: 1.5 } },
+  { from: { x: 1.5, y: 0 }, to: { x: 4.5, y: 0 } },
+  { from: { x: 1.5, y: 0 }, to: { x: 4.5, y: -1.5 } },
+];
+
+// Particle shaders
 const particleVertexShader = `
   attribute float size;
   attribute vec3 customColor;
@@ -43,7 +76,6 @@ const particleFragmentShader = `
     float dist = length(gl_PointCoord - vec2(0.5));
     if (dist > 0.5) discard;
 
-    // Soft glow falloff
     float glow = 1.0 - smoothstep(0.0, 0.5, dist);
     glow = pow(glow, 1.5);
 
@@ -51,26 +83,8 @@ const particleFragmentShader = `
   }
 `;
 
-// Energy pulse shader for connections
-const pulseVertexShader = `
-  attribute float size;
-  attribute vec3 customColor;
-  attribute float alpha;
-
-  varying vec3 vColor;
-  varying float vAlpha;
-
-  void main() {
-    vColor = customColor;
-    vAlpha = alpha;
-
-    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-    gl_PointSize = size * (300.0 / -mvPosition.z);
-    gl_Position = projectionMatrix * mvPosition;
-  }
-`;
-
-const pulseFragmentShader = `
+// Storm effect shader for chaos background
+const stormFragmentShader = `
   varying vec3 vColor;
   varying float vAlpha;
 
@@ -78,28 +92,35 @@ const pulseFragmentShader = `
     float dist = length(gl_PointCoord - vec2(0.5));
     if (dist > 0.5) discard;
 
-    // Bright core with soft edge
-    float core = 1.0 - smoothstep(0.0, 0.2, dist);
-    float glow = 1.0 - smoothstep(0.2, 0.5, dist);
-    float intensity = core * 0.8 + glow * 0.5;
+    // Softer, more diffuse glow for storms
+    float glow = 1.0 - smoothstep(0.0, 0.5, dist);
+    glow = pow(glow, 2.0);
 
-    gl_FragColor = vec4(vColor, vAlpha * intensity);
+    gl_FragColor = vec4(vColor, vAlpha * glow * 0.6);
   }
 `;
 
 interface ParticleSystemProps {
   phase: Phase;
-  width: number;
-  height: number;
   mousePosition: { x: number; y: number };
 }
 
-function ParticleSystem({ phase, width, height, mousePosition }: ParticleSystemProps) {
-  const particlesRef = useRef<THREE.Points>(null);
+function BusinessChaosSystem({ phase, mousePosition }: ParticleSystemProps) {
+  const effortRef = useRef<THREE.Points>(null);
   const pulsesRef = useRef<THREE.Points>(null);
+  const stormsRef = useRef<THREE.Points>(null);
+
   const phaseRef = useRef(phase);
   const phaseStartTime = useRef(Date.now());
   const chaosPositions = useRef<Float32Array | null>(null);
+
+  // Storm centers that create turbulence
+  const stormCenters = useRef([
+    { x: -3, y: 1.5, intensity: 1, phase: 0 },
+    { x: 2, y: -1, intensity: 0.8, phase: Math.PI * 0.5 },
+    { x: -1, y: -2, intensity: 0.9, phase: Math.PI },
+    { x: 3, y: 2, intensity: 0.7, phase: Math.PI * 1.5 },
+  ]);
 
   // Track phase changes
   useEffect(() => {
@@ -107,59 +128,59 @@ function ParticleSystem({ phase, width, height, mousePosition }: ParticleSystemP
       phaseRef.current = phase;
       phaseStartTime.current = Date.now();
 
-      // Store chaos positions at start of transition
-      if (phase === 'transition' && particlesRef.current) {
-        const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
+      if (phase === 'transition' && effortRef.current) {
+        const positions = effortRef.current.geometry.attributes.position.array as Float32Array;
         chaosPositions.current = new Float32Array(positions);
       }
     }
   }, [phase]);
 
-  // Convert structured positions to 3D coordinates
+  // Clarity target positions (all nodes flattened)
   const clarityTargets = useMemo(() => {
-    const targets = new Float32Array(CLARITY_NODE_COUNT * 3);
-    STRUCTURED_POSITIONS.slice(0, CLARITY_NODE_COUNT).forEach((pos, i) => {
-      targets[i * 3] = ((pos.x / 100) - 0.5) * 10;
-      targets[i * 3 + 1] = ((50 - pos.y) / 100) * 6;
-      targets[i * 3 + 2] = 0;
-    });
-    return targets;
+    const all = [
+      ...BUSINESS_NODES.inputs,
+      ...BUSINESS_NODES.processing,
+      ...BUSINESS_NODES.core,
+      ...BUSINESS_NODES.outputs,
+    ];
+    return all.map(n => ({ x: n.x, y: n.y }));
   }, []);
 
-  // Initialize particle geometry
-  const { geometry, velocities, targetAssignments } = useMemo(() => {
-    const positions = new Float32Array(PARTICLE_COUNT * 3);
-    const colors = new Float32Array(PARTICLE_COUNT * 3);
-    const sizes = new Float32Array(PARTICLE_COUNT);
-    const alphas = new Float32Array(PARTICLE_COUNT);
-    const vels = new Float32Array(PARTICLE_COUNT * 3);
-    const assignments = new Int32Array(PARTICLE_COUNT);
+  // Initialize effort particles
+  const { effortGeometry, velocities, targetAssignments, stormAssignments } = useMemo(() => {
+    const positions = new Float32Array(EFFORT_PARTICLES * 3);
+    const colors = new Float32Array(EFFORT_PARTICLES * 3);
+    const sizes = new Float32Array(EFFORT_PARTICLES);
+    const alphas = new Float32Array(EFFORT_PARTICLES);
+    const vels = new Float32Array(EFFORT_PARTICLES * 3);
+    const targets = new Int32Array(EFFORT_PARTICLES);
+    const storms = new Int32Array(EFFORT_PARTICLES);
 
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      // Random initial positions in a sphere
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      const r = Math.random() * 4;
-
-      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    for (let i = 0; i < EFFORT_PARTICLES; i++) {
+      // Spread around the scene
+      positions[i * 3] = (Math.random() - 0.5) * 10;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 6;
       positions[i * 3 + 2] = (Math.random() - 0.5) * 2;
 
-      // Red chaos color
-      colors[i * 3] = 0.94;
-      colors[i * 3 + 1] = 0.27;
-      colors[i * 3 + 2] = 0.27;
+      // Warm chaos colors (orange/red/amber)
+      const hue = Math.random() * 40; // 0-40 = red to orange
+      const rgb = hslToRgb(hue / 360, 0.8, 0.55);
+      colors[i * 3] = rgb.r;
+      colors[i * 3 + 1] = rgb.g;
+      colors[i * 3 + 2] = rgb.b;
 
-      sizes[i] = 0.08 + Math.random() * 0.12;
-      alphas[i] = 0.6 + Math.random() * 0.4;
+      sizes[i] = 0.06 + Math.random() * 0.08;
+      alphas[i] = 0.4 + Math.random() * 0.4;
 
-      // Random velocities for chaos
-      vels[i * 3] = (Math.random() - 0.5) * 0.02;
-      vels[i * 3 + 1] = (Math.random() - 0.5) * 0.02;
-      vels[i * 3 + 2] = (Math.random() - 0.5) * 0.01;
+      // Random chaotic velocities
+      vels[i * 3] = (Math.random() - 0.5) * 0.04;
+      vels[i * 3 + 1] = (Math.random() - 0.5) * 0.04;
+      vels[i * 3 + 2] = (Math.random() - 0.5) * 0.02;
 
-      // Assign to clarity target (for transition)
-      assignments[i] = i % CLARITY_NODE_COUNT;
+      // Assign to clarity target
+      targets[i] = i % clarityTargets.length;
+      // Assign to storm for chaos phase
+      storms[i] = Math.floor(Math.random() * STORM_COUNT);
     }
 
     const geo = new THREE.BufferGeometry();
@@ -168,27 +189,65 @@ function ParticleSystem({ phase, width, height, mousePosition }: ParticleSystemP
     geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
     geo.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1));
 
-    return { geometry: geo, velocities: vels, targetAssignments: assignments };
+    return {
+      effortGeometry: geo,
+      velocities: vels,
+      targetAssignments: targets,
+      stormAssignments: storms,
+    };
+  }, [clarityTargets]);
+
+  // Storm particles (background chaos indicators)
+  const stormGeometry = useMemo(() => {
+    const count = 40; // Subtle storm particles
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    const sizes = new Float32Array(count);
+    const alphas = new Float32Array(count);
+
+    for (let i = 0; i < count; i++) {
+      const stormIdx = i % STORM_COUNT;
+      const storm = stormCenters.current[stormIdx];
+
+      positions[i * 3] = storm.x + (Math.random() - 0.5) * 3;
+      positions[i * 3 + 1] = storm.y + (Math.random() - 0.5) * 2;
+      positions[i * 3 + 2] = -0.5;
+
+      // Dark red/crimson for storm clouds
+      colors[i * 3] = 0.6;
+      colors[i * 3 + 1] = 0.1;
+      colors[i * 3 + 2] = 0.1;
+
+      sizes[i] = 0.8 + Math.random() * 0.6;
+      alphas[i] = 0.1 + Math.random() * 0.15;
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('customColor', new THREE.BufferAttribute(colors, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+    geo.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1));
+
+    return geo;
   }, []);
 
-  // Initialize pulse geometry for energy flow
+  // Pulse geometry (wasted effort in chaos, efficient flow in clarity)
   const pulseGeometry = useMemo(() => {
-    const positions = new Float32Array(CONNECTION_PARTICLE_COUNT * 3);
-    const colors = new Float32Array(CONNECTION_PARTICLE_COUNT * 3);
-    const sizes = new Float32Array(CONNECTION_PARTICLE_COUNT);
-    const alphas = new Float32Array(CONNECTION_PARTICLE_COUNT);
+    const positions = new Float32Array(PULSE_COUNT * 3);
+    const colors = new Float32Array(PULSE_COUNT * 3);
+    const sizes = new Float32Array(PULSE_COUNT);
+    const alphas = new Float32Array(PULSE_COUNT);
 
-    for (let i = 0; i < CONNECTION_PARTICLE_COUNT; i++) {
+    for (let i = 0; i < PULSE_COUNT; i++) {
       positions[i * 3] = 0;
       positions[i * 3 + 1] = 0;
       positions[i * 3 + 2] = 0.1;
 
-      // Purple clarity color
       colors[i * 3] = 0.65;
       colors[i * 3 + 1] = 0.55;
       colors[i * 3 + 2] = 0.98;
 
-      sizes[i] = 0.15;
+      sizes[i] = 0.1;
       alphas[i] = 0;
     }
 
@@ -201,10 +260,9 @@ function ParticleSystem({ phase, width, height, mousePosition }: ParticleSystemP
     return geo;
   }, []);
 
-  // Shader materials
-  const particleMaterial = useMemo(() => {
+  // Materials
+  const effortMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
-      uniforms: {},
       vertexShader: particleVertexShader,
       fragmentShader: particleFragmentShader,
       transparent: true,
@@ -213,11 +271,20 @@ function ParticleSystem({ phase, width, height, mousePosition }: ParticleSystemP
     });
   }, []);
 
+  const stormMaterial = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      vertexShader: particleVertexShader,
+      fragmentShader: stormFragmentShader,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+  }, []);
+
   const pulseMaterial = useMemo(() => {
     return new THREE.ShaderMaterial({
-      uniforms: {},
-      vertexShader: pulseVertexShader,
-      fragmentShader: pulseFragmentShader,
+      vertexShader: particleVertexShader,
+      fragmentShader: particleFragmentShader,
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
@@ -225,238 +292,335 @@ function ParticleSystem({ phase, width, height, mousePosition }: ParticleSystemP
   }, []);
 
   useFrame((state) => {
-    if (!particlesRef.current || !pulsesRef.current) return;
+    if (!effortRef.current || !pulsesRef.current || !stormsRef.current) return;
 
     const time = state.clock.elapsedTime;
     const phaseTime = Date.now() - phaseStartTime.current;
     const currentPhase = phaseRef.current;
 
-    const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
-    const colors = particlesRef.current.geometry.attributes.customColor.array as Float32Array;
-    const sizes = particlesRef.current.geometry.attributes.size.array as Float32Array;
-    const alphas = particlesRef.current.geometry.attributes.alpha.array as Float32Array;
+    const positions = effortRef.current.geometry.attributes.position.array as Float32Array;
+    const colors = effortRef.current.geometry.attributes.customColor.array as Float32Array;
+    const sizes = effortRef.current.geometry.attributes.size.array as Float32Array;
+    const alphas = effortRef.current.geometry.attributes.alpha.array as Float32Array;
+
+    const stormPositions = stormsRef.current.geometry.attributes.position.array as Float32Array;
+    const stormAlphas = stormsRef.current.geometry.attributes.alpha.array as Float32Array;
 
     const pulsePositions = pulsesRef.current.geometry.attributes.position.array as Float32Array;
     const pulseColors = pulsesRef.current.geometry.attributes.customColor.array as Float32Array;
     const pulseSizes = pulsesRef.current.geometry.attributes.size.array as Float32Array;
     const pulseAlphas = pulsesRef.current.geometry.attributes.alpha.array as Float32Array;
 
-    // Mouse influence (converted to 3D space)
-    const mouseX = (mousePosition.x - 0.5) * 10;
-    const mouseY = (0.5 - mousePosition.y) * 6;
-
     if (currentPhase === 'chaos') {
-      // Chaotic motion with turbulence
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const i3 = i * 3;
+      // CHAOS PHASE: Storms, wasted effort, misdirected energy
 
-        // Turbulence based on position and time
-        const turbX = Math.sin(time * 0.8 + i * 0.1) * 0.03 +
-                     Math.sin(time * 1.3 + positions[i3 + 1] * 2) * 0.02;
-        const turbY = Math.cos(time * 0.9 + i * 0.15) * 0.03 +
-                     Math.cos(time * 1.1 + positions[i3] * 2) * 0.02;
-        const turbZ = Math.sin(time * 0.5 + i * 0.05) * 0.01;
+      // Update storm centers (they slowly drift)
+      stormCenters.current.forEach((storm, idx) => {
+        storm.x += Math.sin(time * 0.3 + storm.phase) * 0.01;
+        storm.y += Math.cos(time * 0.4 + storm.phase) * 0.008;
+        storm.intensity = 0.7 + Math.sin(time * 0.5 + idx) * 0.3;
+      });
 
-        // Apply velocity and turbulence
-        positions[i3] += velocities[i3] + turbX;
-        positions[i3 + 1] += velocities[i3 + 1] + turbY;
-        positions[i3 + 2] += velocities[i3 + 2] + turbZ;
+      // Update storm background particles
+      const stormCount = 40;
+      for (let i = 0; i < stormCount; i++) {
+        const stormIdx = i % STORM_COUNT;
+        const storm = stormCenters.current[stormIdx];
 
-        // Mouse repulsion
-        const dx = positions[i3] - mouseX;
-        const dy = positions[i3 + 1] - mouseY;
-        const distToMouse = Math.sqrt(dx * dx + dy * dy);
-        if (distToMouse < 2) {
-          const force = (2 - distToMouse) * 0.05;
-          positions[i3] += (dx / distToMouse) * force;
-          positions[i3 + 1] += (dy / distToMouse) * force;
-        }
+        // Swirl around storm center
+        const angle = time * 0.5 + i * 0.3;
+        const radius = 1 + Math.sin(time + i) * 0.5;
 
-        // Contain in bounds with soft wrapping
-        if (positions[i3] > 5) positions[i3] = -5;
-        if (positions[i3] < -5) positions[i3] = 5;
-        if (positions[i3 + 1] > 3.5) positions[i3 + 1] = -3.5;
-        if (positions[i3 + 1] < -3.5) positions[i3 + 1] = 3.5;
-        if (positions[i3 + 2] > 1.5) positions[i3 + 2] = -1.5;
-        if (positions[i3 + 2] < -1.5) positions[i3 + 2] = 1.5;
+        stormPositions[i * 3] = storm.x + Math.cos(angle) * radius;
+        stormPositions[i * 3 + 1] = storm.y + Math.sin(angle) * radius * 0.7;
 
-        // Pulsing red/orange colors
-        const hueShift = Math.sin(time * 2 + i * 0.3) * 0.1;
-        colors[i3] = 0.94 + hueShift;
-        colors[i3 + 1] = 0.27 + hueShift * 0.5;
-        colors[i3 + 2] = 0.27;
-
-        // Pulsing size
-        sizes[i] = (0.08 + Math.random() * 0.04) * (1 + Math.sin(time * 3 + i) * 0.3);
-        alphas[i] = 0.5 + Math.sin(time * 2 + i * 0.5) * 0.3;
+        // Pulse alpha with storm intensity
+        stormAlphas[i] = (0.1 + Math.sin(time * 2 + i) * 0.08) * storm.intensity;
       }
 
-      // Hide pulses during chaos
-      for (let i = 0; i < CONNECTION_PARTICLE_COUNT; i++) {
-        pulseAlphas[i] = 0;
+      // Update effort particles - chaotic motion pulled by storms
+      for (let i = 0; i < EFFORT_PARTICLES; i++) {
+        const i3 = i * 3;
+        const assignedStorm = stormAssignments[i];
+        const storm = stormCenters.current[assignedStorm];
+
+        // Pull toward storm center (wasted effort getting sucked into chaos)
+        const dx = storm.x - positions[i3];
+        const dy = storm.y - positions[i3 + 1];
+        const distToStorm = Math.sqrt(dx * dx + dy * dy);
+
+        // Turbulent spiral around storm
+        const tangentX = -dy / (distToStorm + 0.1);
+        const tangentY = dx / (distToStorm + 0.1);
+
+        // Combine inward pull with tangential spin
+        const pullStrength = 0.015 * storm.intensity;
+        const spinStrength = 0.025 * storm.intensity;
+
+        velocities[i3] += dx * pullStrength / (distToStorm + 1) + tangentX * spinStrength;
+        velocities[i3 + 1] += dy * pullStrength / (distToStorm + 1) + tangentY * spinStrength;
+
+        // Add random turbulence (unpredictable chaos)
+        velocities[i3] += (Math.random() - 0.5) * 0.008;
+        velocities[i3 + 1] += (Math.random() - 0.5) * 0.008;
+
+        // Damping
+        velocities[i3] *= 0.97;
+        velocities[i3 + 1] *= 0.97;
+        velocities[i3 + 2] *= 0.95;
+
+        // Apply velocity
+        positions[i3] += velocities[i3];
+        positions[i3 + 1] += velocities[i3 + 1];
+        positions[i3 + 2] += velocities[i3 + 2];
+
+        // Occasionally reset particles that get too close to storm center
+        // (effort disappearing into the void)
+        if (distToStorm < 0.5) {
+          // Respawn at edge
+          const spawnAngle = Math.random() * Math.PI * 2;
+          const spawnRadius = 4 + Math.random() * 2;
+          positions[i3] = Math.cos(spawnAngle) * spawnRadius;
+          positions[i3 + 1] = Math.sin(spawnAngle) * spawnRadius * 0.6;
+          velocities[i3] = (Math.random() - 0.5) * 0.02;
+          velocities[i3 + 1] = (Math.random() - 0.5) * 0.02;
+        }
+
+        // Boundary wrapping
+        if (positions[i3] > 6) positions[i3] = -6;
+        if (positions[i3] < -6) positions[i3] = 6;
+        if (positions[i3 + 1] > 4) positions[i3 + 1] = -4;
+        if (positions[i3 + 1] < -4) positions[i3 + 1] = 4;
+
+        // Chaos colors - red/orange with intensity based on speed
+        const speed = Math.sqrt(velocities[i3] ** 2 + velocities[i3 + 1] ** 2);
+        const hue = 15 + speed * 200; // Red when slow, orange when fast
+        const rgb = hslToRgb(Math.min(hue, 45) / 360, 0.8, 0.5 + speed * 2);
+        colors[i3] = rgb.r;
+        colors[i3 + 1] = rgb.g;
+        colors[i3 + 2] = rgb.b;
+
+        // Size pulses with chaos
+        sizes[i] = (0.05 + Math.random() * 0.03) * (1 + Math.sin(time * 4 + i) * 0.4);
+        alphas[i] = 0.4 + Math.sin(time * 2 + i * 0.5) * 0.25;
+      }
+
+      // WASTED EFFORT PULSES - shooting off randomly, never reaching destination
+      for (let i = 0; i < PULSE_COUNT; i++) {
+        const i3 = i * 3;
+
+        // Each pulse shoots from a random effort particle toward a random direction
+        // but fades out before reaching anything useful
+        const pulsePhase = (time * 1.2 + i * 0.3) % 3;
+
+        if (pulsePhase < 0.1) {
+          // Start new pulse from random position
+          const sourceIdx = Math.floor(Math.random() * EFFORT_PARTICLES) * 3;
+          pulsePositions[i3] = positions[sourceIdx] || 0;
+          pulsePositions[i3 + 1] = positions[sourceIdx + 1] || 0;
+        } else if (pulsePhase < 2) {
+          // Shoot in random direction
+          const angle = i * 0.5 + Math.sin(time + i);
+          pulsePositions[i3] += Math.cos(angle) * 0.08;
+          pulsePositions[i3 + 1] += Math.sin(angle) * 0.06;
+        }
+
+        // Red/orange wasted effort color
+        pulseColors[i3] = 0.9;
+        pulseColors[i3 + 1] = 0.3;
+        pulseColors[i3 + 2] = 0.1;
+
+        pulseSizes[i] = 0.08;
+        // Fade in then out - wasted effort dissipating
+        pulseAlphas[i] = pulsePhase < 0.5
+          ? pulsePhase * 1.2
+          : Math.max(0, (2 - pulsePhase) * 0.4);
       }
 
     } else if (currentPhase === 'transition') {
+      // TRANSITION: Chaos collapses, effort consolidates
       const transitionDuration = 1800;
       const progress = Math.min(1, phaseTime / transitionDuration);
 
-      // Elastic ease out
+      // Elastic ease
       const c4 = (2 * Math.PI) / 3;
       const eased = progress === 0 ? 0 : progress === 1 ? 1 :
         Math.pow(2, -10 * progress) * Math.sin((progress * 10 - 0.75) * c4) + 1;
 
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
+      // Fade out storms
+      const stormCount = 40;
+      for (let i = 0; i < stormCount; i++) {
+        stormAlphas[i] = (0.15) * (1 - progress);
+      }
+
+      // Consolidate particles into clarity nodes
+      for (let i = 0; i < EFFORT_PARTICLES; i++) {
         const i3 = i * 3;
         const targetIdx = targetAssignments[i];
-        const t3 = targetIdx * 3;
+        const target = clarityTargets[targetIdx];
 
-        // Get start position (stored at transition start)
         const startX = chaosPositions.current ? chaosPositions.current[i3] : positions[i3];
         const startY = chaosPositions.current ? chaosPositions.current[i3 + 1] : positions[i3 + 1];
-        const startZ = chaosPositions.current ? chaosPositions.current[i3 + 2] : positions[i3 + 2];
 
-        // Target position
-        const targetX = clarityTargets[t3];
-        const targetY = clarityTargets[t3 + 1];
-        const targetZ = 0;
-
-        // Stagger based on distance
-        const dist = Math.sqrt(
-          Math.pow(startX - targetX, 2) +
-          Math.pow(startY - targetY, 2)
-        );
-        const stagger = (dist / 10) * 0.3;
+        // Staggered convergence
+        const dist = Math.sqrt((startX - target.x) ** 2 + (startY - target.y) ** 2);
+        const stagger = (dist / 12) * 0.4;
         const particleProgress = Math.max(0, Math.min(1, (progress - stagger) / (1 - stagger)));
 
-        // Apply easing to particle progress
         const particleEased = particleProgress === 0 ? 0 : particleProgress === 1 ? 1 :
           Math.pow(2, -10 * particleProgress) * Math.sin((particleProgress * 10 - 0.75) * c4) + 1;
 
-        // Spiral inward effect during first half
+        // Spiral inward during first half
         const spiralPhase = Math.max(0, 1 - particleProgress * 2);
-        const spiralAngle = spiralPhase * Math.PI * 2 * (i % 2 === 0 ? 1 : -1);
-        const spiralRadius = spiralPhase * 0.5;
+        const spiralAngle = spiralPhase * Math.PI * 3 * (i % 2 === 0 ? 1 : -1);
+        const spiralRadius = spiralPhase * 0.8;
 
-        positions[i3] = startX + (targetX - startX) * particleEased + Math.cos(spiralAngle + i) * spiralRadius;
-        positions[i3 + 1] = startY + (targetY - startY) * particleEased + Math.sin(spiralAngle + i) * spiralRadius;
-        positions[i3 + 2] = startZ + (targetZ - startZ) * particleEased;
+        positions[i3] = startX + (target.x - startX) * particleEased + Math.cos(spiralAngle + i) * spiralRadius;
+        positions[i3 + 1] = startY + (target.y - startY) * particleEased + Math.sin(spiralAngle + i) * spiralRadius;
+        positions[i3 + 2] = (1 - particleEased) * 0.5;
 
-        // Color transition: red -> purple -> violet
-        const colorProgress = Math.min(1, phaseTime / 1200);
-        if (colorProgress < 0.4) {
-          const t = colorProgress / 0.4;
-          colors[i3] = 0.94 - t * 0.28;     // 0.94 -> 0.66
-          colors[i3 + 1] = 0.27 + t * 0.06;  // 0.27 -> 0.33
-          colors[i3 + 2] = 0.27 + t * 0.69;  // 0.27 -> 0.96
-        } else {
-          const t = (colorProgress - 0.4) / 0.6;
-          colors[i3] = 0.66 - t * 0.17;      // 0.66 -> 0.49
-          colors[i3 + 1] = 0.33 - t * 0.10;  // 0.33 -> 0.23
-          colors[i3 + 2] = 0.96 - t * 0.04;  // 0.96 -> 0.92
-        }
+        // Color transition: red/orange -> purple/violet
+        const colorT = Math.min(1, phaseTime / 1200);
+        const rgb = hslToRgb(
+          (30 - colorT * 90 + 360) % 360 / 360, // Red -> Purple hue
+          0.7 + colorT * 0.2,
+          0.5 + colorT * 0.1
+        );
+        colors[i3] = rgb.r;
+        colors[i3 + 1] = rgb.g;
+        colors[i3 + 2] = rgb.b;
 
-        // Size pulse during transition
-        const sizePulse = Math.sin(particleProgress * Math.PI) * 0.1;
-        sizes[i] = 0.1 + sizePulse;
+        // Grow during transition
+        sizes[i] = 0.06 + particleProgress * 0.08;
 
-        // Fade out excess particles
-        if (i >= CLARITY_NODE_COUNT * 3) {
+        // Fade out excess
+        const particlesPerNode = Math.floor(EFFORT_PARTICLES / clarityTargets.length);
+        if (i >= clarityTargets.length * Math.min(8, particlesPerNode)) {
           alphas[i] = Math.max(0, 1 - particleProgress * 1.5);
         } else {
-          alphas[i] = 0.7 + particleProgress * 0.3;
+          alphas[i] = 0.5 + particleProgress * 0.4;
         }
       }
 
-      // Shockwave ring effect
-      if (progress > 0.1 && progress < 0.6) {
-        const ringProgress = (progress - 0.1) / 0.5;
-        const ringRadius = ringProgress * 6;
-        const ringAlpha = Math.sin(ringProgress * Math.PI) * 0.5;
+      // Implosion ring effect
+      if (progress > 0.1 && progress < 0.5) {
+        const ringProgress = (progress - 0.1) / 0.4;
+        const ringRadius = (1 - ringProgress) * 6;
 
-        for (let i = 0; i < 50; i++) {
-          const angle = (i / 50) * Math.PI * 2;
-          const pi = i * 3;
-          pulsePositions[pi] = Math.cos(angle) * ringRadius;
-          pulsePositions[pi + 1] = Math.sin(angle) * ringRadius * 0.6;
-          pulsePositions[pi + 2] = 0.1;
+        for (let i = 0; i < 30; i++) {
+          const angle = (i / 30) * Math.PI * 2;
+          pulsePositions[i * 3] = Math.cos(angle) * ringRadius;
+          pulsePositions[i * 3 + 1] = Math.sin(angle) * ringRadius * 0.6;
+          pulsePositions[i * 3 + 2] = 0.1;
 
-          pulseColors[pi] = 0.65;
-          pulseColors[pi + 1] = 0.33;
-          pulseColors[pi + 2] = 0.96;
+          pulseColors[i * 3] = 0.65;
+          pulseColors[i * 3 + 1] = 0.33;
+          pulseColors[i * 3 + 2] = 0.96;
 
-          pulseSizes[i] = 0.2 * (1 - ringProgress);
-          pulseAlphas[i] = ringAlpha;
+          pulseSizes[i] = 0.15 * ringProgress;
+          pulseAlphas[i] = Math.sin(ringProgress * Math.PI) * 0.6;
         }
       }
 
     } else {
-      // Clarity phase - organized nodes with energy flow
+      // CLARITY PHASE: Efficient flow, maximum output to customer
 
-      // Main particles settle into clarity positions
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
+      // Hide storms
+      const stormCount = 40;
+      for (let i = 0; i < stormCount; i++) {
+        stormAlphas[i] = 0;
+      }
+
+      // Settle particles into node positions
+      for (let i = 0; i < EFFORT_PARTICLES; i++) {
         const i3 = i * 3;
         const targetIdx = targetAssignments[i];
-        const t3 = targetIdx * 3;
+        const target = clarityTargets[targetIdx];
 
-        // Only show primary particles for each node
-        const isMainParticle = i < CLARITY_NODE_COUNT * 3;
+        const particlesPerNode = Math.floor(EFFORT_PARTICLES / clarityTargets.length);
+        const isVisible = i < clarityTargets.length * Math.min(8, particlesPerNode);
 
-        if (isMainParticle) {
-          // Gentle breathing motion
-          const breathe = Math.sin(time * 2 + i * 0.5) * 0.05;
-          positions[i3] = clarityTargets[t3] + Math.sin(time + i) * 0.03;
-          positions[i3 + 1] = clarityTargets[t3 + 1] + Math.cos(time * 1.1 + i) * 0.03;
-          positions[i3 + 2] = breathe;
+        if (isVisible) {
+          // Gentle orbit around node position
+          const orbitOffset = (i % 8) * (Math.PI * 2 / 8);
+          const orbitRadius = 0.15 + (Math.floor(i / clarityTargets.length) % 3) * 0.08;
 
-          // Output nodes are green, others are purple
-          const isOutput = OUTPUT_ENDPOINT_INDICES.includes(targetIdx);
+          positions[i3] = target.x + Math.cos(time * 0.8 + orbitOffset) * orbitRadius;
+          positions[i3 + 1] = target.y + Math.sin(time * 0.8 + orbitOffset) * orbitRadius * 0.7;
+          positions[i3 + 2] = Math.sin(time + i) * 0.1;
+
+          // Color based on node type
+          const isOutput = targetIdx >= clarityTargets.length - 3; // Last 3 are outputs
+          const isCore = targetIdx === clarityTargets.length - 4; // Core node
+
           if (isOutput) {
-            colors[i3] = 0.13;
-            colors[i3 + 1] = 0.77;
-            colors[i3 + 2] = 0.37;
+            // Green for output/value delivered
+            const rgb = hslToRgb(145 / 360, 0.7, 0.5);
+            colors[i3] = rgb.r;
+            colors[i3 + 1] = rgb.g;
+            colors[i3 + 2] = rgb.b;
+          } else if (isCore) {
+            // Bright violet for BEAU_PROTOCOL core
+            const rgb = hslToRgb(270 / 360, 0.9, 0.6);
+            colors[i3] = rgb.r;
+            colors[i3 + 1] = rgb.g;
+            colors[i3 + 2] = rgb.b;
           } else {
-            colors[i3] = 0.49;
-            colors[i3 + 1] = 0.23;
-            colors[i3 + 2] = 0.92;
+            // Purple for processing nodes
+            const rgb = hslToRgb(280 / 360, 0.7, 0.5);
+            colors[i3] = rgb.r;
+            colors[i3 + 1] = rgb.g;
+            colors[i3 + 2] = rgb.b;
           }
 
-          // Larger, brighter for clarity
-          sizes[i] = 0.2 + Math.sin(time * 3 + i) * 0.05;
-          alphas[i] = 0.8 + Math.sin(time * 2 + i) * 0.2;
+          sizes[i] = 0.1 + Math.sin(time * 2 + i) * 0.02;
+          alphas[i] = 0.7 + Math.sin(time * 1.5 + i) * 0.2;
         } else {
-          // Hide excess particles
           alphas[i] = 0;
         }
       }
 
-      // Energy pulses flowing along connections
+      // EFFICIENT FLOW PULSES - following the pipeline, all reaching destination
       let pulseIdx = 0;
-      STRUCTURED_CONNECTIONS.forEach((conn, connIdx) => {
-        const fromT3 = conn.from * 3;
-        const toT3 = conn.to * 3;
+      FLOW_CONNECTIONS.forEach((conn, connIdx) => {
+        // Multiple pulses per connection - steady, efficient flow
+        for (let p = 0; p < 5; p++) {
+          if (pulseIdx >= PULSE_COUNT) break;
 
-        const fromX = clarityTargets[fromT3];
-        const fromY = clarityTargets[fromT3 + 1];
-        const toX = clarityTargets[toT3];
-        const toY = clarityTargets[toT3 + 1];
+          const pulseProgress = ((time * 0.6 + connIdx * 0.15 + p * 0.2) % 1);
+          const i3 = pulseIdx * 3;
 
-        // Multiple pulses per connection
-        for (let p = 0; p < 4; p++) {
-          if (pulseIdx >= CONNECTION_PARTICLE_COUNT) break;
+          // Smooth bezier-like path
+          const midX = (conn.from.x + conn.to.x) / 2;
+          const midY = (conn.from.y + conn.to.y) / 2 + 0.2;
 
-          const pulseProgress = ((time * 0.8 + connIdx * 0.2 + p * 0.25) % 1);
-          const pi = pulseIdx * 3;
+          // Quadratic interpolation for curved path
+          const t = pulseProgress;
+          const t2 = t * t;
+          const mt = 1 - t;
+          const mt2 = mt * mt;
 
-          pulsePositions[pi] = fromX + (toX - fromX) * pulseProgress;
-          pulsePositions[pi + 1] = fromY + (toY - fromY) * pulseProgress;
-          pulsePositions[pi + 2] = 0.05;
+          pulsePositions[i3] = mt2 * conn.from.x + 2 * mt * t * midX + t2 * conn.to.x;
+          pulsePositions[i3 + 1] = mt2 * conn.from.y + 2 * mt * t * midY + t2 * conn.to.y;
+          pulsePositions[i3 + 2] = 0.05;
 
-          // Purple energy
-          pulseColors[pi] = 0.65;
-          pulseColors[pi + 1] = 0.55;
-          pulseColors[pi + 2] = 0.98;
+          // Color gradient along flow
+          const isOutputFlow = conn.to.x > 3; // Flowing to output
+          if (isOutputFlow) {
+            // Transition to green as approaching output
+            const greenT = pulseProgress;
+            const rgb = hslToRgb((280 - greenT * 135) / 360, 0.7, 0.55);
+            pulseColors[i3] = rgb.r;
+            pulseColors[i3 + 1] = rgb.g;
+            pulseColors[i3 + 2] = rgb.b;
+          } else {
+            // Purple for internal flow
+            pulseColors[i3] = 0.55;
+            pulseColors[i3 + 1] = 0.35;
+            pulseColors[i3 + 2] = 0.92;
+          }
 
-          pulseSizes[pulseIdx] = 0.12;
+          pulseSizes[pulseIdx] = 0.1 + Math.sin(pulseProgress * Math.PI) * 0.04;
           pulseAlphas[pulseIdx] = 0.7;
 
           pulseIdx++;
@@ -464,16 +628,19 @@ function ParticleSystem({ phase, width, height, mousePosition }: ParticleSystemP
       });
 
       // Hide unused pulses
-      for (let i = pulseIdx; i < CONNECTION_PARTICLE_COUNT; i++) {
+      for (let i = pulseIdx; i < PULSE_COUNT; i++) {
         pulseAlphas[i] = 0;
       }
     }
 
-    // Update attributes
-    particlesRef.current.geometry.attributes.position.needsUpdate = true;
-    particlesRef.current.geometry.attributes.customColor.needsUpdate = true;
-    particlesRef.current.geometry.attributes.size.needsUpdate = true;
-    particlesRef.current.geometry.attributes.alpha.needsUpdate = true;
+    // Update all geometry attributes
+    effortRef.current.geometry.attributes.position.needsUpdate = true;
+    effortRef.current.geometry.attributes.customColor.needsUpdate = true;
+    effortRef.current.geometry.attributes.size.needsUpdate = true;
+    effortRef.current.geometry.attributes.alpha.needsUpdate = true;
+
+    stormsRef.current.geometry.attributes.position.needsUpdate = true;
+    stormsRef.current.geometry.attributes.alpha.needsUpdate = true;
 
     pulsesRef.current.geometry.attributes.position.needsUpdate = true;
     pulsesRef.current.geometry.attributes.customColor.needsUpdate = true;
@@ -483,35 +650,32 @@ function ParticleSystem({ phase, width, height, mousePosition }: ParticleSystemP
 
   return (
     <>
-      <points ref={particlesRef} geometry={geometry} material={particleMaterial} />
+      <points ref={stormsRef} geometry={stormGeometry} material={stormMaterial} />
+      <points ref={effortRef} geometry={effortGeometry} material={effortMaterial} />
       <points ref={pulsesRef} geometry={pulseGeometry} material={pulseMaterial} />
     </>
   );
 }
 
-// Connection lines component
-function ConnectionLines({ phase }: { phase: Phase }) {
+// Connection lines for clarity phase
+function FlowLines({ phase }: { phase: Phase }) {
   const linesRef = useRef<THREE.Group>(null);
-
-  const clarityTargets = useMemo(() => {
-    return STRUCTURED_POSITIONS.slice(0, CLARITY_NODE_COUNT).map(pos => ({
-      x: ((pos.x / 100) - 0.5) * 10,
-      y: ((50 - pos.y) / 100) * 6,
-    }));
-  }, []);
 
   const lines = useMemo(() => {
     const lineObjects: THREE.Line[] = [];
 
-    STRUCTURED_CONNECTIONS.forEach((conn) => {
-      const from = clarityTargets[conn.from];
-      const to = clarityTargets[conn.to];
+    FLOW_CONNECTIONS.forEach((conn) => {
+      // Create curved line with control point
+      const midX = (conn.from.x + conn.to.x) / 2;
+      const midY = (conn.from.y + conn.to.y) / 2 + 0.2;
 
-      const points = [
-        new THREE.Vector3(from.x, from.y, -0.1),
-        new THREE.Vector3(to.x, to.y, -0.1),
-      ];
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(conn.from.x, conn.from.y, -0.1),
+        new THREE.Vector3(midX, midY, -0.1),
+        new THREE.Vector3(conn.to.x, conn.to.y, -0.1)
+      );
 
+      const points = curve.getPoints(20);
       const geo = new THREE.BufferGeometry().setFromPoints(points);
       const mat = new THREE.LineBasicMaterial({
         color: new THREE.Color(0x7C3AED),
@@ -524,18 +688,17 @@ function ConnectionLines({ phase }: { phase: Phase }) {
     });
 
     return lineObjects;
-  }, [clarityTargets]);
+  }, []);
 
-  useFrame((state) => {
+  useFrame(() => {
     if (!linesRef.current) return;
 
-    const targetOpacity = phase === 'clarity' ? 0.3 :
-                          phase === 'transition' ? 0.15 : 0;
+    const targetOpacity = phase === 'clarity' ? 0.25 : phase === 'transition' ? 0.1 : 0;
 
     linesRef.current.children.forEach((child) => {
       const line = child as THREE.Line;
       const mat = line.material as THREE.LineBasicMaterial;
-      mat.opacity += (targetOpacity - mat.opacity) * 0.05;
+      mat.opacity += (targetOpacity - mat.opacity) * 0.08;
     });
   });
 
@@ -548,36 +711,80 @@ function ConnectionLines({ phase }: { phase: Phase }) {
   );
 }
 
+// Node labels for clarity phase
+function NodeLabels({ phase }: { phase: Phase }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (phase === 'clarity') {
+      const timer = setTimeout(() => setVisible(true), 500);
+      return () => clearTimeout(timer);
+    } else {
+      setVisible(false);
+    }
+  }, [phase]);
+
+  const allNodes = useMemo(() => [
+    ...BUSINESS_NODES.inputs,
+    ...BUSINESS_NODES.processing,
+    ...BUSINESS_NODES.core,
+    ...BUSINESS_NODES.outputs,
+  ], []);
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+    groupRef.current.visible = visible;
+  });
+
+  // Labels would need HTML overlay or drei Text - keeping simple for performance
+  return null;
+}
+
+// Helper: HSL to RGB
+function hslToRgb(h: number, s: number, l: number) {
+  let r, g, b;
+
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+
+  return { r, g, b };
+}
+
 interface QuantumParticlesProps {
   phase: Phase;
 }
 
 export default function QuantumParticles({ phase }: QuantumParticlesProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [mousePosition, setMousePosition] = useState({ x: 0.5, y: 0.5 });
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-
-    const updateDimensions = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setDimensions({ width: rect.width, height: rect.height });
-      }
-    };
-
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
-  // Throttled mouse handler for performance
+  // Throttled mouse handler
   const lastMouseUpdate = useRef(0);
   const handleMouseMove = (e: React.MouseEvent) => {
     const now = Date.now();
-    if (now - lastMouseUpdate.current < 32) return; // ~30fps throttle
+    if (now - lastMouseUpdate.current < 50) return;
     lastMouseUpdate.current = now;
 
     if (!containerRef.current) return;
@@ -597,29 +804,24 @@ export default function QuantumParticles({ phase }: QuantumParticlesProps) {
       onMouseMove={handleMouseMove}
     >
       <Canvas
-        camera={{ position: [0, 0, 6], fov: 50 }}
-        dpr={[1, 1.5]} // Reduced DPR for performance
+        camera={{ position: [0, 0, 7], fov: 50 }}
+        dpr={[1, 1.5]}
         gl={{
-          antialias: false, // Disable for performance
+          antialias: false,
           alpha: true,
           powerPreference: 'high-performance',
         }}
         style={{ background: '#0D0D0D' }}
       >
-        <ParticleSystem
-          phase={phase}
-          width={dimensions.width}
-          height={dimensions.height}
-          mousePosition={mousePosition}
-        />
-        <ConnectionLines phase={phase} />
+        <BusinessChaosSystem phase={phase} mousePosition={mousePosition} />
+        <FlowLines phase={phase} />
 
         <EffectComposer>
           <Bloom
-            intensity={phase === 'clarity' ? 0.5 : phase === 'transition' ? 0.7 : 0.3}
-            luminanceThreshold={0.3}
+            intensity={phase === 'clarity' ? 0.6 : phase === 'transition' ? 0.8 : 0.4}
+            luminanceThreshold={0.2}
             luminanceSmoothing={0.9}
-            radius={0.6}
+            radius={0.8}
           />
         </EffectComposer>
       </Canvas>

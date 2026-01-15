@@ -49,11 +49,11 @@ export default function ChaosToClarity() {
     setPhase('chaos');
   }, []);
 
-  // Stats based on phase
+  // Stats based on phase - tells the business story
   const stats = {
-    efficiency: phase === 'chaos' ? '23%' : phase === 'clarity' ? '94%' : '...',
-    bottlenecks: phase === 'chaos' ? '12' : phase === 'clarity' ? '0' : '...',
-    automation: phase === 'chaos' ? '0%' : phase === 'clarity' ? '100%' : '...',
+    wastedEffort: phase === 'chaos' ? '67%' : phase === 'clarity' ? '3%' : '...',
+    customerValue: phase === 'chaos' ? '18%' : phase === 'clarity' ? '94%' : '...',
+    operationalCost: phase === 'chaos' ? '$$$' : phase === 'clarity' ? '$' : '...',
   };
 
   const statColor =
@@ -233,38 +233,38 @@ export default function ChaosToClarity() {
             <div className="px-3 sm:px-4 py-2 sm:py-3 bg-[#1A1A1A] border-t border-[#2A2A2A] grid grid-cols-3 gap-2 sm:gap-4 text-center">
               <div>
                 <div className="font-mono text-[9px] sm:text-[10px] md:text-xs text-[#666] uppercase mb-0.5 sm:mb-1">
-                  Efficiency
+                  Wasted Effort
                 </div>
                 <motion.div
                   className="font-mono text-xs sm:text-sm font-medium"
-                  animate={{ color: statColor }}
+                  animate={{ color: phase === 'chaos' ? '#EF4444' : phase === 'clarity' ? '#10B981' : '#94A3B8' }}
                   transition={{ duration: 0.3 }}
                 >
-                  {stats.efficiency}
+                  {stats.wastedEffort}
                 </motion.div>
               </div>
               <div>
                 <div className="font-mono text-[9px] sm:text-[10px] md:text-xs text-[#666] uppercase mb-0.5 sm:mb-1">
-                  Bottlenecks
+                  Customer Value
                 </div>
                 <motion.div
                   className="font-mono text-xs sm:text-sm font-medium"
                   animate={{ color: statColor }}
                   transition={{ duration: 0.3 }}
                 >
-                  {stats.bottlenecks}
+                  {stats.customerValue}
                 </motion.div>
               </div>
               <div>
                 <div className="font-mono text-[9px] sm:text-[10px] md:text-xs text-[#666] uppercase mb-0.5 sm:mb-1">
-                  Automation
+                  Op. Cost
                 </div>
                 <motion.div
                   className="font-mono text-xs sm:text-sm font-medium"
-                  animate={{ color: statColor }}
+                  animate={{ color: phase === 'chaos' ? '#EF4444' : phase === 'clarity' ? '#10B981' : '#94A3B8' }}
                   transition={{ duration: 0.3 }}
                 >
-                  {stats.automation}
+                  {stats.operationalCost}
                 </motion.div>
               </div>
             </div>

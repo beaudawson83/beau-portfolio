@@ -5,7 +5,6 @@ import GoogleAnalytics from '@/components/GoogleAnalytics';
 import AnalyticsProvider from '@/components/AnalyticsProvider';
 import SmoothScroll from '@/components/SmoothScroll';
 import PageLoader from '@/components/PageLoader';
-import CustomCursor from '@/components/CustomCursor';
 import GlobalParticles from '@/components/GlobalParticles';
 import './globals.css';
 
@@ -72,7 +71,6 @@ export default function RootLayout({
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-[#111111] text-white`}
       >
         <PageLoader />
-        <CustomCursor />
         <Suspense fallback={null}>
           <GlobalParticles />
         </Suspense>
