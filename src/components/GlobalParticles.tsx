@@ -4,19 +4,20 @@ import { useRef, useMemo, useEffect, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-const PARTICLE_COUNT = 150;
+const PARTICLE_COUNT = 80; // Reduced from 150
 
-function Particles() {
+function Particles({ isVisible }: { isVisible: boolean }) {
   const meshRef = useRef<THREE.Points>(null);
-  const [scrollVelocity, setScrollVelocity] = useState(0);
+  const scrollVelocity = useRef(0);
+  const frameCount = useRef(0);
 
   // Listen to scroll events for velocity-based animation
   useEffect(() => {
     const handleScroll = (e: Event) => {
       const customEvent = e as CustomEvent;
-      setScrollVelocity(customEvent.detail?.velocity || 0);
+      scrollVelocity.current = customEvent.detail?.velocity || 0;
     };
-    window.addEventListener('smoothscroll', handleScroll);
+    window.addEventListener('smoothscroll', handleScroll, { passive: true });
     return () => window.removeEventListener('smoothscroll', handleScroll);
   }, []);
 
@@ -41,7 +42,11 @@ function Particles() {
   }, []);
 
   useFrame((state) => {
-    if (!meshRef.current) return;
+    if (!meshRef.current || !isVisible) return;
+
+    // Skip frames for performance (update at ~30fps)
+    frameCount.current++;
+    if (frameCount.current % 2 !== 0) return;
 
     const positions = meshRef.current.geometry.attributes.position.array as Float32Array;
     const time = state.clock.elapsedTime;
@@ -49,11 +54,12 @@ function Particles() {
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const i3 = i * 3;
 
-      positions[i3] += velocities[i3] + Math.sin(time * 0.5 + i) * 0.002;
-      positions[i3 + 1] += velocities[i3 + 1] + Math.cos(time * 0.3 + i) * 0.002;
-      positions[i3 + 2] += velocities[i3 + 2];
+      // Double velocity since we skip frames
+      positions[i3] += (velocities[i3] + Math.sin(time * 0.5 + i) * 0.002) * 2;
+      positions[i3 + 1] += (velocities[i3 + 1] + Math.cos(time * 0.3 + i) * 0.002) * 2;
+      positions[i3 + 2] += velocities[i3 + 2] * 2;
 
-      positions[i3 + 1] -= scrollVelocity * 0.1;
+      positions[i3 + 1] -= scrollVelocity.current * 0.1;
 
       if (positions[i3] > 10) positions[i3] = -10;
       if (positions[i3] < -10) positions[i3] = 10;
@@ -83,19 +89,22 @@ function Particles() {
   );
 }
 
-function FloatingLines() {
+function FloatingLines({ isVisible }: { isVisible: boolean }) {
   const groupRef = useRef<THREE.Group>(null);
+  const frameCount = useRef(0);
 
   const lines = useMemo(() => {
     const lineObjects: THREE.Line[] = [];
 
-    for (let i = 0; i < 8; i++) {
+    // Reduced from 8 to 4 lines
+    for (let i = 0; i < 4; i++) {
       const points: number[] = [];
       const startX = (Math.random() - 0.5) * 15;
       const startY = (Math.random() - 0.5) * 15;
       const startZ = (Math.random() - 0.5) * 5 - 3;
 
-      for (let j = 0; j < 20; j++) {
+      // Reduced points from 20 to 12
+      for (let j = 0; j < 12; j++) {
         points.push(
           startX + Math.sin(j * 0.5) * 2,
           startY + j * 0.3,
@@ -120,7 +129,12 @@ function FloatingLines() {
   }, []);
 
   useFrame((state) => {
-    if (!groupRef.current) return;
+    if (!groupRef.current || !isVisible) return;
+
+    // Skip frames for performance
+    frameCount.current++;
+    if (frameCount.current % 3 !== 0) return;
+
     const time = state.clock.elapsedTime;
 
     groupRef.current.children.forEach((child, i) => {
@@ -140,6 +154,7 @@ function FloatingLines() {
 
 export default function GlobalParticles() {
   const [mounted, setMounted] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia(
@@ -149,6 +164,13 @@ export default function GlobalParticles() {
     if (!prefersReducedMotion) {
       setMounted(true);
     }
+
+    // Pause when tab is not visible
+    const handleVisibilityChange = () => {
+      setIsVisible(!document.hidden);
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   if (!mounted) return null;
@@ -159,13 +181,14 @@ export default function GlobalParticles() {
         camera={{ position: [0, 0, 8], fov: 60 }}
         dpr={[1, 1.5]}
         gl={{
-          antialias: true,
+          antialias: false, // Disable for performance
           alpha: true,
           powerPreference: 'high-performance',
         }}
+        frameloop={isVisible ? 'always' : 'never'} // Pause when not visible
       >
-        <Particles />
-        <FloatingLines />
+        <Particles isVisible={isVisible} />
+        <FloatingLines isVisible={isVisible} />
       </Canvas>
     </div>
   );

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import AnalyticsProvider from '@/components/AnalyticsProvider';
@@ -72,7 +73,9 @@ export default function RootLayout({
       >
         <PageLoader />
         <CustomCursor />
-        <GlobalParticles />
+        <Suspense fallback={null}>
+          <GlobalParticles />
+        </Suspense>
         <SmoothScroll>
           <AnalyticsProvider>{children}</AnalyticsProvider>
         </SmoothScroll>

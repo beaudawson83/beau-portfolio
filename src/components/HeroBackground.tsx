@@ -1,8 +1,8 @@
 'use client';
 
 import { useRef, useMemo, useEffect, useState } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postprocessing';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import { BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
 
@@ -88,7 +88,8 @@ function InfiniteGrid() {
 // Energy particles flowing toward center
 function EnergyParticles() {
   const particlesRef = useRef<THREE.Points>(null);
-  const PARTICLE_COUNT = 200;
+  const frameCount = useRef(0);
+  const PARTICLE_COUNT = 100; // Reduced from 200
 
   const { geometry, velocities } = useMemo(() => {
     const positions = new Float32Array(PARTICLE_COUNT * 3);
@@ -126,14 +127,19 @@ function EnergyParticles() {
   useFrame(() => {
     if (!particlesRef.current) return;
 
+    // Skip every other frame for performance
+    frameCount.current++;
+    if (frameCount.current % 2 !== 0) return;
+
     const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
 
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const i3 = i * 3;
 
-      positions[i3] += velocities[i3];
-      positions[i3 + 1] += velocities[i3 + 1];
-      positions[i3 + 2] += velocities[i3 + 2];
+      // Double velocity since we skip frames
+      positions[i3] += velocities[i3] * 2;
+      positions[i3 + 1] += velocities[i3 + 1] * 2;
+      positions[i3 + 2] += velocities[i3 + 2] * 2;
 
       const dist = Math.sqrt(positions[i3] ** 2 + positions[i3 + 2] ** 2);
 
@@ -220,19 +226,24 @@ function FloatingShapes() {
   );
 }
 
-// Mouse parallax handler
+// Mouse parallax handler with throttling
 function MouseParallax({ children }: { children: React.ReactNode }) {
   const groupRef = useRef<THREE.Group>(null);
-  const { viewport } = useThree();
   const mouse = useRef({ x: 0, y: 0 });
+  const lastUpdate = useRef(0);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      // Throttle to ~30fps
+      const now = Date.now();
+      if (now - lastUpdate.current < 32) return;
+      lastUpdate.current = now;
+
       mouse.current.x = (e.clientX / window.innerWidth - 0.5) * 2;
       mouse.current.y = -(e.clientY / window.innerHeight - 0.5) * 2;
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
@@ -260,18 +271,13 @@ function Scene() {
         <FloatingShapes />
       </MouseParallax>
 
+      {/* Simplified post-processing - removed ChromaticAberration for performance */}
       <EffectComposer>
         <Bloom
-          intensity={0.5}
-          luminanceThreshold={0.2}
+          intensity={0.4}
+          luminanceThreshold={0.3}
           luminanceSmoothing={0.9}
           blendFunction={BlendFunction.ADD}
-        />
-        <ChromaticAberration
-          offset={new THREE.Vector2(0.0005, 0.0005)}
-          blendFunction={BlendFunction.NORMAL}
-          radialModulation={false}
-          modulationOffset={0}
         />
       </EffectComposer>
     </>
@@ -307,9 +313,9 @@ export default function HeroBackground() {
     <div className="absolute inset-0 z-0">
       <Canvas
         camera={{ position: [0, 0, 8], fov: 60 }}
-        dpr={[1, 2]}
+        dpr={[1, 1.5]} // Reduced DPR for performance
         gl={{
-          antialias: true,
+          antialias: false, // Disable for performance
           alpha: true,
           powerPreference: 'high-performance',
         }}

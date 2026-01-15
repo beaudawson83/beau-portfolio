@@ -12,8 +12,9 @@ import {
   OUTPUT_ENDPOINT_INDICES,
 } from './constants';
 
-const PARTICLE_COUNT = 500;
-const CONNECTION_PARTICLE_COUNT = 200;
+// Reduced particle counts for performance (was 500/200)
+const PARTICLE_COUNT = 200;
+const CONNECTION_PARTICLE_COUNT = 80;
 
 // Custom shader for particles with glow
 const particleVertexShader = `
@@ -572,7 +573,13 @@ export default function QuantumParticles({ phase }: QuantumParticlesProps) {
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
+  // Throttled mouse handler for performance
+  const lastMouseUpdate = useRef(0);
   const handleMouseMove = (e: React.MouseEvent) => {
+    const now = Date.now();
+    if (now - lastMouseUpdate.current < 32) return; // ~30fps throttle
+    lastMouseUpdate.current = now;
+
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     setMousePosition({
@@ -591,9 +598,9 @@ export default function QuantumParticles({ phase }: QuantumParticlesProps) {
     >
       <Canvas
         camera={{ position: [0, 0, 6], fov: 50 }}
-        dpr={[1, 2]}
+        dpr={[1, 1.5]} // Reduced DPR for performance
         gl={{
-          antialias: true,
+          antialias: false, // Disable for performance
           alpha: true,
           powerPreference: 'high-performance',
         }}
@@ -609,10 +616,10 @@ export default function QuantumParticles({ phase }: QuantumParticlesProps) {
 
         <EffectComposer>
           <Bloom
-            intensity={phase === 'clarity' ? 0.8 : phase === 'transition' ? 1.2 : 0.5}
-            luminanceThreshold={0.2}
+            intensity={phase === 'clarity' ? 0.5 : phase === 'transition' ? 0.7 : 0.3}
+            luminanceThreshold={0.3}
             luminanceSmoothing={0.9}
-            radius={0.8}
+            radius={0.6}
           />
         </EffectComposer>
       </Canvas>

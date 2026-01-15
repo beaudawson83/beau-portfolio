@@ -1,25 +1,39 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, useSpring, useMotionValue } from 'framer-motion';
 
 export default function CustomCursor() {
   const [isVisible, setIsVisible] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
-  const trailRef = useRef<{ x: number; y: number }[]>([]);
+  const lastMoveTime = useRef(0);
+  const lastHoverCheck = useRef(0);
+  const cachedIsInteractive = useRef(false);
 
   const cursorX = useMotionValue(-100);
   const cursorY = useMotionValue(-100);
 
-  const springConfig = { damping: 25, stiffness: 400 };
+  // Optimized spring configs - reduced stiffness for smoother performance
+  const springConfig = { damping: 30, stiffness: 300 };
   const cursorXSpring = useSpring(cursorX, springConfig);
   const cursorYSpring = useSpring(cursorY, springConfig);
 
   // Outer ring with more lag
-  const outerSpringConfig = { damping: 20, stiffness: 150 };
+  const outerSpringConfig = { damping: 25, stiffness: 120 };
   const outerXSpring = useSpring(cursorX, outerSpringConfig);
   const outerYSpring = useSpring(cursorY, outerSpringConfig);
+
+  // Memoized hover detection with throttling
+  const checkInteractive = useCallback((target: HTMLElement): boolean => {
+    return Boolean(
+      target.tagName === 'A' ||
+      target.tagName === 'BUTTON' ||
+      target.closest('a') ||
+      target.closest('button') ||
+      target.getAttribute('role') === 'button'
+    );
+  }, []);
 
   useEffect(() => {
     // Check if device has pointer
@@ -33,14 +47,24 @@ export default function CustomCursor() {
     if (prefersReducedMotion) return;
 
     const handleMouseMove = (e: MouseEvent) => {
+      // Throttle to ~60fps
+      const now = Date.now();
+      if (now - lastMoveTime.current < 16) return;
+      lastMoveTime.current = now;
+
       setIsVisible(true);
       cursorX.set(e.clientX);
       cursorY.set(e.clientY);
 
-      // Update trail
-      trailRef.current.push({ x: e.clientX, y: e.clientY });
-      if (trailRef.current.length > 20) {
-        trailRef.current.shift();
+      // Throttle hover detection to ~15fps (expensive DOM check)
+      if (now - lastHoverCheck.current > 66) {
+        lastHoverCheck.current = now;
+        const target = e.target as HTMLElement;
+        const isInteractive = checkInteractive(target);
+        if (isInteractive !== cachedIsInteractive.current) {
+          cachedIsInteractive.current = isInteractive;
+          setIsHovering(isInteractive);
+        }
       }
     };
 
@@ -50,27 +74,11 @@ export default function CustomCursor() {
     const handleMouseDown = () => setIsClicking(true);
     const handleMouseUp = () => setIsClicking(false);
 
-    // Detect hoverable elements
-    const handleElementHover = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const isInteractive = Boolean(
-        target.tagName === 'A' ||
-        target.tagName === 'BUTTON' ||
-        target.closest('a') ||
-        target.closest('button') ||
-        target.getAttribute('role') === 'button' ||
-        window.getComputedStyle(target).cursor === 'pointer'
-      );
-
-      setIsHovering(isInteractive);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mousemove', handleMouseMove, { passive: true });
     document.addEventListener('mouseenter', handleMouseEnter);
     document.addEventListener('mouseleave', handleMouseLeave);
     document.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('mouseover', handleElementHover);
 
     // Hide default cursor
     document.body.style.cursor = 'none';
@@ -81,10 +89,9 @@ export default function CustomCursor() {
       document.removeEventListener('mouseleave', handleMouseLeave);
       document.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('mouseover', handleElementHover);
       document.body.style.cursor = 'auto';
     };
-  }, [cursorX, cursorY]);
+  }, [cursorX, cursorY, checkInteractive]);
 
   // Don't render on mobile/touch devices
   if (typeof window !== 'undefined') {

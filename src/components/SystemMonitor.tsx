@@ -338,14 +338,20 @@ function DepartmentCard({ department, delay }: { department: Department; delay: 
     Array.from({ length: 8 }, () => Math.random() * 40 + 30)
   );
   const [isHovered, setIsHovered] = useState(false);
+  const lastMouseMove = useRef(0);
 
-  // 3D tilt effect
+  // 3D tilt effect - with reduced spring stiffness for better performance
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
-  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [8, -8]), { stiffness: 300, damping: 30 });
-  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-8, 8]), { stiffness: 300, damping: 30 });
+  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [5, -5]), { stiffness: 150, damping: 20 });
+  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-5, 5]), { stiffness: 150, damping: 20 });
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Throttle to ~30fps
+    const now = Date.now();
+    if (now - lastMouseMove.current < 32) return;
+    lastMouseMove.current = now;
+
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
@@ -360,7 +366,7 @@ function DepartmentCard({ department, delay }: { department: Department; delay: 
     setIsHovered(false);
   };
 
-  // Fluctuate metrics periodically
+  // Fluctuate metrics periodically - longer interval for performance
   useEffect(() => {
     const interval = setInterval(() => {
       setMetrics(prev => prev.map(m => ({
@@ -368,7 +374,7 @@ function DepartmentCard({ department, delay }: { department: Department; delay: 
         value: Math.max(0, Math.min(m.target * 1.5, m.value + (Math.random() - 0.5) * 5)),
       })));
       setSparkData(prev => [...prev.slice(1), Math.random() * 40 + 30]);
-    }, 2000 + Math.random() * 1000);
+    }, 4000 + Math.random() * 2000); // Increased from 2-3s to 4-6s
     return () => clearInterval(interval);
   }, []);
 
@@ -610,7 +616,7 @@ function GlobalMetrics() {
         revenue: prev.revenue + Math.floor(Math.random() * 1000),
         nps: Math.max(0, Math.min(100, prev.nps + (Math.random() - 0.5) * 2)),
       }));
-    }, 3000);
+    }, 5000); // Increased from 3s to 5s
     return () => clearInterval(interval);
   }, []);
 
@@ -672,7 +678,7 @@ function ActivityFeed() {
       ];
       const shuffled = [...newActivities].sort(() => Math.random() - 0.5).slice(0, 5);
       setVisibleActivities(shuffled);
-    }, 8000);
+    }, 12000); // Increased from 8s to 12s
     return () => clearInterval(interval);
   }, []);
 
