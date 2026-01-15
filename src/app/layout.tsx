@@ -2,6 +2,10 @@ import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import AnalyticsProvider from '@/components/AnalyticsProvider';
+import SmoothScroll from '@/components/SmoothScroll';
+import PageLoader from '@/components/PageLoader';
+import CustomCursor from '@/components/CustomCursor';
+import GlobalParticles from '@/components/GlobalParticles';
 import './globals.css';
 
 const inter = Inter({
@@ -66,7 +70,12 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-[#111111] text-white`}
       >
-        <AnalyticsProvider>{children}</AnalyticsProvider>
+        <PageLoader />
+        <CustomCursor />
+        <GlobalParticles />
+        <SmoothScroll>
+          <AnalyticsProvider>{children}</AnalyticsProvider>
+        </SmoothScroll>
       </body>
     </html>
   );

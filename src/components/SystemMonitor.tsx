@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, useInView, AnimatePresence } from 'framer-motion';
+import { motion, useInView, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useTrackSectionWithRef } from '@/hooks/useTrackSection';
 
 // ============================================================================
@@ -228,9 +228,9 @@ function AlertBanner({ alerts }: { alerts: Alert[] }) {
   }, [alerts.length]);
 
   const severityStyles = {
-    critical: 'bg-red-500/10 border-red-500/30 text-red-400',
-    warning: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
-    info: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
+    critical: 'bg-red-500/10 text-red-400',
+    warning: 'bg-amber-500/10 text-amber-400',
+    info: 'bg-blue-500/10 text-blue-400',
   };
 
   const severityIcons = {
@@ -239,27 +239,86 @@ function AlertBanner({ alerts }: { alerts: Alert[] }) {
     info: 'ℹ',
   };
 
+  const severityGlows = {
+    critical: [
+      '0 0 0 1px rgba(239, 68, 68, 0.3)',
+      '0 0 20px rgba(239, 68, 68, 0.4), 0 0 0 1px rgba(239, 68, 68, 0.5)',
+      '0 0 0 1px rgba(239, 68, 68, 0.3)',
+    ],
+    warning: [
+      '0 0 0 1px rgba(245, 158, 11, 0.3)',
+      '0 0 15px rgba(245, 158, 11, 0.3), 0 0 0 1px rgba(245, 158, 11, 0.5)',
+      '0 0 0 1px rgba(245, 158, 11, 0.3)',
+    ],
+    info: [
+      '0 0 0 1px rgba(59, 130, 246, 0.3)',
+      '0 0 10px rgba(59, 130, 246, 0.3), 0 0 0 1px rgba(59, 130, 246, 0.5)',
+      '0 0 0 1px rgba(59, 130, 246, 0.3)',
+    ],
+  };
+
   if (alerts.length === 0) return null;
+
+  const currentAlert = alerts[currentIndex];
 
   return (
     <div className="mb-6">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 10 }}
-          transition={{ duration: 0.3 }}
-          className={`px-4 py-2 rounded-lg border ${severityStyles[alerts[currentIndex].severity]} flex items-center justify-between`}
+          initial={{ opacity: 0, y: -10, scale: 0.98 }}
+          animate={{
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            boxShadow: severityGlows[currentAlert.severity],
+          }}
+          exit={{ opacity: 0, y: 10, scale: 0.98 }}
+          transition={{
+            duration: 0.3,
+            boxShadow: {
+              duration: 1.5,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            },
+          }}
+          className={`relative px-4 py-2 rounded-lg ${severityStyles[currentAlert.severity]} flex items-center justify-between overflow-hidden`}
         >
-          <div className="flex items-center gap-3">
-            <span className="text-lg">{severityIcons[alerts[currentIndex].severity]}</span>
+          {/* Animated scan line for critical alerts */}
+          {currentAlert.severity === 'critical' && (
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <motion.div
+                className="absolute left-0 right-0 h-full"
+                style={{
+                  background: 'linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.1), transparent)',
+                  width: '50%',
+                }}
+                animate={{ x: ['-100%', '300%'] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              />
+            </motion.div>
+          )}
+
+          <div className="flex items-center gap-3 relative z-10">
+            <motion.span
+              className="text-lg"
+              animate={currentAlert.severity === 'critical' ? {
+                scale: [1, 1.2, 1],
+              } : {}}
+              transition={{ duration: 0.5, repeat: Infinity }}
+            >
+              {severityIcons[currentAlert.severity]}
+            </motion.span>
             <div>
-              <span className="font-mono text-xs uppercase opacity-60">{alerts[currentIndex].department}</span>
-              <p className="text-sm">{alerts[currentIndex].message}</p>
+              <span className="font-mono text-xs uppercase opacity-60">{currentAlert.department}</span>
+              <p className="text-sm">{currentAlert.message}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs opacity-60">
+          <div className="flex items-center gap-2 text-xs opacity-60 relative z-10">
             <span className="font-mono">{alerts.length > 1 && `${currentIndex + 1}/${alerts.length}`}</span>
           </div>
         </motion.div>
@@ -273,10 +332,33 @@ function AlertBanner({ alerts }: { alerts: Alert[] }) {
 // ============================================================================
 
 function DepartmentCard({ department, delay }: { department: Department; delay: number }) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const [metrics, setMetrics] = useState(department.metrics);
   const [sparkData, setSparkData] = useState<number[]>(() =>
     Array.from({ length: 8 }, () => Math.random() * 40 + 30)
   );
+  const [isHovered, setIsHovered] = useState(false);
+
+  // 3D tilt effect
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [8, -8]), { stiffness: 300, damping: 30 });
+  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-8, 8]), { stiffness: 300, damping: 30 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    mouseX.set(x);
+    mouseY.set(y);
+  };
+
+  const handleMouseLeave = () => {
+    mouseX.set(0);
+    mouseY.set(0);
+    setIsHovered(false);
+  };
 
   // Fluctuate metrics periodically
   useEffect(() => {
@@ -296,13 +378,54 @@ function DepartmentCard({ department, delay }: { department: Department; delay: 
     critical: 'border-red-500/20',
   };
 
+  const statusGlows = {
+    operational: isHovered ? '0 0 30px rgba(16, 185, 129, 0.15)' : 'none',
+    degraded: isHovered ? '0 0 30px rgba(245, 158, 11, 0.15)' : 'none',
+    critical: '0 0 30px rgba(239, 68, 68, 0.2)',
+  };
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      ref={cardRef}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.5, delay }}
-      className={`bg-[#0D0D0D] rounded-lg border ${statusColors[department.status]} border-[#2A2A2A] overflow-hidden hover:border-[#3A3A3A] transition-colors`}
+      style={{
+        rotateX: isHovered ? rotateX : 0,
+        rotateY: isHovered ? rotateY : 0,
+        transformPerspective: 1000,
+        transformStyle: 'preserve-3d',
+        boxShadow: statusGlows[department.status],
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={handleMouseLeave}
+      className={`relative bg-[#0D0D0D] rounded-lg border ${statusColors[department.status]} border-[#2A2A2A] overflow-hidden hover:border-[#3A3A3A] transition-colors`}
     >
+      {/* Glass reflection */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{
+          background: isHovered
+            ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, transparent 100%)'
+            : 'none',
+        }}
+      />
+
+      {/* Scan line effect for critical status */}
+      {department.status === 'critical' && (
+        <motion.div
+          className="absolute inset-0 pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <motion.div
+            className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-500/50 to-transparent"
+            animate={{ top: ['0%', '100%'] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+          />
+        </motion.div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 bg-[#1A1A1A] border-b border-[#2A2A2A]">
         <div className="flex items-center gap-1.5 sm:gap-2">
@@ -357,25 +480,63 @@ function DepartmentCard({ department, delay }: { department: Department; delay: 
 // ============================================================================
 
 function ProducerCard({ producer, rank, delay }: { producer: Producer; rank: number; delay: number }) {
+  const [isHovered, setIsHovered] = useState(false);
   const rankColors = ['text-amber-400', 'text-gray-400', 'text-amber-600', 'text-[#94A3B8]', 'text-[#94A3B8]'];
   const rankBgs = ['bg-amber-400/10', 'bg-gray-400/10', 'bg-amber-600/10', 'bg-transparent', 'bg-transparent'];
+  const rankGlows = [
+    '0 0 15px rgba(251, 191, 36, 0.4)',
+    '0 0 10px rgba(156, 163, 175, 0.3)',
+    '0 0 8px rgba(180, 83, 9, 0.3)',
+    'none',
+    'none',
+  ];
 
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4, delay }}
-      className="flex items-center gap-2 sm:gap-3 py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-[#1A1A1A] transition-colors"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="relative flex items-center gap-2 sm:gap-3 py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-[#1A1A1A] transition-colors cursor-default"
     >
-      {/* Rank */}
-      <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full ${rankBgs[rank]} flex items-center justify-center flex-shrink-0`}>
-        <span className={`font-mono text-[10px] sm:text-xs font-bold ${rankColors[rank]}`}>{rank + 1}</span>
-      </div>
+      {/* Achievement glow for top 3 */}
+      {rank < 3 && isHovered && (
+        <motion.div
+          className="absolute inset-0 rounded-lg pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{
+            boxShadow: rankGlows[rank],
+          }}
+        />
+      )}
 
-      {/* Avatar */}
-      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] flex items-center justify-center text-white text-[10px] sm:text-xs font-bold flex-shrink-0">
+      {/* Rank with pulse animation for #1 */}
+      <motion.div
+        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full ${rankBgs[rank]} flex items-center justify-center flex-shrink-0 relative`}
+        animate={rank === 0 ? {
+          boxShadow: [
+            '0 0 0 0 rgba(251, 191, 36, 0)',
+            '0 0 0 4px rgba(251, 191, 36, 0.3)',
+            '0 0 0 0 rgba(251, 191, 36, 0)',
+          ],
+        } : {}}
+        transition={rank === 0 ? { duration: 2, repeat: Infinity } : {}}
+      >
+        <span className={`font-mono text-[10px] sm:text-xs font-bold ${rankColors[rank]}`}>{rank + 1}</span>
+      </motion.div>
+
+      {/* Avatar with glow */}
+      <motion.div
+        className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] flex items-center justify-center text-white text-[10px] sm:text-xs font-bold flex-shrink-0 relative"
+        whileHover={{ scale: 1.1 }}
+        style={{
+          boxShadow: isHovered ? '0 0 15px rgba(124, 58, 237, 0.5)' : 'none',
+        }}
+      >
         {producer.initials}
-      </div>
+      </motion.div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
@@ -383,9 +544,14 @@ function ProducerCard({ producer, rank, delay }: { producer: Producer; rank: num
         <p className="text-[9px] sm:text-[10px] text-[#666] font-mono uppercase">{producer.department}</p>
       </div>
 
-      {/* Metric */}
+      {/* Metric with slide-in detail on hover */}
       <div className="text-right flex-shrink-0">
-        <p className="text-xs sm:text-sm font-bold text-white">{producer.value}</p>
+        <motion.p
+          className="text-xs sm:text-sm font-bold text-white"
+          animate={{ color: isHovered ? '#A78BFA' : '#FFFFFF' }}
+        >
+          {producer.value}
+        </motion.p>
         <div className="flex items-center justify-end gap-1">
           <TrendIndicator trend={producer.trend > 0 ? 'up' : 'down'} value={Math.abs(producer.trend)} />
         </div>

@@ -1,15 +1,24 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { Phase } from './types';
-import { useParticleSystem } from './useParticleSystem';
 import { useTrackSectionWithRef } from '@/hooks/useTrackSection';
 import { trackCTAClick } from '@/lib/analytics';
 
+// Dynamic import for WebGL component (SSR disabled)
+const QuantumParticles = dynamic(() => import('./QuantumParticles'), {
+  ssr: false,
+  loading: () => (
+    <div className="absolute inset-0 bg-[#0D0D0D] flex items-center justify-center">
+      <div className="font-mono text-xs text-[#94A3B8]">INITIALIZING_QUANTUM_FIELD...</div>
+    </div>
+  ),
+});
+
 export default function ChaosToClarity() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const isInView = useInView(containerRef, { once: false, margin: '-100px' });
 
   // Track when this section becomes visible
@@ -17,13 +26,6 @@ export default function ChaosToClarity() {
 
   const [phase, setPhase] = useState<Phase>('chaos');
   const [isActivating, setIsActivating] = useState(false);
-
-  // Use particle system
-  const { resetParticles } = useParticleSystem(canvasRef, {
-    particleCount: 12,
-    phase,
-    isInView,
-  });
 
   // Handle button click - trigger the transformation
   const handleActivate = useCallback(() => {
@@ -45,8 +47,7 @@ export default function ChaosToClarity() {
   // Reset to chaos
   const handleReset = useCallback(() => {
     setPhase('chaos');
-    resetParticles();
-  }, [resetParticles]);
+  }, []);
 
   // Stats based on phase
   const stats = {
@@ -119,13 +120,10 @@ export default function ChaosToClarity() {
               </div>
             </div>
 
-            {/* Canvas Animation Area - Better mobile aspect ratio */}
+            {/* WebGL Animation Area - Better mobile aspect ratio */}
             <div className="relative aspect-[4/3] sm:aspect-[3/2] md:aspect-[2/1] min-h-[220px] sm:min-h-[260px] md:min-h-[300px]">
-              <canvas
-                ref={canvasRef}
-                className="absolute inset-0 w-full h-full"
-                style={{ background: '#0D0D0D' }}
-              />
+              {/* WebGL Quantum Particle System */}
+              <QuantumParticles phase={phase} />
 
               {/* Center Status (transition only) */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
