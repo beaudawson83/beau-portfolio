@@ -61,18 +61,18 @@ export default function Hero() {
           >
             {/* Glitch decode headline */}
             <h1 className="font-bold leading-tight mb-3 sm:mb-4 md:mb-6">
-              <div className="text-[clamp(1.25rem,5vw,3.75rem)] whitespace-nowrap">
+              <div className="text-[clamp(1.25rem,5vw,3.75rem)]">
                 <GlitchText
-                  text="Operations is leverage."
+                  text="Infrastructure is the leverage most companies leave on the table."
                   as="span"
                   delay={2800}
                   duration={1500}
                   className="font-bold"
                 />
               </div>
-              <div className="text-[clamp(1.25rem,5vw,3.75rem)] whitespace-nowrap">
+              <div className="text-[clamp(0.875rem,3vw,1.5rem)] mt-4">
                 <GlitchText
-                  text="Most companies leave it on the table."
+                  text="Using a decade of in-the-trenches intuition and cutting-edge agentic automation, I help you outgrow the mess and build the systems that turn vision into effortless scale."
                   as="span"
                   delay={3200}
                   duration={1500}
