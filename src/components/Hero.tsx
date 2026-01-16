@@ -60,15 +60,26 @@ export default function Hero() {
             className="order-2 lg:order-1"
           >
             {/* Glitch decode headline */}
-            <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl 2xl:text-6xl font-bold leading-tight mb-3 sm:mb-4 md:mb-6">
-              <GlitchText
-                text={heroContent.headline}
-                as="h1"
-                delay={2800}
-                duration={1500}
-                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl 2xl:text-6xl font-bold leading-tight"
-              />
-            </div>
+            <h1 className="font-bold leading-tight mb-3 sm:mb-4 md:mb-6">
+              <div className="text-[clamp(1.25rem,5vw,3.75rem)] whitespace-nowrap">
+                <GlitchText
+                  text="Operations is leverage."
+                  as="span"
+                  delay={2800}
+                  duration={1500}
+                  className="font-bold"
+                />
+              </div>
+              <div className="text-[clamp(1.25rem,5vw,3.75rem)] whitespace-nowrap">
+                <GlitchText
+                  text="Most companies leave it on the table."
+                  as="span"
+                  delay={3200}
+                  duration={1500}
+                  className="font-bold"
+                />
+              </div>
+            </h1>
 
             {/* Subheader with fade-in */}
             <motion.p
