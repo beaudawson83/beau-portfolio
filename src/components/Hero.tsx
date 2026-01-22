@@ -51,7 +51,7 @@ export default function Hero() {
 
       {/* Content */}
       <div className="relative z-10 max-w-7xl 2xl:max-w-[1600px] mx-auto w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 md:gap-12 lg:gap-16 2xl:gap-24 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6 sm:gap-8 md:gap-12 lg:gap-16 2xl:gap-24 items-center">
           {/* Left: Text Block */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -60,8 +60,8 @@ export default function Hero() {
             className="order-2 lg:order-1"
           >
             {/* Glitch decode headline */}
-            <h1 className="font-bold leading-tight mb-3 sm:mb-4 md:mb-6">
-              <div className="text-[clamp(1.25rem,5vw,3.75rem)]">
+            <h1 className="font-bold leading-tight mb-3 sm:mb-4 md:mb-6 hyphens-none">
+              <div className="text-[clamp(1.25rem,5vw,3.75rem)] break-keep">
                 <GlitchText
                   text="Infrastructure is the leverage most companies leave on the table."
                   as="span"
@@ -70,7 +70,7 @@ export default function Hero() {
                   className="font-bold"
                 />
               </div>
-              <div className="text-[clamp(0.875rem,3vw,1.5rem)] mt-4">
+              <div className="text-[clamp(0.875rem,3vw,1.5rem)] mt-4 break-keep">
                 <GlitchText
                   text="Using a decade of in-the-trenches intuition and cutting-edge agentic automation, I help you outgrow the mess and build the systems that turn vision into effortless scale."
                   as="span"
