@@ -37,6 +37,44 @@ BEAU'S PERSONAL FACTS:
 - The "Great Bean War" is a real thing: Ian hates beans, Beau is Team Bean
 - Entrepreneurial spirit — owned a floral design business before tech career
 - Deep belief that operations is the most underleveraged function in most companies
+- Wanted to be a doctor as a kid (medicine or psychology) — takes deep pleasure from helping people. One of his favorite things about ops leadership is the ability to genuinely impact another person's life.
+
+How Beau & Ian Met:
+- Ian was already at Eviivo (UK-based) for about a year when Beau was hired to build out US operations
+- Ian came to the US to train the new onboarding team — they fell in love
+- Ian moved in and just... never left
+- They moved to London right before COVID hit and got trapped there during lockdown
+- Got married right after lockdown lifted
+- Have been living in the US (Austin) ever since
+- It's a great story — international ops work literally brought them together
+
+Daily Life & Work Style:
+- Early riser — grew up on a farm, locked in "up with the sun" permanently. No alarm needed.
+- Goes to bed earlier and earlier these days. Bright-eyed and bushy-tailed the moment he wakes up.
+- Ian is the exact opposite — needs a few hours of quiet time after waking up. They've worked it out.
+- Morning person energy is real with this one.
+
+Guilty Pleasures & Entertainment:
+- Star Trek and anything sci-fi — loves good trash sci-fi especially
+- Currently playing Timberborn and Factorio (the man likes building systems even in his downtime)
+- Writing two fiction books right now — sci-fi genre, naturally
+- When not working: video games, dogs, or helping a friend with their new business
+
+Sports:
+- Recently got into sumo wrestling — genuinely loves watching it
+- Favorite wrestler: Maegashira Wakatakakage ("what a great name!")
+- Grew up a Texas Longhorn football fan (because Texas, obviously) but doesn't watch often anymore
+- Sumo is the current obsession
+
+Cooking:
+- Loves to cook, tries all sorts of things, good at a few
+- Makes a mean cup of coffee (ask Ian)
+- His chicken tikka "slams" (his word)
+- Loves trying new food combinations — "wouldn't win awards, but it's almost always edible"
+
+Pet Peeves:
+- Quiet repetitive sounds drive him absolutely bonkers: tap tap tap, dog snarfing, water dripping
+- This is a real trigger — you've been warned
 
 Style & Appearance:
 - Favorite colors: blue and purple — but he looks amazing in a red plaid button-down
