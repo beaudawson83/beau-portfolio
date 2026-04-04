@@ -2,31 +2,14 @@
 
 import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import dynamic from 'next/dynamic';
-import GlitchText from './GlitchText';
-import HolographicFrame from './HolographicFrame';
 import EnergyButton from './ui/EnergyButton';
 import AskBeau from './AskBeau';
 import { heroContent } from '@/lib/data';
 import { trackCTAClick, trackSectionView } from '@/lib/analytics';
 
-// Dynamic import for HeroBackground to avoid SSR issues with Three.js
-const HeroBackground = dynamic(() => import('./HeroBackground'), {
-  ssr: false,
-  loading: () => (
-    <div
-      className="absolute inset-0 z-0"
-      style={{
-        background: 'radial-gradient(ellipse at center, rgba(124, 58, 237, 0.1) 0%, transparent 70%)',
-      }}
-    />
-  ),
-});
-
 export default function Hero() {
   const hasTrackedView = useRef(false);
 
-  // Track hero section view on mount (it's always visible first)
   useEffect(() => {
     if (!hasTrackedView.current) {
       hasTrackedView.current = true;
@@ -35,114 +18,119 @@ export default function Hero() {
   }, []);
 
   const scrollToContact = () => {
-    trackCTAClick('Connect With Me', 'Hero');
+    trackCTAClick('Get in Touch', 'Hero');
     document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const scrollToExperience = () => {
-    trackCTAClick('View Experience', 'Hero');
-    document.getElementById('changelog')?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToWork = () => {
+    trackCTAClick('See My Work', 'Hero');
+    document.getElementById('case-studies')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
     <section className="relative min-h-screen flex items-center pt-14 sm:pt-16 pb-8 sm:pb-12 px-4 sm:px-6 lg:px-8 2xl:px-16 overflow-hidden">
-      {/* 3D Background */}
-      <HeroBackground />
+      {/* Subtle gradient background */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          background: 'radial-gradient(ellipse at 30% 50%, rgba(124, 58, 237, 0.06) 0%, transparent 60%)',
+        }}
+      />
 
-      {/* Content */}
       <div className="relative z-10 max-w-7xl 2xl:max-w-[1600px] mx-auto w-full">
-        {/* Full-width headline above the grid */}
-        <motion.h1
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="font-bold leading-tight mb-6 sm:mb-8 md:mb-10 hyphens-none"
-        >
-          <div className="text-[clamp(1.5rem,4.5vw,3.75rem)] text-balance">
-            <GlitchText
-              text={heroContent.headline}
-              as="span"
-              delay={400}
-              duration={800}
-              className="font-bold"
-            />
-          </div>
-        </motion.h1>
-
-        <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6 sm:gap-8 md:gap-12 lg:gap-16 2xl:gap-24 items-start">
-          {/* Left: Text Block */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-            className="order-2 lg:order-1"
-          >
-            {/* Subheader with fade-in */}
-            <motion.p
-              initial={{ opacity: 0, y: 15 }}
+        <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-8 md:gap-12 lg:gap-16 items-center">
+          {/* Left: Text */}
+          <div className="order-2 lg:order-1">
+            {/* Name + Title */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.0 }}
-              className="text-sm sm:text-base md:text-lg lg:text-xl 2xl:text-2xl text-[#94A3B8] leading-relaxed mb-5 sm:mb-6 md:mb-8 max-w-xl 2xl:max-w-2xl text-balance"
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="mb-6"
+            >
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl 2xl:text-7xl font-bold text-white leading-[1.1] mb-3">
+                {heroContent.name}
+              </h1>
+              <p className="font-mono text-sm sm:text-base md:text-lg text-[#7C3AED] tracking-wide">
+                {heroContent.title}
+              </p>
+            </motion.div>
+
+            {/* Headline */}
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.25 }}
+              className="text-xl sm:text-2xl md:text-3xl font-semibold text-white/90 leading-snug mb-4"
+            >
+              {heroContent.headline}
+            </motion.p>
+
+            {/* Proof line */}
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="text-sm sm:text-base md:text-lg text-[#94A3B8] leading-relaxed mb-8 max-w-2xl"
             >
               {heroContent.subheader}
             </motion.p>
 
-            {/* Energy Buttons */}
+            {/* CTAs */}
             <motion.div
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.3 }}
-              className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8"
+              transition={{ duration: 0.5, delay: 0.55 }}
+              className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8"
             >
               <EnergyButton variant="primary" onClick={scrollToContact}>
                 {heroContent.primaryCTA}
               </EnergyButton>
-              <EnergyButton variant="secondary" onClick={scrollToExperience}>
+              <EnergyButton variant="secondary" onClick={scrollToWork}>
                 {heroContent.secondaryCTA}
               </EnergyButton>
             </motion.div>
 
-            {/* Ask Beau Terminal - Desktop */}
+            {/* Ask Beau - Desktop */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.6 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.7 }}
               className="hidden lg:block"
             >
               <AskBeau />
             </motion.div>
-          </motion.div>
+          </div>
 
-          {/* Right: Holographic Headshot */}
+          {/* Right: Headshot */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
             className="order-1 lg:order-2 flex justify-center lg:justify-end"
           >
             <div className="relative w-40 h-40 sm:w-56 sm:h-56 md:w-72 md:h-72 lg:w-96 lg:h-96 2xl:w-[28rem] 2xl:h-[28rem]">
-              <HolographicFrame
-                src="/beau.jpg"
-                alt="Beau Dawson"
-                className="w-full h-full"
-              />
+              <div className="w-full h-full rounded-2xl overflow-hidden border border-[#2A2A2A] shadow-2xl shadow-[#7C3AED]/5">
+                <img
+                  src="/beau.jpg"
+                  alt="Beau Dawson"
+                  className="w-full h-full object-cover"
+                />
+              </div>
             </div>
           </motion.div>
         </div>
 
-        {/* Ask Beau Terminal - Mobile/Tablet (below hero content) */}
+        {/* Ask Beau - Mobile */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 1.6 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.7 }}
           className="lg:hidden mt-8 sm:mt-10"
         >
           <AskBeau />
         </motion.div>
       </div>
-
-      {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#111111] to-transparent pointer-events-none z-10" />
     </section>
   );
 }

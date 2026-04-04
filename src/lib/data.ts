@@ -217,6 +217,70 @@ export const badLabsContent = {
   liveUrl: 'https://testconsole.badlabs.systems',
 };
 
+export interface CaseStudy {
+  company: string;
+  role: string;
+  period: string;
+  problem: string;
+  built: string;
+  results: string[];
+  highlight: string;
+}
+
+export const caseStudies: CaseStudy[] = [
+  {
+    company: 'Expedia Group (HomeAway)',
+    role: 'Billing Specialist → Support Director',
+    period: '2015 - 2018',
+    problem:
+      'Legacy billing systems were silently hemorrhaging revenue through logic errors nobody had found. International support teams were fragmented across outsourced vendors during a major corporate integration.',
+    built:
+      'Forensic billing audit that traced revenue leakage through complex charge calculations. Overhauled billing and support workflows with automated validation. Led the international consolidation of outsourced support into parent corporate structures.',
+    results: [
+      '$1M+ in revenue recovered from billing logic errors',
+      '$1M/yr in fraud and leakage identified bridging Support + Finance data',
+      '50%+ reduction in processing errors',
+      '22 promotions orchestrated, 18 cross-functional transitions',
+      '4 personal promotions in 3.5 years',
+    ],
+    highlight: 'Found money nobody knew was missing.',
+  },
+  {
+    company: 'Union',
+    role: 'Support Operations Manager',
+    period: '2022 - 2025',
+    problem:
+      'Series A-B SaaS with a 15-person support team drowning in unstructured workflows, no career pathing, a 50% washout rate for new hires, and zero self-service infrastructure. Leadership gaps meant wearing multiple hats across Support, Success, and Sales.',
+    built:
+      'Tiered support model with clear escalation paths. Scalable knowledge base from scratch. Structured onboarding curriculum with milestone-based progression. Career-pathing framework with clear growth trajectories. Custom Shopify-to-HubSpot integration for hardware sales.',
+    results: [
+      '35% improvement in CSAT scores',
+      '20% faster resolution time',
+      '18% ticket volume reduction via self-service',
+      '90-day onboarding success: 50% → 90%',
+      '9 promotions including 3 double-promotions',
+      'Zero leadership turnover across entire tenure',
+      '60% ops effort reduction via Shopify-HubSpot integration',
+    ],
+    highlight: 'Walked into chaos. Left it running itself.',
+  },
+  {
+    company: 'BAD Labs',
+    role: 'Founder & Principal Operations Architect',
+    period: '2025 - Present',
+    problem:
+      'SMBs are paying a complexity tax on every dollar — drowning in manual CRM entry, disconnected tools, and processes that depend on one person knowing how things work.',
+    built:
+      'Console — an autonomous agentic CRM where AI agents handle data entry, pipeline tracking, and workflow orchestration without human intervention. Plus 12+ custom AI-powered micro-apps for client-specific bottlenecks.',
+    results: [
+      '~90% reduction in CRM administrative overhead',
+      '12+ custom AI tools built and deployed',
+      'Available for fractional COO / VP Ops engagements',
+    ],
+    highlight: 'Building the systems I spent 20 years wishing existed.',
+  },
+];
+
 export const socialLinks: SocialLink[] = [
   {
     label: 'LINKEDIN',
@@ -236,9 +300,11 @@ export const socialLinks: SocialLink[] = [
 ];
 
 export const heroContent = {
-  headline: 'Infrastructure is the leverage most companies leave on the table.',
+  name: 'Beau Dawson',
+  title: 'Operations leader. Systems builder. AI architect.',
+  headline: "I don't manage operations — I engineer them.",
   subheader:
-    "Every manual process, every workaround, every \"that's just how we do it\" — it's money you're not making. I find those gaps and I close them. Not with band-aids, but with systems designed to scale. In 20+ years I've turned cost centers into profit engines. If your operations aren't accelerating your business, you're subsidizing your competitors.",
-  primaryCTA: '> INITIATE_CONTACT',
-  secondaryCTA: '[ VIEW_EXPERIENCE ]',
+    "$1M+ recovered at Expedia. 90% retention across 1,500 accounts at Eviivo. 31 internal promotions driven. Zero leadership turnover. Now building autonomous AI systems that eliminate operational bottlenecks entirely.",
+  primaryCTA: 'Get in Touch',
+  secondaryCTA: 'See My Work',
 };
