@@ -41,7 +41,7 @@ export default function Hero() {
 
   const scrollToExperience = () => {
     trackCTAClick('View Experience', 'Hero');
-    document.getElementById('experience')?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('changelog')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
@@ -53,26 +53,17 @@ export default function Hero() {
       <div className="relative z-10 max-w-7xl 2xl:max-w-[1600px] mx-auto w-full">
         {/* Full-width headline above the grid */}
         <motion.h1
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 2.5 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
           className="font-bold leading-tight mb-6 sm:mb-8 md:mb-10 hyphens-none"
         >
           <div className="text-[clamp(1.5rem,4.5vw,3.75rem)] text-balance">
             <GlitchText
-              text="Infrastructure is the leverage most companies leave on the table."
+              text={heroContent.headline}
               as="span"
-              delay={2800}
-              duration={1500}
-              className="font-bold"
-            />
-          </div>
-          <div className="text-[clamp(0.875rem,2.5vw,1.5rem)] mt-4 text-balance max-w-5xl">
-            <GlitchText
-              text="Using a decade of in-the-trenches intuition and cutting-edge agentic automation, I help you outgrow the mess and build the systems that turn vision into effortless scale."
-              as="span"
-              delay={3200}
-              duration={1500}
+              delay={400}
+              duration={800}
               className="font-bold"
             />
           </div>
@@ -83,14 +74,14 @@ export default function Hero() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, delay: 2.5 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
             className="order-2 lg:order-1"
           >
             {/* Subheader with fade-in */}
             <motion.p
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 4 }}
+              transition={{ duration: 0.6, delay: 1.0 }}
               className="text-sm sm:text-base md:text-lg lg:text-xl 2xl:text-2xl text-[#94A3B8] leading-relaxed mb-5 sm:mb-6 md:mb-8 max-w-xl 2xl:max-w-2xl text-balance"
             >
               {heroContent.subheader}
@@ -98,9 +89,9 @@ export default function Hero() {
 
             {/* Energy Buttons */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 4.3 }}
+              transition={{ duration: 0.6, delay: 1.3 }}
               className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8"
             >
               <EnergyButton variant="primary" onClick={scrollToContact}>
@@ -115,7 +106,7 @@ export default function Hero() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 4.6 }}
+              transition={{ duration: 0.6, delay: 1.6 }}
               className="hidden lg:block"
             >
               <AskBeau />
@@ -126,7 +117,7 @@ export default function Hero() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, delay: 2.5 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
             className="order-1 lg:order-2 flex justify-center lg:justify-end"
           >
             <div className="relative w-40 h-40 sm:w-56 sm:h-56 md:w-72 md:h-72 lg:w-96 lg:h-96 2xl:w-[28rem] 2xl:h-[28rem]">
@@ -143,7 +134,7 @@ export default function Hero() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 4.6 }}
+          transition={{ duration: 0.6, delay: 1.6 }}
           className="lg:hidden mt-8 sm:mt-10"
         >
           <AskBeau />

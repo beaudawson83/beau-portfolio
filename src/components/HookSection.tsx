@@ -2,7 +2,7 @@
 
 import { motion, useInView, useScroll, useTransform } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
-import { hookQuote } from '@/lib/data';
+const hookQuote = "Companies don't hire Operations Directors because everything is running perfectly. They hire them because manual processes are eating margins. If your team is drowning in repetitive tasks, you are paying a 'complexity tax' on every dollar you earn.";
 import { useTrackSectionWithRef } from '@/hooks/useTrackSection';
 
 // Individual floating word component

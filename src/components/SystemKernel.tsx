@@ -200,9 +200,9 @@ function CategoryCard({
         </ul>
 
         {/* Connection lines (decorative) */}
-        {index < 2 && (
+        {index < 3 && (
           <motion.div
-            className="absolute -right-4 sm:-right-6 md:-right-8 top-1/2 w-4 sm:w-6 md:w-8 h-px bg-gradient-to-r from-[#7C3AED]/30 to-transparent hidden sm:block"
+            className="absolute -right-3 md:-right-4 top-1/2 w-3 md:w-4 h-px bg-gradient-to-r from-[#7C3AED]/30 to-transparent hidden lg:block"
             initial={{ scaleX: 0 }}
             animate={isInView ? { scaleX: 1 } : {}}
             transition={{ delay: index * 0.15 + 0.5, duration: 0.5 }}
@@ -276,7 +276,7 @@ export default function SystemKernel() {
           </motion.div>
 
           {/* Skills grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-4 md:gap-8 2xl:gap-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 md:gap-6 2xl:gap-8">
             {skills.map((skillGroup, index) => (
               <CategoryCard
                 key={skillGroup.category}

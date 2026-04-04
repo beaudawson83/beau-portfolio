@@ -9,14 +9,21 @@ export interface Experience {
   yearRange: string;
   company: string;
   role: string;
+  context?: string;
   impacts: string[];
   tech?: string[];
+  highlights?: string[];
   isLegacy?: boolean;
 }
 
 export interface Skill {
   category: string;
   items: string[];
+}
+
+export interface BadLabsFeature {
+  title: string;
+  description: string;
 }
 
 export type ContactObjective =

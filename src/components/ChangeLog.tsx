@@ -60,8 +60,10 @@ function ExperienceCard({
     yearRange: string;
     company: string;
     role: string;
+    context?: string;
     impacts: string[];
     tech?: string[];
+    highlights?: string[];
   };
   index: number;
   isInView: boolean;
@@ -171,6 +173,18 @@ function ExperienceCard({
           </motion.div>
         </div>
 
+        {/* Context line */}
+        {exp.context && !isLegacy && (
+          <motion.div
+            className="font-mono text-[10px] sm:text-xs md:text-sm 2xl:text-base text-[#94A3B8]/70 ml-1 sm:ml-2 mb-2 sm:mb-3 leading-relaxed italic"
+            initial={{ opacity: 0 }}
+            animate={isInView ? { opacity: 1 } : {}}
+            transition={{ delay: index * 0.15 + 0.25 }}
+          >
+            {exp.context}
+          </motion.div>
+        )}
+
         {/* Impacts with stagger */}
         {exp.impacts.map((impact, i) => (
           <motion.div
@@ -189,19 +203,37 @@ function ExperienceCard({
           </motion.div>
         ))}
 
-        {/* Tech tags */}
-        {exp.tech?.map((tech, i) => (
+        {/* Highlights */}
+        {exp.highlights?.map((highlight, i) => (
           <motion.div
-            key={i}
-            className="font-mono text-[10px] sm:text-xs md:text-sm 2xl:text-base text-[#94A3B8] ml-1 sm:ml-2 mb-0.5 sm:mb-1 leading-relaxed"
+            key={`highlight-${i}`}
+            className="font-mono text-[10px] sm:text-xs md:text-sm 2xl:text-base text-[#10B981]/80 ml-1 sm:ml-2 mb-0.5 sm:mb-1 leading-relaxed"
             initial={{ opacity: 0, x: -15 }}
             animate={isInView ? { opacity: 1, x: 0 } : {}}
             transition={{ delay: index * 0.15 + 0.4 + i * 0.05 }}
           >
-            <span className="text-[#10B981]">{'>'}</span>{' '}
-            <span className="text-[#10B981]">TECH:</span> {tech}
+            <span className="text-[#10B981]">{'>'}</span> {highlight}
           </motion.div>
         ))}
+
+        {/* Tech stack as inline tags */}
+        {exp.tech && exp.tech.length > 0 && (
+          <motion.div
+            className="flex flex-wrap gap-1.5 ml-1 sm:ml-2 mt-2"
+            initial={{ opacity: 0 }}
+            animate={isInView ? { opacity: 1 } : {}}
+            transition={{ delay: index * 0.15 + 0.5 }}
+          >
+            {exp.tech.map((tech, i) => (
+              <span
+                key={i}
+                className="font-mono text-[9px] sm:text-[10px] px-2 py-0.5 rounded bg-[#7C3AED]/10 text-[#7C3AED]/70 border border-[#7C3AED]/20"
+              >
+                {tech}
+              </span>
+            ))}
+          </motion.div>
+        )}
       </div>
     </motion.div>
   );
@@ -225,7 +257,7 @@ export default function ChangeLog() {
 
   return (
     <section
-      id="experience"
+      id="changelog"
       className="relative py-12 sm:py-16 md:py-20 2xl:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16 overflow-hidden"
     >
       {/* Background pattern */}

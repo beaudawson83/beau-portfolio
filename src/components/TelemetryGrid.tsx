@@ -166,7 +166,7 @@ function MetricCard({
         duration: 0.5,
         ease: [0.16, 1, 0.3, 1], // Custom spring-like easing
       }}
-      className="relative md:px-6 lg:px-8 2xl:px-12 first:md:pl-0 last:md:pr-0 text-center md:text-left group"
+      className="relative px-4 py-3 text-center md:text-left group"
     >
       {/* Hover glow effect */}
       <motion.div
@@ -297,7 +297,7 @@ export default function TelemetryGrid() {
           initial={{ opacity: 0 }}
           animate={isInView ? { opacity: 1 } : {}}
           transition={{ duration: 0.3 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 md:gap-0 md:divide-x md:divide-[#1F1F1F]"
+          className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8"
         >
           {metrics.map((metric, index) => (
             <MetricCard
