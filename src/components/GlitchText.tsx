@@ -124,23 +124,55 @@ export default function GlitchText({
     return () => clearInterval(glitchInterval);
   }, [isComplete, characters, getRandomChar]);
 
+  // Group characters into words so the browser wraps at word boundaries,
+  // not between individual letter spans
+  const words: { startIndex: number; chars: string[] }[] = [];
+  let currentWord: { startIndex: number; chars: string[] } = { startIndex: 0, chars: [] };
+
+  displayText.forEach((char, index) => {
+    if (char === ' ' || characters[index] === ' ') {
+      if (currentWord.chars.length > 0) {
+        words.push(currentWord);
+      }
+      words.push({ startIndex: index, chars: [' '] });
+      currentWord = { startIndex: index + 1, chars: [] };
+    } else {
+      if (currentWord.chars.length === 0) {
+        currentWord.startIndex = index;
+      }
+      currentWord.chars.push(char);
+    }
+  });
+  if (currentWord.chars.length > 0) {
+    words.push(currentWord);
+  }
+
   return (
     <Tag className={className}>
-      {displayText.map((char, index) => {
-        const isLocked = char === characters[index];
+      {words.map((word) => {
+        if (word.chars.length === 1 && word.chars[0] === ' ') {
+          return <span key={`space-${word.startIndex}`}>{' '}</span>;
+        }
         return (
-          <span
-            key={index}
-            style={{
-              display: 'inline-block',
-              minWidth: char === ' ' ? '0.3em' : undefined,
-              color: isLocked ? undefined : '#7C3AED',
-              textShadow: !isLocked
-                ? '0 0 10px rgba(124, 58, 237, 0.8), 2px 0 rgba(255, 0, 0, 0.3), -2px 0 rgba(0, 255, 255, 0.3)'
-                : undefined,
-            }}
-          >
-            {char}
+          <span key={`word-${word.startIndex}`} style={{ whiteSpace: 'nowrap' }}>
+            {word.chars.map((char, charIdx) => {
+              const globalIndex = word.startIndex + charIdx;
+              const isLocked = char === characters[globalIndex];
+              return (
+                <span
+                  key={globalIndex}
+                  style={{
+                    display: 'inline-block',
+                    color: isLocked ? undefined : '#7C3AED',
+                    textShadow: !isLocked
+                      ? '0 0 10px rgba(124, 58, 237, 0.8), 2px 0 rgba(255, 0, 0, 0.3), -2px 0 rgba(0, 255, 255, 0.3)'
+                      : undefined,
+                  }}
+                >
+                  {char}
+                </span>
+              );
+            })}
           </span>
         );
       })}
