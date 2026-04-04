@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { experiences } from '@/lib/data';
 
 export default function Timeline() {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   return (
     <section className="py-10 sm:py-14 px-4 sm:px-6 lg:px-8 2xl:px-16">
