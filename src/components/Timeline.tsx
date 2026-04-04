@@ -10,16 +10,19 @@ export default function Timeline() {
   return (
     <section className="py-10 sm:py-14 px-4 sm:px-6 lg:px-8 2xl:px-16">
       <div className="max-w-5xl 2xl:max-w-6xl mx-auto">
-        {/* Toggle */}
+        {/* Toggle bar */}
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-3 mb-6 group cursor-pointer"
+          className="w-full flex items-center justify-between px-5 py-4 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg hover:border-[#7C3AED]/30 transition-colors cursor-pointer"
         >
-          <h2 className="text-lg sm:text-xl font-semibold text-white group-hover:text-[#7C3AED] transition-colors">
-            Full Career Timeline
-          </h2>
-          <span className="font-mono text-xs text-[#94A3B8]/50">
-            {expanded ? '- collapse' : `+ ${experiences.length} roles`}
+          <div className="flex items-center gap-3">
+            <span className="text-[#7C3AED] text-lg">{expanded ? '−' : '+'}</span>
+            <h2 className="text-base sm:text-lg font-semibold text-white">
+              Full Career Timeline
+            </h2>
+          </div>
+          <span className="font-mono text-xs text-[#94A3B8]">
+            {expanded ? 'Collapse' : `${experiences.length} roles`}
           </span>
         </button>
 
@@ -32,7 +35,7 @@ export default function Timeline() {
               transition={{ duration: 0.3 }}
               className="overflow-hidden"
             >
-              <div className="relative pl-6 border-l border-[#2A2A2A]">
+              <div className="relative pl-6 border-l border-[#2A2A2A] mt-6">
                 {experiences.map((exp, index) => (
                   <motion.div
                     key={`${exp.company}-${exp.yearRange}`}
