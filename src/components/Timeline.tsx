@@ -1,28 +1,29 @@
-'use client';
-
 import { experiences } from '@/lib/data';
 
 export default function Timeline() {
   return (
     <section className="py-10 sm:py-14 px-4 sm:px-6 lg:px-8 2xl:px-16">
       <div className="max-w-5xl 2xl:max-w-6xl mx-auto">
-        {/* Native details/summary — immune to scroll library interference */}
-        <details className="group">
-          <summary className="w-full flex items-center justify-between px-5 py-4 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg hover:border-[#7C3AED]/30 transition-colors cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-            <div className="flex items-center gap-3">
-              <span className="text-[#7C3AED] text-lg group-open:hidden">+</span>
-              <span className="text-[#7C3AED] text-lg hidden group-open:inline">−</span>
-              <span className="text-base sm:text-lg font-semibold text-white">
-                Full Career Timeline
-              </span>
-            </div>
-            <span className="font-mono text-xs text-[#94A3B8]">
-              <span className="group-open:hidden">{experiences.length} roles</span>
-              <span className="hidden group-open:inline">Collapse</span>
-            </span>
-          </summary>
+        {/* Pure CSS accordion — hidden checkbox + peer selectors, zero JS */}
+        <input type="checkbox" id="timeline-toggle" className="peer sr-only" />
 
-          <div className="relative pl-6 border-l border-[#2A2A2A] mt-6">
+        <label
+          htmlFor="timeline-toggle"
+          className="relative z-10 w-full flex items-center justify-between px-5 py-4 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg hover:border-[#7C3AED]/30 transition-colors cursor-pointer select-none"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-[#7C3AED] text-lg">+</span>
+            <span className="text-base sm:text-lg font-semibold text-white">
+              Full Career Timeline
+            </span>
+          </div>
+          <span className="font-mono text-xs text-[#94A3B8]">
+            {experiences.length} roles
+          </span>
+        </label>
+
+        <div className="max-h-0 overflow-hidden peer-checked:max-h-[5000px] transition-all duration-500">
+          <div className="relative pl-6 border-l border-[#2A2A2A] mt-6 pb-2">
             {experiences.map((exp) => (
               <div
                 key={`${exp.company}-${exp.yearRange}`}
@@ -65,7 +66,7 @@ export default function Timeline() {
               </div>
             ))}
           </div>
-        </details>
+        </div>
       </div>
     </section>
   );
