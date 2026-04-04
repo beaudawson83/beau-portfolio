@@ -19,8 +19,8 @@ export default function EnergyButton({
     <button
       onClick={onClick}
       className={`
-        px-6 py-3 font-mono text-sm tracking-wider rounded-lg
-        transition-all duration-200
+        w-full sm:w-auto px-6 py-3 font-mono text-sm tracking-wider rounded-lg
+        transition-all duration-200 text-center
         ${
           isPrimary
             ? 'bg-[#7C3AED] text-white hover:bg-[#6D28D9] active:scale-[0.98]'

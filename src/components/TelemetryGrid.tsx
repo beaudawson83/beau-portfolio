@@ -64,17 +64,17 @@ function MetricCard({
       className="text-center md:text-left px-2 py-3"
     >
       {/* Value */}
-      <div className="font-mono text-2xl sm:text-3xl lg:text-4xl font-bold text-[#7C3AED] mb-1">
+      <div className="font-mono text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#7C3AED] mb-1 whitespace-nowrap">
         <AnimatedValue value={metric.value} inView={isInView} />
       </div>
 
       {/* Context */}
-      <div className="text-xs sm:text-sm text-[#94A3B8] leading-snug mb-1">
+      <div className="text-[11px] sm:text-xs md:text-sm text-[#94A3B8] leading-snug mb-1">
         {metric.context}
       </div>
 
       {/* Source */}
-      <div className="font-mono text-[10px] sm:text-xs text-[#94A3B8]/40">
+      <div className="font-mono text-[9px] sm:text-[10px] md:text-xs text-[#94A3B8]/40">
         {metric.source}
       </div>
     </motion.div>

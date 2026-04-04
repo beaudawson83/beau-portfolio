@@ -138,7 +138,7 @@ export default function AskBeau() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onFocus={handleInputFocus}
-              placeholder={messages.length === 0 ? 'Ask anything about Beau...' : 'Follow up...'}
+              placeholder={messages.length === 0 ? 'Ask about Beau...' : 'Follow up...'}
               disabled={isLoading}
               className="flex-1 bg-transparent px-4 py-3 text-sm text-white placeholder-[#94A3B8]/30 outline-none"
               maxLength={200}

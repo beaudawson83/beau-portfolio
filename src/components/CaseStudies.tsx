@@ -27,11 +27,11 @@ function CaseStudyCard({
       {/* Header — always visible */}
       <div className="p-5 sm:p-6 lg:p-8">
         {/* Company + Period */}
-        <div className="flex items-start justify-between mb-1">
-          <h3 className="text-lg sm:text-xl font-bold text-white">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-1 gap-1">
+          <h3 className="text-base sm:text-xl font-bold text-white">
             {study.company}
           </h3>
-          <span className="font-mono text-xs text-[#94A3B8]/50 flex-shrink-0 ml-4 mt-1">
+          <span className="font-mono text-[11px] sm:text-xs text-[#94A3B8]/50 flex-shrink-0">
             {study.period}
           </span>
         </div>
@@ -47,11 +47,11 @@ function CaseStudyCard({
         </p>
 
         {/* Key results — always visible */}
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-4">
           {study.results.slice(0, 3).map((result, i) => (
             <span
               key={i}
-              className="text-xs sm:text-sm px-3 py-1 rounded-full bg-[#7C3AED]/8 border border-[#7C3AED]/15 text-[#94A3B8]"
+              className="text-[11px] sm:text-sm px-2.5 sm:px-3 py-1 rounded-full bg-[#7C3AED]/8 border border-[#7C3AED]/15 text-[#94A3B8]"
             >
               {result}
             </span>

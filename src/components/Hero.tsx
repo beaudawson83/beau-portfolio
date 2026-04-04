@@ -109,7 +109,7 @@ export default function Hero() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="order-1 lg:order-2 flex justify-center lg:justify-end"
           >
-            <div className="relative w-40 h-40 sm:w-56 sm:h-56 md:w-72 md:h-72 lg:w-96 lg:h-96 2xl:w-[28rem] 2xl:h-[28rem]">
+            <div className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-72 md:h-72 lg:w-96 lg:h-96 2xl:w-[28rem] 2xl:h-[28rem]">
               <div className="w-full h-full rounded-2xl overflow-hidden border border-[#2A2A2A] shadow-2xl shadow-[#7C3AED]/5">
                 <img
                   src="/beau.jpg"
