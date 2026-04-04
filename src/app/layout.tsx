@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import AnalyticsProvider from '@/components/AnalyticsProvider';
-import SmoothScroll from '@/components/SmoothScroll';
+
 import PageLoader from '@/components/PageLoader';
 import GlobalParticles from '@/components/GlobalParticles';
 import './globals.css';
@@ -74,9 +74,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <GlobalParticles />
         </Suspense>
-        <SmoothScroll>
-          <AnalyticsProvider>{children}</AnalyticsProvider>
-        </SmoothScroll>
+        <AnalyticsProvider>{children}</AnalyticsProvider>
       </body>
     </html>
   );
