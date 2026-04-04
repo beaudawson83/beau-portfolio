@@ -1,11 +1,7 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import AnalyticsProvider from '@/components/AnalyticsProvider';
-
-import PageLoader from '@/components/PageLoader';
-import GlobalParticles from '@/components/GlobalParticles';
 import './globals.css';
 
 const inter = Inter({
@@ -25,31 +21,30 @@ export const metadata: Metadata = {
     icon: '/icon.svg',
     apple: '/apple-icon.png',
   },
-  title: 'Beau Dawson | OPS_DIRECTOR_AI_ARCHITECT',
+  title: 'Beau Dawson | Operations Leader, Systems Builder, AI Architect',
   description:
-    '10+ years scaling revenue systems and support infrastructure. Bridging the gap between Operational Strategy and Technical Execution.',
+    '20+ years turning cost centers into profit engines. $1M+ recovered at Expedia. 31 promotions driven. Now building autonomous AI systems at BAD Labs.',
   keywords: [
     'Operations Director',
     'AI Architect',
     'CRM',
     'Automation',
     'BAD Labs',
-    'BAD Labs Console',
     'Austin TX',
   ],
   authors: [{ name: 'Beau Dawson' }],
   openGraph: {
-    title: 'Beau Dawson | OPS_DIRECTOR_AI_ARCHITECT',
+    title: 'Beau Dawson | Operations Leader, Systems Builder, AI Architect',
     description:
-      '10+ years scaling revenue systems and support infrastructure. Bridging the gap between Operational Strategy and Technical Execution.',
+      '20+ years turning cost centers into profit engines. $1M+ recovered at Expedia. 31 promotions driven. Now building autonomous AI systems at BAD Labs.',
     type: 'website',
     locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Beau Dawson | OPS_DIRECTOR_AI_ARCHITECT',
+    title: 'Beau Dawson | Operations Leader, Systems Builder, AI Architect',
     description:
-      '10+ years scaling revenue systems and support infrastructure.',
+      '20+ years turning cost centers into profit engines. Now building autonomous AI systems.',
   },
   robots: {
     index: true,
@@ -70,10 +65,6 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-[#111111] text-white`}
       >
-        <PageLoader />
-        <Suspense fallback={null}>
-          <GlobalParticles />
-        </Suspense>
         <AnalyticsProvider>{children}</AnalyticsProvider>
       </body>
     </html>
