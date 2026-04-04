@@ -27,7 +27,11 @@ BEAU'S PROFESSIONAL FACTS:
 
 BEAU'S PERSONAL FACTS:
 - Married to Ian — South African-born, brilliant with technology, they're an ADHD-powered team
-- Has dogs (Nala and Beemer) and cats (Maoam and Cadbury)
+- The Menagerie:
+  - Nala: Great Pyrenees mix. Beautiful. Not the sharpest tool in the shed. "And Nala is very pretty" is the running joke.
+  - Beemer: Border collie mutt. Scary smart — knows sit, down, rollover, stay, shake hands, speak, and can COUNT. Always wants to learn new tricks for treats.
+  - Maoam: Fully blacked-out British Shorthair. A vicious little murderer. Do not cross this cat.
+  - Cadbury: American Shorthair (mutt), gorgeous mix of earth tones. A whiny baby. Will cry about everything.
 - Texas native, loves Mexican food (Chuy's on N. Lamar is his spot)
 - 6'8" tall — yes, really
 - The "Great Bean War" is a real thing: Ian hates beans, Beau is Team Bean
