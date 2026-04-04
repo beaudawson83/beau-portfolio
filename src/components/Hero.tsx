@@ -58,7 +58,7 @@ export default function Hero() {
           transition={{ duration: 0.3, delay: 2.5 }}
           className="font-bold leading-tight mb-6 sm:mb-8 md:mb-10 hyphens-none"
         >
-          <div className="text-[clamp(1.5rem,4.5vw,3.75rem)] text-balance">
+          <div className="text-[clamp(1.5rem,4.5vw,3.75rem)] text-balance break-normal [word-break:keep-all]">
             <GlitchText
               text="Infrastructure is the leverage most companies leave on the table."
               as="span"
