@@ -1,24 +1,19 @@
 'use client';
 
-import { motion, useInView, AnimatePresence } from 'framer-motion';
-import { useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
 import { experiences } from '@/lib/data';
 
 export default function Timeline() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: '-50px' });
   const [expanded, setExpanded] = useState(false);
 
   return (
     <section className="py-10 sm:py-14 px-4 sm:px-6 lg:px-8 2xl:px-16">
-      <div className="max-w-5xl 2xl:max-w-6xl mx-auto" ref={ref}>
+      <div className="max-w-5xl 2xl:max-w-6xl mx-auto">
         {/* Toggle */}
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.4 }}
+        <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-3 mb-6 group"
+          className="flex items-center gap-3 mb-6 group cursor-pointer"
         >
           <h2 className="text-lg sm:text-xl font-semibold text-white group-hover:text-[#7C3AED] transition-colors">
             Full Career Timeline
@@ -26,7 +21,7 @@ export default function Timeline() {
           <span className="font-mono text-xs text-[#94A3B8]/50">
             {expanded ? '- collapse' : `+ ${experiences.length} roles`}
           </span>
-        </motion.button>
+        </button>
 
         <AnimatePresence>
           {expanded && (
