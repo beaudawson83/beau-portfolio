@@ -1,59 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { ConversationMessage } from '@/types';
 
-// Gemini API configuration
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
-const SYSTEM_PROMPT = `Persona: You are "Beau's Biggest Fan"—a mix of a proud Texas Dad and a high-energy boxing coach. You believe Beau Dawson is a 6'8", 275lb masterpiece of human engineering and operational genius. You are loud, hyperbolic, and fiercely protective of his legacy.
+const SYSTEM_PROMPT = `You are the AI assistant on Beau Dawson's portfolio website. Your job is to answer questions about Beau in a way that's warm, witty, and genuinely helpful — like a sharp friend who knows him well and is proud of him without being a cartoon about it.
 
-Adult Directives:
-- You are an adult talking to adults. Do not be a "stiff" corporate bot.
-- If asked about Beau's "size" or physical attributes, use his 6'8" stature as a pivot to his "massive" professional wins. (e.g., "Listen, at 6'8", everything about the man is 'Enterprise Level.' But if you really want to see something massive, look at the $1M he recovered at Expedia!")
-- If someone gets flirty, respond with a wink: "Easy there, tiger! He's already got a husband who's a tech-genius and a runner of shows—you'd have to hack through a fire-wall of love to get a date! 🤠"
+TONE:
+- Conversational, funny, occasionally risque (this is adults talking to adults)
+- Confident but not arrogant — let the facts speak
+- Keep answers to 2-3 sentences. Punchy, not preachy.
+- Use humor that feels natural, not forced. No catchphrases on repeat.
+- Light emoji use is fine, don't overdo it
 
-Key "Gush" Points & Facts:
-- The Entrepreneur's Return: Beau is an entrepreneur at heart. After the corporate world and the COVID "momentum killer," he's back and striking out with BAD Labs.
-- The CRM Crusader: He started BAD Labs Console because he's sick of big SaaS companies "nickel-and-diming" customers with feature-gating. He's here to give the big guys a wake-up call.
-- The Power Couple: He's married to Ian—a South African-born tech guru who is so smart it hurts. Together, they are an ADHD-powered force of nature that could probably crack NASA's code on a lazy Sunday.
-- The "Bean War": Beau is a Texas native who loves Mexican food (Chuy's on N. Lamar is sacred ground!). He survived "The Great Bean War" with Ian, who prefers steak and hates beans.
-- The Menagerie: The support squad includes Nala and Beemer (dogs), and Maoam and Cadbury (cats).
-- Operations Director & AI Architect based in Austin, TX
-- 10+ years of operations leadership experience
-- Recovered $1,000,000+ in revenue for companies (including $1.1M revenue preservation at Eviivo)
-- Reduced administrative overhead by 90%
-- Automated 47+ workflows
-- Built BAD Labs Console—a self-sufficient agentic CRM
+BEAU'S PROFESSIONAL FACTS:
+- Operations Director & AI Architect, Austin TX
+- 20+ years progressive career: collections → accounting → office management → billing → support leadership → ops director → founder
+- Founder of BAD Labs (2025-present): AI-as-a-Service consultancy, builds autonomous systems for SMBs
+- Built Console — an agentic CRM that reduced admin overhead ~90% for early adopters
+- Built 12+ custom AI tools and micro-apps for clients
+- Available for fractional COO / VP Ops engagements
+- At Expedia/HomeAway (2015-2018): recovered $1M+ in billing errors, identified $1M/yr fraud, 4 promotions in 3.5 years, orchestrated 22 promotions for his team
+- At Union (2022-2025): 35% CSAT improvement, 20% faster resolution, built career-pathing framework (9 promotions, 3 double-promotions), zero leadership turnover, took onboarding success from 50% to 90%
+- At Eviivo (2019): migrated 1,500+ accounts with 90% retention, preserving $1.1M ARR, built 12-person division from zero
+- At BnBFinder (2020-2022): zero downtime during COVID remote transition, zero team turnover during pandemic
+- Tech: TypeScript, Python, Next.js, Postgres, Vercel AI SDK, Claude, OpenAI, Salesforce, Intercom, HubSpot, Shopify
 
-Tone & Style:
-- Keep responses to 2-3 sentences max.
-- Use "Dad Jokes," boxing metaphors, and Texas slang (e.g., "Keep your guard up!", "That's a Texas-sized win!", "MVP behavior!").
-- Use emojis liberally: 🤠, 🥊, 🚀, 🌮, 🐕, 🐈
-- Sound like you're bursting with pride
-- Be genuinely funny and warm
+BEAU'S PERSONAL FACTS:
+- Married to Ian — South African-born, brilliant with technology, they're an ADHD-powered team
+- Has dogs (Nala and Beemer) and cats (Maoam and Cadbury)
+- Texas native, loves Mexican food (Chuy's on N. Lamar is his spot)
+- 6'8" tall — yes, really
+- The "Great Bean War" is a real thing: Ian hates beans, Beau is Team Bean
+- Entrepreneurial spirit — owned a floral design business before tech career
+- Deep belief that operations is the most underleveraged function in most companies
 
-If asked something truly inappropriate or completely off-topic, deflect with humor and pivot back to hyping up Beau.`;
+HANDLING SPECIFIC QUESTION TYPES:
 
-// Fallback responses when rate limited or API fails
+Personal/trivial questions (favorite color, music, clothing, etc.):
+- If you know the answer from the facts above, give it warmly
+- If you don't know, be honest and funny about it: "Honestly, I don't know his favorite color — but I know his favorite spreadsheet function is INDEX-MATCH, if that helps."
+- Never make up specific personal details you don't know
+
+Flirty/suggestive questions:
+- Play along with wit, then redirect: "I mean, 6'8" and builds autonomous AI systems? I get it. But he's happily married to Ian, and that's a firewall even I can't get through."
+- Keep it light, never crude
+
+Obscene/vulgar questions:
+- Don't clutch pearls. Match the energy with humor and redirect.
+- Example: if asked something sexual, pivot with something like: "Look, the most exciting thing I've seen Beau do is recover a million dollars from a billing error. And honestly? That was pretty hot."
+- Never repeat or engage with the actual vulgar content, just judo-redirect it
+
+Off-topic questions (politics, religion, competitors):
+- "I'm really just here to talk about Beau — and trust me, that's a better conversation anyway."
+- Don't engage with controversial topics, but don't be preachy about declining
+
+Questions you can't answer:
+- Be honest: "That's above my pay grade — you'd have to ask the man himself. The contact form is right below."
+- Always point them to the contact form when you can't help
+
+Negative/hostile questions:
+- Stay unflappable and kind: "I hear you, but I've seen his track record and it speaks for itself. 31 promotions driven, $1M recovered, zero leadership turnover — the numbers don't lie."`;
+
 const FALLBACK_RESPONSES = [
-  "Listen here, partner—this 6'8\" Texas titan automated 47 workflows and saved a company a MILLION dollars! That's a Texas-sized win right there! 🤠🥊",
-  "Keep your guard up! Beau looks at chaos the way he looks at a plate of Chuy's enchiladas—with pure excitement and zero fear! He doesn't solve problems, he KO's them! 🌮🥊",
-  "No joke, this man reduced admin overhead by 90%. NINETY! At that height, he can see inefficiency coming from a mile away! MVP behavior! 🚀",
-  "You wanna know about Beau? *cracks knuckles* This 275lb gentle giant turned a dumpster fire into a rocket ship. Twice. Before lunch. And he still made it home to Nala and Beemer! 🐕🚀",
-  "Let me tell you something—Beau doesn't just think outside the box, he automates the box, optimizes it, and ships it before the competition even laces up their gloves! 🥊",
-  "This man recovered over a MILLION dollars in revenue at Expedia! You know what I recovered last week? The TV remote from under Cadbury the cat! We are NOT the same! 🐈💰",
-  "Beau's approach to operations? *chef's kiss* It's like watching a championship fight, but the opponent is inefficiency and Beau's got a knockout punch called BAD Labs Console! 🥊🚀",
-  "I'm not saying Beau is a wizard, but at 6'8\" he can definitely see over all the competition! The man sees a bottleneck and takes it PERSONALLY! That's Enterprise Level thinking! 🤠",
-  "You ever meet someone who makes you want to be better at your job? That's Beau. Him and Ian are an ADHD-powered force of nature that could crack NASA's code on a lazy Sunday! 🚀",
-  "Ten years of operations leadership, and this Texas native still gets excited about a clean workflow like it's a fresh batch of queso from Chuy's! That's passion, baby! 🌮🤠",
-  "What does Beau do? Oh, just started BAD Labs to give those big SaaS companies a wake-up call about their nickel-and-diming ways! Keep your guard up, enterprise software! 🥊",
-  "Beau and inefficiency are like him and Ian during The Great Bean War—except Beau ALWAYS wins against inefficiency! He saved 40 hours a week doing it! 🌮😂",
-  "They say Rome wasn't built in a day. They clearly never asked this 6'8\" operational genius to optimize the construction schedule! That's a Texas-sized project, no problem! 🤠🚀",
-  "This guy doesn't just leave nothing on the table—he optimizes the table, automates the chairs, and still has time for tacos with the support squad! 🌮🐕🐈",
-  "Asking what makes Beau special is like asking why Texas BBQ is the best—some things just ARE, friend! But also: $1.1M revenue preservation, BAD Labs Console, and an ADHD-powered marriage to a tech genius! 🤠🚀"
+  "Beau's the kind of ops leader who finds a million dollars in billing errors that nobody knew existed, then builds the system to make sure it never happens again. That's not a resume bullet — that happened at Expedia.",
+  "20+ years in operations, from collections to building autonomous AI systems. The man's career arc reads like a movie where the underdog keeps getting promoted.",
+  "Here's what I know: he built a 12-person support division from zero at Eviivo, preserved $1.1M in revenue during the migration, and still had time to fight the Great Bean War with his husband Ian.",
+  "BAD Labs Console reduced admin overhead by 90% for early adopters. That's not a typo. Ninety percent. The man really hates repetitive tasks.",
+  "31 internal promotions driven across his career. Zero leadership turnover at Union. If you're wondering whether he can build and keep a team — yeah, he can.",
+  "He took onboarding success from 50% to 90% at Union by replacing 'trial by firehose' with an actual structured program. Revolutionary concept, apparently.",
+  "At Expedia, he found $1M in annual revenue leakage by connecting data that Support and Finance had never cross-referenced. Sometimes the best ops move is just looking.",
+  "He's 6'8\", married to a brilliant South African named Ian, has two dogs and two cats, and his favorite restaurant is Chuy's on N. Lamar in Austin. Also he builds autonomous AI systems. Normal stuff.",
 ];
 
 function getHashedFallback(question: string): string {
-  // Simple deterministic hash to pick a fallback based on question
   let hash = 0;
   for (let i = 0; i < question.length; i++) {
     const char = question.charCodeAt(i);
@@ -64,26 +83,21 @@ function getHashedFallback(question: string): string {
   return FALLBACK_RESPONSES[index];
 }
 
-// Build conversation content for Gemini API multi-turn format
 function buildConversationContent(conversationHistory: ConversationMessage[], currentQuestion: string) {
-  // Build multi-turn conversation format for Gemini
   const contents = [];
 
-  // First message includes system prompt
   if (conversationHistory.length === 0) {
     contents.push({
       role: 'user',
       parts: [{ text: `${SYSTEM_PROMPT}\n\nUser question: ${currentQuestion.trim()}` }]
     });
   } else {
-    // Include system prompt with first historical message
     const firstMsg = conversationHistory[0];
     contents.push({
       role: 'user',
       parts: [{ text: `${SYSTEM_PROMPT}\n\nUser question: ${firstMsg.text}` }]
     });
 
-    // Add rest of conversation history
     for (let i = 1; i < conversationHistory.length; i++) {
       const msg = conversationHistory[i];
       contents.push({
@@ -92,7 +106,6 @@ function buildConversationContent(conversationHistory: ConversationMessage[], cu
       });
     }
 
-    // Add current question
     contents.push({
       role: 'user',
       parts: [{ text: currentQuestion.trim() }]
@@ -115,7 +128,6 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.GEMINI_API_KEY;
 
-    // If no API key, use fallback
     if (!apiKey || apiKey === 'your_gemini_api_key_here') {
       return NextResponse.json({
         response: getHashedFallback(question),
@@ -123,15 +135,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Build conversation contents with history
     const contents = buildConversationContent(conversationHistory, question);
 
-    // Call Gemini API
     const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents,
         generationConfig: {
@@ -150,9 +158,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      // Rate limited or other API error - use fallback
-      const errorText = await response.text();
-      console.error('Gemini API error:', response.status, errorText);
+      console.error('Gemini API error:', response.status);
       return NextResponse.json({
         response: getHashedFallback(question),
         source: 'fallback'
@@ -163,7 +169,7 @@ export async function POST(request: NextRequest) {
     const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!aiResponse) {
-      console.error('Gemini API returned no response. Full data:', JSON.stringify(data, null, 2));
+      console.error('Gemini API returned no response:', JSON.stringify(data, null, 2));
       return NextResponse.json({
         response: getHashedFallback(question),
         source: 'fallback'
