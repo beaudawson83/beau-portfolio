@@ -229,8 +229,8 @@ export const socialLinks: SocialLink[] = [
     type: 'phone',
   },
   {
-    label: 'EMAIL: beau.dawson83@gmail.com',
-    url: 'mailto:beau.dawson83@gmail.com',
+    label: 'EMAIL: email@beaudawson.com',
+    url: 'mailto:email@beaudawson.com',
     type: 'email',
   },
 ];
