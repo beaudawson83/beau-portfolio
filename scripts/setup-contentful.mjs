@@ -77,7 +77,6 @@ async function main() {
       console.log(`→ Creating content type '${CONTENT_TYPE_ID}'...`);
       contentType = await environment.createContentTypeWithId(CONTENT_TYPE_ID, {
         name: 'System Log',
-        displayField: 'title',
         fields: [],
       });
     } else {
@@ -98,10 +97,18 @@ async function main() {
     console.log(`  + added '${spec.id}' (${spec.type})`);
   }
 
-  if (added === 0) {
+  // Ensure displayField points to the title field once it exists
+  if (
+    contentType.fields.some((f) => f.id === 'title') &&
+    contentType.displayField !== 'title'
+  ) {
+    contentType.displayField = 'title';
+  }
+
+  if (added === 0 && contentType.displayField === (contentType.sys?.publishedVersion ? contentType.displayField : 'title')) {
     console.log('\n✓ Content type already has all required fields. Nothing to do.');
   } else {
-    console.log(`\n→ Saving content type with ${added} new field(s)...`);
+    console.log(`\n→ Saving content type...`);
     contentType = await contentType.update();
     console.log('→ Publishing content type...');
     await contentType.publish();
