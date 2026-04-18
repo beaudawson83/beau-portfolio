@@ -153,16 +153,75 @@ The system prompt is the single source of truth for chatbot personality. Edit it
 
 ---
 
-## Blog (System Logs)
+## Blog (System Logs) — LIVE but hidden
 
-Infrastructure is built but no content published yet. See TODO.md for planned posts.
+Shipped April 2026. Live behind the Pi easter egg only.
+Full setup walkthrough: `BLOG_SETUP.md`.
 
-- **CMS:** Contentful (posts, tags, rich text)
-- **Database:** Supabase (view counts, likes)
-- **Rendering:** ISR with 60s revalidation
-- **Tags:** AI_STRATEGY, OPS_EFFICIENCY, FRACTIONAL_INSIGHTS, AUTOMATION, CRM_ARCHITECTURE, LEADERSHIP
-- **Admin:** NextAuth-protected create page at `/system-logs/create`
-- **OG Images:** Auto-generated per post at `/system-logs/[slug]/opengraph-image`
+- **Current state:** live in production, `robots: noindex`, no public link
+  anywhere. Accessible only via Pi easter egg → Dashboard → `ACCESS_SYSTEM_LOGS`
+  or `LOG_CREATOR [RESTRICTED]`.
+- **CMS:** Contentful. Space ID `birct6t1cscc`. Content type `systemLog`.
+- **Admin auth:** single password via NextAuth Credentials provider —
+  `ADMIN_PASSWORD` env var. No OAuth, no Supabase whitelist.
+- **Login page:** `/system-logs/login` (client-side form, POSTs to NextAuth)
+- **Create page:** `/system-logs/create` (layout-gated on `session.user.isAdmin`)
+- **Rendering:** ISR — listing 60s, individual posts 300s
+- **Tags:** AI_STRATEGY, OPS_EFFICIENCY, FRACTIONAL_INSIGHTS, AUTOMATION,
+  CRM_ARCHITECTURE, LEADERSHIP (enum-enforced in Contentful)
+- **Statuses:** DRAFT | DEPLOYED | ARCHIVED (enum-enforced; only DEPLOYED
+  shows on public listing)
+- **Supabase (newsletter + view analytics):** opt-in, unconfigured. All
+  Supabase calls no-op when env vars missing. Add later if desired.
+
+### Infrastructure scripts
+
+- `scripts/setup-contentful.mjs` — idempotent migration that creates the
+  full `systemLog` content type via the Contentful Management API.
+  Run with `npm run setup:contentful`. Reads `.env.local` if present.
+
+### Env vars (Vercel production, all configured as of April 2026)
+
+Core: `GEMINI_API_KEY`, `RESEND_API_KEY`, `NEXT_PUBLIC_GA_MEASUREMENT_ID`
+Admin auth: `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ADMIN_PASSWORD`
+Contentful: `CONTENTFUL_SPACE_ID`, `CONTENTFUL_ACCESS_TOKEN`,
+`CONTENTFUL_PREVIEW_TOKEN`, `CONTENTFUL_MANAGEMENT_TOKEN`
+(Supabase vars intentionally unset)
+
+### When it's time to make the blog public
+
+Two tiny edits unhide it:
+
+1. Remove the `robots: noindex` block in `src/app/system-logs/layout.tsx`
+2. Add a "System Logs" link to `src/components/Header.tsx`
+
+Optionally also add a "recent posts" preview card section to `src/app/page.tsx`.
+
+### Want list / future enhancements for the blog (parked)
+
+User wants to play with the blog while writing posts, then circle back on:
+
+- **Photo spot / gallery inside post body** — currently body is rich text only.
+  Options: (a) enable Contentful asset field on the content type,
+  (b) use Contentful's built-in rich-text embedded asset, then extend
+  `RichTextRenderer.tsx` to render images.
+- **Possible edits to displayed content** on post pages (layout, typography,
+  accent styling) — TBD based on how published posts look
+- When we circle back: check the "Next-session picks-up-here" checklist
+  below before doing anything destructive.
+
+### Next-session pick-up-here checklist
+
+When returning to blog work:
+
+1. Confirm current branch and production parity: `git log main --oneline -5`
+2. Check Vercel env vars haven't drifted (Contentful + NextAuth triplet)
+3. Confirm the Pi dashboard → LOG_CREATOR → password → editor flow still works
+4. Check what posts exist in `birct6t1cscc` via Contentful UI or
+   `npm run setup:contentful` (re-runnable, shows status)
+5. If adding photo/gallery support: coordinate with user whether to
+   re-run setup-contentful.mjs to add new fields, or edit content model
+   in the Contentful UI
 
 ---
 
