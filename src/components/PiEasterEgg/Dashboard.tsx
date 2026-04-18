@@ -119,7 +119,7 @@ export default function Dashboard({ onClose }: DashboardProps) {
             transition={{ delay: 0.7 }}
           >
             <Link
-              href="/system-logs/create"
+              href="/system-logs/login"
               className="block text-green-500/40 hover:text-green-500/80 font-mono text-sm transition-colors"
             >
               {'>'} LOG_CREATOR <span className="text-yellow-500/60">[RESTRICTED]</span>
