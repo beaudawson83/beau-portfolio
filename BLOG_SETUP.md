@@ -50,35 +50,7 @@ stores your blog posts.
 2. Create a new **Space** — call it `beau-portfolio` or anything.
 3. Pick the free "Community" tier.
 
-### 2b. Create the content model
-
-This tells Contentful what fields a blog post has.
-
-1. In your space: **Content model** → **Add content type**
-2. Name it **System Log** → API identifier: `systemLog` (exact,
-   camelCase — the code expects this)
-3. Add these fields one by one using **Add field**:
-
-   | Field Name | Field ID | Type | Required? |
-   |-----------|----------|------|-----------|
-   | Title | `title` | Short text | Yes |
-   | Slug | `slug` | Short text | Yes |
-   | Entry ID | `entryId` | Short text | Yes |
-   | Published Date | `publishedDate` | Date & time | Yes |
-   | Status | `status` | Short text | Yes |
-   | Tags | `tags` | Short text, **list** | No |
-   | Executive Summary | `executiveSummary` | Long text | Yes |
-   | Bottleneck Identified | `bottleneckIdentified` | Long text | No |
-   | Body | `body` | Rich text | Yes |
-   | Recommended Architecture | `recommendedArchitecture` | Long text | No |
-   | Meta Description | `metaDescription` | Short text | No |
-
-   _Tip: For "Status" and "Tags", you can add **validations** later
-   to restrict values, but it's not required to publish._
-
-4. Click **Save** on the content type.
-
-### 2c. Get your API keys
+### 2b. Get your API keys
 
 1. **Settings** → **API keys** → **Add API key**
 2. Name it "Production". Copy these three values:
@@ -86,12 +58,52 @@ This tells Contentful what fields a blog post has.
    - **Content Delivery API — access token**
    - **Content Preview API — access token**
 
-### 2d. Get a management token (needed to CREATE posts from the site)
+### 2c. Get a management token (needed to CREATE posts from the site)
 
 1. Top-right avatar → **Account settings**
 2. **CMA tokens** → **Create personal access token**
 3. Name it "Portfolio admin" → **Generate**
 4. Copy the long token (shown once — save to password manager)
+
+### 2d. Create the content model — one command
+
+Instead of clicking 11 fields into the Contentful UI, run our setup
+script. It creates the full `systemLog` content type with correct
+types, validations, and field order in one shot.
+
+1. In this repo locally, create a `.env.local` file (never commit it):
+
+   ```
+   CONTENTFUL_SPACE_ID=<paste from 2b>
+   CONTENTFUL_MANAGEMENT_TOKEN=<paste from 2c>
+   ```
+
+2. Install deps (first time only):
+
+   ```
+   npm install
+   ```
+
+3. Run the setup:
+
+   ```
+   npm run setup:contentful
+   ```
+
+   Expected output:
+
+   ```
+   → Connecting to space xxxxx (env: master)...
+   → Creating content type 'systemLog'...
+     + added 'title' (Symbol)
+     + added 'slug' (Symbol)
+     + added 'entryId' (Symbol)
+     ... (etc)
+   ✓ Content type 'systemLog' is live in space xxxxx.
+   ```
+
+   _Idempotent — safe to re-run. If the content type already exists,
+   missing fields are added and existing ones left alone._
 
 ### 2e. Add to Vercel
 
