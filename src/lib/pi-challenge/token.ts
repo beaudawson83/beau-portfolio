@@ -3,9 +3,9 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 export type ChallengeKind = 'code' | 'quote';
 
-export type ChallengePayload = {
+type TokenPayload = {
   kind: ChallengeKind;
-  answer: string;
+  answerHash: string;
   exp: number;
   nonce: string;
 };
@@ -40,37 +40,64 @@ function sign(body: string): string {
   return base64urlEncode(createHmac('sha256', getSecret()).update(body).digest());
 }
 
+// Hash the answer with the shared secret + per-token nonce so the token
+// payload never contains the raw answer, even if a curious user base64-decodes it.
+function hashAnswer(answer: string, nonce: string): string {
+  return base64urlEncode(
+    createHmac('sha256', getSecret()).update(`${nonce}:${answer}`).digest()
+  );
+}
+
 export function signChallenge(kind: ChallengeKind, answer: string): string {
-  const payload: ChallengePayload = {
+  const nonce = randomBytes(16).toString('hex');
+  const payload: TokenPayload = {
     kind,
-    answer,
+    answerHash: hashAnswer(answer, nonce),
     exp: Date.now() + TTL_MS,
-    nonce: randomBytes(8).toString('hex'),
+    nonce,
   };
   const body = base64urlEncode(Buffer.from(JSON.stringify(payload)));
   const sig = sign(body);
   return `${body}.${sig}`;
 }
 
-export function verifyChallenge(token: string, kind: ChallengeKind): ChallengePayload | null {
-  if (typeof token !== 'string' || !token.includes('.')) return null;
+export function verifyChallenge(
+  token: string,
+  kind: ChallengeKind,
+  userAnswer: string
+): { valid: boolean; expired: boolean } {
+  if (typeof token !== 'string' || !token.includes('.')) {
+    return { valid: false, expired: false };
+  }
   const [body, sig] = token.split('.');
-  if (!body || !sig) return null;
+  if (!body || !sig) return { valid: false, expired: false };
 
   const expected = sign(body);
   const a = Buffer.from(sig);
   const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    return { valid: false, expired: false };
+  }
 
-  let payload: ChallengePayload;
+  let payload: TokenPayload;
   try {
     payload = JSON.parse(base64urlDecode(body).toString('utf8'));
   } catch {
-    return null;
+    return { valid: false, expired: false };
   }
 
-  if (payload.kind !== kind) return null;
-  if (typeof payload.exp !== 'number' || payload.exp < Date.now()) return null;
-  if (typeof payload.answer !== 'string') return null;
-  return payload;
+  if (payload.kind !== kind) return { valid: false, expired: false };
+  if (typeof payload.exp !== 'number' || payload.exp < Date.now()) {
+    return { valid: false, expired: true };
+  }
+  if (typeof payload.answerHash !== 'string' || typeof payload.nonce !== 'string') {
+    return { valid: false, expired: false };
+  }
+
+  const submittedHash = hashAnswer(userAnswer, payload.nonce);
+  const ah = Buffer.from(payload.answerHash);
+  const sh = Buffer.from(submittedHash);
+  if (ah.length !== sh.length) return { valid: false, expired: false };
+
+  return { valid: timingSafeEqual(ah, sh), expired: false };
 }

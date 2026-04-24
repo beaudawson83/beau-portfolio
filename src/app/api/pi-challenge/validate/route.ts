@@ -21,13 +21,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ valid: false });
   }
 
-  const payload = verifyChallenge(body.token, kind as ChallengeKind);
-  if (!payload) {
-    return NextResponse.json({ valid: false, expired: true });
-  }
-
   const submitted =
     kind === 'code' ? normalizeCodeAnswer(body.userAnswer) : body.userAnswer.trim();
 
-  return NextResponse.json({ valid: submitted === payload.answer });
+  const result = verifyChallenge(body.token, kind as ChallengeKind, submitted);
+  return NextResponse.json({ valid: result.valid, expired: result.expired });
 }
