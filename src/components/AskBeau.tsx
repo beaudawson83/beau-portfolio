@@ -12,6 +12,17 @@ import type { ChatMessage } from '@/types';
 
 const MAX_QUESTIONS = 10;
 const QUESTION_COUNT_KEY = 'askBeau_questionCount';
+const SESSION_ID_KEY = 'askBeau_sessionId';
+
+function getOrCreateSessionId(): string {
+  if (typeof window === 'undefined') return '';
+  let id = sessionStorage.getItem(SESSION_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    sessionStorage.setItem(SESSION_ID_KEY, id);
+  }
+  return id;
+}
 
 export default function AskBeau() {
   const [input, setInput] = useState('');
@@ -64,7 +75,10 @@ export default function AskBeau() {
     try {
       const response = await fetch('/api/ask-beau', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Chat-Session': getOrCreateSessionId(),
+        },
         body: JSON.stringify({
           question,
           conversationHistory: getConversationHistory(),

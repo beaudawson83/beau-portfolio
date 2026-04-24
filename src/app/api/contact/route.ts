@@ -1,8 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ContactFormData, OBJECTIVE_LABELS } from '@/types';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { extractClientIp } from '@/lib/chat-log';
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = extractClientIp(request.headers);
+    const rl = await checkRateLimit(`contact:${ip ?? 'anon'}`, {
+      limit: 5,
+      windowSeconds: 3600,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many submissions. Try again in an hour.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': Math.max(
+              1,
+              Math.ceil((rl.resetAt.getTime() - Date.now()) / 1000)
+            ).toString(),
+          },
+        }
+      );
+    }
+
     const { name, objective, message }: ContactFormData = await request.json();
 
     // Validate required fields

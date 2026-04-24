@@ -3,13 +3,43 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TerminalLoginState, CodeChallenge, StarTrekQuote } from './types';
-import { generateCodeChallenge, validateCodeResponse } from './codeChallenge';
-import { getRandomQuote } from './starTrekQuotes';
 
 interface TerminalLoginProps {
   isActive: boolean;
   onClose: () => void;
   onSuccess: () => void;
+}
+
+async function issueChallenge(kind: 'code'): Promise<CodeChallenge>;
+async function issueChallenge(kind: 'quote', excludeIds: string[]): Promise<StarTrekQuote>;
+async function issueChallenge(
+  kind: 'code' | 'quote',
+  excludeIds: string[] = []
+): Promise<CodeChallenge | StarTrekQuote> {
+  const res = await fetch('/api/pi-challenge/issue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind, excludeIds }),
+  });
+  if (!res.ok) throw new Error('issue_failed');
+  const data = await res.json();
+  if (kind === 'code') return { prompt: data.prompt, token: data.token };
+  return { ...data.quote, token: data.token };
+}
+
+async function validateAnswer(
+  kind: 'code' | 'quote',
+  token: string,
+  userAnswer: string
+): Promise<boolean> {
+  const res = await fetch('/api/pi-challenge/validate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind, token, userAnswer }),
+  });
+  if (!res.ok) return false;
+  const data = await res.json();
+  return Boolean(data.valid);
 }
 
 export default function TerminalLogin({ isActive, onClose, onSuccess }: TerminalLoginProps) {
@@ -22,16 +52,23 @@ export default function TerminalLogin({ isActive, onClose, onSuccess }: Terminal
   });
   const [showError, setShowError] = useState(false);
   const [usedQuoteIds, setUsedQuoteIds] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Initialize code challenge on mount
   useEffect(() => {
-    if (isActive && !state.currentCode) {
-      setState(prev => ({
-        ...prev,
-        currentCode: generateCodeChallenge(),
-      }));
-    }
+    if (!isActive || state.currentCode) return;
+    let cancelled = false;
+    issueChallenge('code')
+      .then(code => {
+        if (!cancelled) setState(prev => ({ ...prev, currentCode: code }));
+      })
+      .catch(() => {
+        /* swallow; user can close with ESC */
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [isActive, state.currentCode]);
 
   // Focus input when phase changes
@@ -67,70 +104,95 @@ export default function TerminalLogin({ isActive, onClose, onSuccess }: Terminal
       });
       setUsedQuoteIds([]);
       setShowError(false);
+      setIsSubmitting(false);
     }
   }, [isActive]);
 
-  const handleCodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!state.currentCode || !state.userInput) return;
-
-    if (validateCodeResponse(state.userInput, state.currentCode.answer)) {
-      // Correct - advance to quote challenge
-      const quote = getRandomQuote(usedQuoteIds);
-      setUsedQuoteIds(prev => [...prev, quote.id]);
-      setState(prev => ({
-        ...prev,
-        phase: 'quote-challenge',
-        currentQuote: quote,
-        userInput: '',
-      }));
-    } else {
-      // Wrong - strike
-      const newStrikes = state.strikes + 1;
-      if (newStrikes >= 2) {
-        setState(prev => ({ ...prev, phase: 'denied', strikes: newStrikes }));
-        setTimeout(() => onClose(), 2000);
-      } else {
-        setShowError(true);
-        setTimeout(() => {
-          setShowError(false);
-          setState(prev => ({
-            ...prev,
-            strikes: newStrikes,
-            currentCode: generateCodeChallenge(),
-            userInput: '',
-          }));
-        }, 1500);
-      }
-    }
+  const advanceToQuote = async () => {
+    const quote = await issueChallenge('quote', usedQuoteIds);
+    setUsedQuoteIds(prev => [...prev, quote.id]);
+    setState(prev => ({
+      ...prev,
+      phase: 'quote-challenge',
+      currentQuote: quote,
+      userInput: '',
+    }));
   };
 
-  const handleQuoteAnswer = (answer: string) => {
-    if (!state.currentQuote) return;
+  const handleCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!state.currentCode || !state.userInput || isSubmitting) return;
+    setIsSubmitting(true);
 
-    if (answer === state.currentQuote.correctAnswer) {
-      // Correct - access granted
-      setState(prev => ({ ...prev, phase: 'granted' }));
-    } else {
-      // Wrong - strike
-      const newStrikes = state.strikes + 1;
-      if (newStrikes >= 2) {
-        setState(prev => ({ ...prev, phase: 'denied', strikes: newStrikes }));
-        setTimeout(() => onClose(), 2000);
-      } else {
-        setShowError(true);
-        setTimeout(() => {
-          setShowError(false);
-          const quote = getRandomQuote(usedQuoteIds);
-          setUsedQuoteIds(prev => [...prev, quote.id]);
-          setState(prev => ({
-            ...prev,
-            strikes: newStrikes,
-            currentQuote: quote,
-          }));
-        }, 1500);
+    const valid = await validateAnswer('code', state.currentCode.token, state.userInput);
+
+    if (valid) {
+      try {
+        await advanceToQuote();
+      } catch {
+        setIsSubmitting(false);
+        return;
       }
+      setIsSubmitting(false);
+      return;
     }
+
+    const newStrikes = state.strikes + 1;
+    if (newStrikes >= 2) {
+      setState(prev => ({ ...prev, phase: 'denied', strikes: newStrikes }));
+      setTimeout(() => onClose(), 2000);
+      setIsSubmitting(false);
+      return;
+    }
+
+    setShowError(true);
+    setTimeout(async () => {
+      setShowError(false);
+      try {
+        const code = await issueChallenge('code');
+        setState(prev => ({
+          ...prev,
+          strikes: newStrikes,
+          currentCode: code,
+          userInput: '',
+        }));
+      } finally {
+        setIsSubmitting(false);
+      }
+    }, 1500);
+  };
+
+  const handleQuoteAnswer = async (answer: string) => {
+    if (!state.currentQuote || isSubmitting) return;
+    setIsSubmitting(true);
+
+    const valid = await validateAnswer('quote', state.currentQuote.token, answer);
+
+    if (valid) {
+      setState(prev => ({ ...prev, phase: 'granted' }));
+      setIsSubmitting(false);
+      return;
+    }
+
+    const newStrikes = state.strikes + 1;
+    if (newStrikes >= 2) {
+      setState(prev => ({ ...prev, phase: 'denied', strikes: newStrikes }));
+      setTimeout(() => onClose(), 2000);
+      setIsSubmitting(false);
+      return;
+    }
+
+    setShowError(true);
+    setTimeout(async () => {
+      setShowError(false);
+      try {
+        const quote = await issueChallenge('quote', usedQuoteIds);
+        setUsedQuoteIds(prev => [...prev, quote.id]);
+        setState(prev => ({ ...prev, strikes: newStrikes, currentQuote: quote }));
+      } finally {
+        setIsSubmitting(false);
+      }
+    }, 1500);
   };
 
   if (!isActive) return null;
@@ -233,6 +295,7 @@ export default function TerminalLogin({ isActive, onClose, onSuccess }: Terminal
                         autoFocus
                         autoComplete="off"
                         spellCheck={false}
+                        disabled={isSubmitting}
                       />
                     </div>
                     <div className="text-green-500/30 text-xs mt-4">
@@ -258,7 +321,7 @@ export default function TerminalLogin({ isActive, onClose, onSuccess }: Terminal
                   {'>'} COMPLETE THE TRANSMISSION:
                 </div>
                 <div className="text-green-400 text-xl mb-8 pl-4">
-                  "{state.currentQuote.partial}"
+                  &ldquo;{state.currentQuote.partial}&rdquo;
                 </div>
 
                 {showError ? (
@@ -275,9 +338,10 @@ export default function TerminalLogin({ isActive, onClose, onSuccess }: Terminal
                       <button
                         key={option.label}
                         onClick={() => handleQuoteAnswer(option.label)}
+                        disabled={isSubmitting}
                         className="w-full text-left px-4 py-2 text-green-500/80 hover:text-green-400
                                    hover:bg-green-900/20 transition-colors border border-transparent
-                                   hover:border-green-900/50"
+                                   hover:border-green-900/50 disabled:opacity-50"
                       >
                         [{option.label}] {option.text}
                       </button>

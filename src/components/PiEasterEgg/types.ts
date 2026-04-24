@@ -25,9 +25,10 @@ export interface LoginState {
 // Terminal Login Types
 export type TerminalPhase = 'code-challenge' | 'quote-challenge' | 'granted' | 'denied';
 
+// Client-facing types. Answers live server-side only — see src/lib/pi-challenge/server.ts.
 export interface CodeChallenge {
   prompt: string;
-  answer: string;
+  token: string;
 }
 
 export interface QuoteOption {
@@ -39,9 +40,9 @@ export interface StarTrekQuote {
   id: string;
   partial: string;
   options: QuoteOption[];
-  correctAnswer: string;
   character: string;
   source: string;
+  token: string;
 }
 
 export interface TerminalLoginState {

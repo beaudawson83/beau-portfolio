@@ -1,6 +1,16 @@
-import { StarTrekQuote } from './types';
+import 'server-only';
 
-export const STAR_TREK_QUOTES: StarTrekQuote[] = [
+export type PublicStarTrekQuote = {
+  id: string;
+  partial: string;
+  options: Array<{ label: string; text: string }>;
+  character: string;
+  source: string;
+};
+
+type FullStarTrekQuote = PublicStarTrekQuote & { correctAnswer: string };
+
+const QUOTES: FullStarTrekQuote[] = [
   {
     id: 'spock-needs',
     partial: 'The needs of the many...',
@@ -68,8 +78,49 @@ export const STAR_TREK_QUOTES: StarTrekQuote[] = [
   },
 ];
 
-export function getRandomQuote(excludeIds: string[] = []): StarTrekQuote {
-  const available = STAR_TREK_QUOTES.filter(q => !excludeIds.includes(q.id));
-  const pool = available.length > 0 ? available : STAR_TREK_QUOTES;
+export function pickQuote(excludeIds: string[] = []): FullStarTrekQuote {
+  const available = QUOTES.filter(q => !excludeIds.includes(q.id));
+  const pool = available.length > 0 ? available : QUOTES;
   return pool[Math.floor(Math.random() * pool.length)];
+}
+
+export function stripAnswer(q: FullStarTrekQuote): PublicStarTrekQuote {
+  const { correctAnswer: _unused, ...publicFields } = q;
+  void _unused;
+  return publicFields;
+}
+
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const NUMBERS = '0123456789';
+
+function randomChar(chars: string): string {
+  return chars[Math.floor(Math.random() * chars.length)];
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+export function generateCodeChallenge(): { prompt: string; answer: string } {
+  const letters = [randomChar(LETTERS), randomChar(LETTERS)];
+  const numbers = [
+    randomChar(NUMBERS),
+    randomChar(NUMBERS),
+    randomChar(NUMBERS),
+    randomChar(NUMBERS),
+  ];
+  const prompt = shuffle([...letters, ...numbers]).join('');
+  const sortedLetters = [...letters].sort();
+  const sortedNumbers = [...numbers].sort((a, b) => parseInt(a) - parseInt(b));
+  const answer = [...sortedLetters, ...sortedNumbers].join('');
+  return { prompt, answer };
+}
+
+export function normalizeCodeAnswer(input: string): string {
+  return input.toUpperCase().trim();
 }

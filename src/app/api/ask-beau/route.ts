@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
 import type { ConversationMessage } from '@/types';
+import { logConversation, extractClientIp, type ChatSource } from '@/lib/chat-log';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
@@ -180,7 +183,34 @@ function buildConversationContent(conversationHistory: ConversationMessage[], cu
   return contents;
 }
 
+function respond(
+  question: string,
+  responseText: string,
+  source: ChatSource,
+  ctx: { sessionId: string | null; ip: string | null; userAgent: string | null },
+  status = 200
+) {
+  if (ctx.sessionId) {
+    after(() =>
+      logConversation({
+        sessionId: ctx.sessionId!,
+        ip: ctx.ip,
+        userAgent: ctx.userAgent,
+        userMessage: question,
+        assistantMessage: responseText,
+        source,
+      })
+    );
+  }
+  return NextResponse.json({ response: responseText, source }, { status });
+}
+
 export async function POST(request: NextRequest) {
+  const sessionId = request.headers.get('x-chat-session');
+  const ip = extractClientIp(request.headers);
+  const userAgent = request.headers.get('user-agent');
+  const ctx = { sessionId, ip, userAgent };
+
   try {
     const { question, conversationHistory = [] } = await request.json();
 
@@ -191,13 +221,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Rate limit by IP hash (or anonymous bucket if no IP available).
+    const rl = await checkRateLimit(`ask-beau:${ip ?? 'anon'}`, {
+      limit: 20,
+      windowSeconds: 3600,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        {
+          response: "Slow down, partner — you've hit the per-hour limit. Try again in a bit.",
+          source: 'fallback',
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': Math.max(1, Math.ceil((rl.resetAt.getTime() - Date.now()) / 1000)).toString(),
+          },
+        }
+      );
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-      return NextResponse.json({
-        response: getHashedFallback(question),
-        source: 'fallback'
-      });
+      return respond(question, getHashedFallback(question), 'fallback', ctx);
     }
 
     const contents = buildConversationContent(conversationHistory, question);
@@ -224,10 +271,7 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       console.error('Gemini API error:', response.status);
-      return NextResponse.json({
-        response: getHashedFallback(question),
-        source: 'fallback'
-      });
+      return respond(question, getHashedFallback(question), 'fallback', ctx);
     }
 
     const data = await response.json();
@@ -235,16 +279,10 @@ export async function POST(request: NextRequest) {
 
     if (!aiResponse) {
       console.error('Gemini API returned no response:', JSON.stringify(data, null, 2));
-      return NextResponse.json({
-        response: getHashedFallback(question),
-        source: 'fallback'
-      });
+      return respond(question, getHashedFallback(question), 'fallback', ctx);
     }
 
-    return NextResponse.json({
-      response: aiResponse,
-      source: 'ai'
-    });
+    return respond(question, aiResponse, 'ai', ctx);
 
   } catch (error) {
     console.error('Ask Beau API error:', error);
