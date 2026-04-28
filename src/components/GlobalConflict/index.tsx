@@ -3,13 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ConflictHotspot, ConflictPayload } from '@/lib/conflict-data';
 import StatCard from './StatCard';
-import NewsFeed from './NewsFeed';
 import ConflictMap, { project } from './ConflictMap';
+import ConflictTimeline from './ConflictTimeline';
 import Sparkline from './Sparkline';
 import './global-conflict.css';
-
-const NEWS_FILTERS = ['all', 'reuters', 'ap', 'bbc', 'ocha'] as const;
-type NewsFilter = (typeof NEWS_FILTERS)[number];
 
 interface GlobalConflictModuleProps {
   initialData: ConflictPayload;
@@ -19,7 +16,6 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
   const data = initialData;
   const [hovered, setHovered] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
-  const [filter, setFilter] = useState<NewsFilter>('all');
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -43,14 +39,6 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
   const hoveredHotspot = useMemo(
     () => (hovered ? data.hotspots.find((h) => h.id === hovered) ?? null : null),
     [hovered, data.hotspots],
-  );
-
-  const filteredNews = useMemo(
-    () =>
-      filter === 'all'
-        ? data.news
-        : data.news.filter((n) => n.source.toLowerCase().includes(filter)),
-    [filter, data.news],
   );
 
   const updatedAt = new Date(data.lastUpdated);
@@ -151,7 +139,10 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
 
           {hoveredHotspot && !focusedHotspot && <HoverTooltip h={hoveredHotspot} />}
           {focusedHotspot && (
-            <DetailPanel h={focusedHotspot} onClose={() => setFocused(null)} />
+            <DetailPanel
+              h={focusedHotspot}
+              onClose={() => setFocused(null)}
+            />
           )}
         </div>
 
@@ -172,35 +163,11 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
         </div>
       </section>
 
-      <section className="gc-news-section">
-        <div className="gc-news-header">
-          <div>
-            <div className="gc-section-kicker">Wire · last 24 hours</div>
-            <h2 className="gc-news-title">Breaking from the field</h2>
-          </div>
-          <div className="gc-news-filters">
-            {NEWS_FILTERS.map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className="gc-filter-btn"
-                data-active={filter === f ? 'true' : undefined}
-              >
-                {f === 'all' ? 'All sources' : f}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <NewsFeed items={filteredNews} density="comfortable" />
-
-        <div className="gc-news-footer">
-          <span>Headlines aggregated from public sources · agent-curated for relevance</span>
-          <span>
-            {filteredNews.length} of {data.news.length} items
-          </span>
-        </div>
-      </section>
+      <ConflictTimeline
+        initialNews={data.news}
+        selectedHotspot={focusedHotspot}
+        onClearSelection={() => setFocused(null)}
+      />
 
       <footer className="gc-footer">
         {[
@@ -283,6 +250,18 @@ function DetailPanel({ h, onClose }: { h: ConflictHotspot; onClose: () => void }
       </div>
       <div className="gc-detail-spark-label">Bar chart · 7d casualty trend</div>
       <Sparkline seed={h.id} />
+      <button
+        type="button"
+        className="gc-detail-cta"
+        onClick={() => {
+          if (typeof document !== 'undefined') {
+            const el = document.querySelector('.gc-news-section');
+            el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }}
+      >
+        View full timeline ↓
+      </button>
     </div>
   );
 }

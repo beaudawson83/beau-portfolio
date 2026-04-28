@@ -1,4 +1,12 @@
-// Conflict Heat Map — types, static fallback, and live-data fetcher (Gemini + Google Search).
+// Conflict Heat Map — types, static fallback, and the high-level read path.
+//
+// Read order at request time:
+//   1. Supabase (latest snapshot + active hotspots + last-24h news)
+//   2. Live Gemini global scan (one-shot, no persistence)
+//   3. Hand-curated FALLBACK_CONFLICT_DATA
+//
+// The cron jobs in src/app/api/cron/conflict-* are responsible for keeping
+// Supabase populated; this file is intentionally read-only.
 
 export type ConflictType =
   | 'interstate'
@@ -92,141 +100,55 @@ export const FALLBACK_CONFLICT_DATA: ConflictData = {
   ],
 };
 
-const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-
-function buildPrompt(): string {
-  const today = new Date().toISOString().slice(0, 10);
-  return `You are an autonomous research agent producing a JSON briefing on the
-state of global armed conflict. Use Google Search to find current, sourced
-information from reputable outlets (Reuters, AP, BBC, Al Jazeera, Guardian,
-ACLED, UCDP, UN OCHA, Crisis Group). Today's date is ${today}.
-
-Return ONE JSON object — and nothing else — wrapped in a fenced \`\`\`json code block.
-
-Schema (all keys required):
-
-{
-  "lastUpdated": "<ISO 8601 timestamp, now>",
-  "totalActive": <number — count of currently active armed conflicts globally>,
-  "casualties7d": <number — reported fatalities across all conflicts in the last 7 days>,
-  "displaced": <number — total forcibly displaced persons globally, cumulative>,
-  "countriesInvolved": <number — countries involved as principal or proxy>,
-  "weeklyDelta": {
-    "conflicts": <signed integer — change in active conflicts vs previous week>,
-    "casualties": <signed integer — change in 7d casualties vs prior 7d>,
-    "displaced": <signed integer — change in displacement this week>
-  },
-  "hotspots": [
-    {
-      "id": "<short slug, e.g. 'ukr', 'gaza'>",
-      "name": "<short label, e.g. 'Ukraine — Eastern Front'>",
-      "lat": <decimal latitude>,
-      "lng": <decimal longitude>,
-      "intensity": <1|2|3|4|5 — 5 = severe>,
-      "casualties7d": <reported fatalities last 7 days>,
-      "type": "<one of: interstate | civil-war | occupation | insurgency | criminal>",
-      "since": "<year conflict began, e.g. '2022'>",
-      "iso": ["<ISO 3166-1 numeric country code(s) as strings, e.g. '804'>"]
-    }
-  ],
-  "news": [
-    {
-      "id": <integer>,
-      "source": "<UPPERCASE source name>",
-      "time": "<relative time, e.g. '12 min ago' | '2h 14m ago' | '14h ago'>",
-      "region": "<short region label>",
-      "headline": "<one sentence>",
-      "url": "<full URL to the article, https://...>"
-    }
-  ]
-}
-
-Constraints:
-- Provide 15-25 hotspots covering all currently active armed conflicts.
-- Provide 10-15 news items, all from the last 24 hours, ordered most recent first.
-- Casualty figures are reported lower bounds — use the most recent published figures.
-- ISO numeric codes: e.g. Ukraine '804', Russia '643', Israel '376', Palestine
-  '275', Sudan '729', Myanmar '104', DRC '180', Mali '466', Burkina Faso '854',
-  Niger '562', Nigeria '566', Mexico '484', Colombia '170', Haiti '332'.
-- Output JSON only. No prose outside the fenced code block.`;
-}
-
-interface GeminiResponse {
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-}
-
-function extractJson(text: string): unknown | null {
-  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const candidate = fence ? fence[1] : text;
-  try {
-    return JSON.parse(candidate.trim());
-  } catch {
-    const first = candidate.indexOf('{');
-    const last = candidate.lastIndexOf('}');
-    if (first === -1 || last === -1 || last <= first) return null;
-    try {
-      return JSON.parse(candidate.slice(first, last + 1));
-    } catch {
-      return null;
-    }
-  }
-}
-
-function isValidConflictData(d: unknown): d is ConflictData {
-  if (!d || typeof d !== 'object') return false;
-  const o = d as Record<string, unknown>;
-  return (
-    typeof o.lastUpdated === 'string' &&
-    typeof o.totalActive === 'number' &&
-    typeof o.casualties7d === 'number' &&
-    typeof o.displaced === 'number' &&
-    typeof o.countriesInvolved === 'number' &&
-    typeof o.weeklyDelta === 'object' && o.weeklyDelta !== null &&
-    Array.isArray(o.hotspots) && o.hotspots.length > 0 &&
-    Array.isArray(o.news)
-  );
+function staticFallback(): ConflictPayload {
+  return {
+    ...FALLBACK_CONFLICT_DATA,
+    lastUpdated: new Date().toISOString(),
+    source: 'fallback',
+  };
 }
 
 export async function getConflictData(): Promise<ConflictPayload> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-    return { ...FALLBACK_CONFLICT_DATA, lastUpdated: new Date().toISOString(), source: 'fallback' };
-  }
-
+  // 1. Prefer the persistent journal in Supabase.
   try {
-    const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: buildPrompt() }] }],
-        tools: [{ google_search: {} }],
-        generationConfig: {
-          temperature: 0.2,
-          topK: 40,
-          topP: 0.9,
-          maxOutputTokens: 8192,
-        },
-      }),
-      next: { revalidate: 900 },
-    });
-
-    if (!res.ok) {
-      console.error('Gemini conflict-data error:', res.status);
-      return { ...FALLBACK_CONFLICT_DATA, lastUpdated: new Date().toISOString(), source: 'fallback' };
+    const { readConflictData, isConflictStoreConfigured } = await import('./conflict-store');
+    if (isConflictStoreConfigured()) {
+      const stored = await readConflictData();
+      if (stored) return { ...stored, source: 'live' };
     }
-
-    const json = (await res.json()) as GeminiResponse;
-    const text = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
-    const parsed = extractJson(text);
-    if (!isValidConflictData(parsed)) {
-      console.error('Gemini conflict-data: invalid shape');
-      return { ...FALLBACK_CONFLICT_DATA, lastUpdated: new Date().toISOString(), source: 'fallback' };
-    }
-
-    return { ...parsed, source: 'live' };
   } catch (err) {
-    console.error('Gemini conflict-data fetch failed:', err);
-    return { ...FALLBACK_CONFLICT_DATA, lastUpdated: new Date().toISOString(), source: 'fallback' };
+    console.error('getConflictData: Supabase read failed:', err);
   }
+
+  // 2. No store yet — try a one-shot live Gemini scan, no persistence.
+  try {
+    const { globalScan } = await import('./conflict-ingest');
+    const scan = await globalScan();
+    if (scan) {
+      const news: ConflictNewsItem[] = scan.news.slice(0, 12).map((n, i) => ({
+        id: i + 1,
+        source: n.source,
+        time: n.time,
+        region: n.region,
+        headline: n.headline,
+        url: n.url,
+      }));
+      return {
+        lastUpdated: scan.lastUpdated || new Date().toISOString(),
+        totalActive: scan.totalActive,
+        casualties7d: scan.casualties7d,
+        displaced: scan.displaced,
+        countriesInvolved: scan.countriesInvolved,
+        weeklyDelta: scan.weeklyDelta,
+        hotspots: scan.hotspots,
+        news,
+        source: 'live',
+      };
+    }
+  } catch (err) {
+    console.error('getConflictData: live scan failed:', err);
+  }
+
+  // 3. Ultimate fallback: hand-curated dataset.
+  return staticFallback();
 }

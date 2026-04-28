@@ -225,6 +225,94 @@ When returning to blog work:
 
 ---
 
+## Global Conflict Index — LIVE but hidden
+
+Live at `/global-conflict`, accessible only via the Pi easter egg dashboard
+(`> ACCESS_GLOBAL_CONFLICT [LIVE]`). `robots: noindex` for now.
+
+A sober data-journalism module: real TopoJSON world map (countries tinted
+red by conflict intensity), animated stat row, hotspot markers, and a wire
+feed. Click any hotspot → the news section becomes that conflict's full
+journal timeline (paginated, all-time history).
+
+### Data flow
+
+1. **Persistent journal in Supabase** (preferred, when configured):
+   - Read at request time by `getConflictData()` in `src/lib/conflict-data.ts`
+   - Tables: `conflict_hotspots`, `conflict_news` (URL-deduped journal),
+     `conflict_snapshots` (time series of global stats)
+   - Schema lives in `scripts/setup-supabase-conflict.sql` (idempotent;
+     run once in the Supabase SQL editor). RLS: anon read, service-role write.
+
+2. **Two cron jobs** (`vercel.json`) keep the journal fresh:
+   - `/api/cron/conflict-snapshot` every 30 min — global Gemini scan,
+     writes a snapshot row + upserts hotspots (marks resolved ones inactive),
+     stashes the global headlines.
+   - `/api/cron/conflict-journal` at :15 hourly — for each active hotspot,
+     runs a deep per-conflict Gemini scan and appends new URLs to
+     `conflict_news`. Designed to grow indefinitely.
+   - Both protected by `Authorization: Bearer ${CRON_SECRET}`.
+
+3. **Live fallback** (no Supabase): one-shot Gemini global scan per request,
+   no persistence. Page-level ISR caches the result for 15 min.
+
+4. **Static fallback**: `FALLBACK_CONFLICT_DATA` ships hand-curated April
+   2026 data so the page never goes blank.
+
+5. **Public API**: `GET /api/global-conflict` (full payload) and
+   `GET /api/global-conflict/news?conflict=<id>&limit=25&before=<iso>`
+   (paginated per-conflict timeline; returns `nextBefore` cursor).
+
+### Env vars (Vercel production)
+
+Required for live data:
+- `GEMINI_API_KEY` (already configured for ask-beau)
+
+Required for the persistent journal:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (cron writes — bypasses RLS)
+- `CRON_SECRET` (generate any high-entropy string; Vercel Cron adds the
+  matching `Authorization: Bearer …` automatically)
+
+### One-time setup
+
+1. Run `scripts/setup-supabase-conflict.sql` in the Supabase SQL editor.
+2. Set the four env vars above in Vercel.
+3. Redeploy. Vercel Cron will pick up `vercel.json` and start invoking the jobs.
+4. Invoke `/api/cron/conflict-snapshot` manually once to seed (with the
+   `Authorization: Bearer $CRON_SECRET` header) so the page has data
+   before the first scheduled run.
+
+### Validation (be honest about scope)
+
+Validation is **shape-only**. The ingest helpers verify top-level types,
+required fields, and that URLs match `^https?://`. They do not:
+- Verify URLs resolve / aren't 404
+- Sanity-check casualty numbers against historical baselines
+- Cross-reference Gemini's claims against ACLED/UCDP datasets directly
+
+The methodology footer is honest about this — it's "agentic, LLM-assisted"
+journalism, not a primary-source dataset.
+
+### Files
+
+- `src/lib/conflict-data.ts` — types, fallback dataset, `getConflictData()`
+- `src/lib/conflict-store.ts` — Supabase read/write layer (no-ops when unconfigured)
+- `src/lib/conflict-ingest.ts` — `globalScan()` and `perConflictScan(h)` Gemini helpers
+- `src/lib/cron-auth.ts` — Bearer-token verifier shared by cron routes
+- `src/app/global-conflict/page.tsx` — server component, ISR 15m
+- `src/app/api/global-conflict/route.ts` — public payload
+- `src/app/api/global-conflict/news/route.ts` — per-conflict timeline w/ cursor
+- `src/app/api/cron/conflict-snapshot/route.ts` — global scan cron
+- `src/app/api/cron/conflict-journal/route.ts` — per-conflict scan cron
+- `src/components/GlobalConflict/` — UI: map, stats, timeline, detail panel
+- `public/countries-110m.json` — world-atlas TopoJSON (105 KB)
+- `vercel.json` — cron schedule
+- `scripts/setup-supabase-conflict.sql` — idempotent migration
+
+---
+
 ## Commands
 
 ```bash
