@@ -73,6 +73,47 @@ create index if not exists idx_conflict_snapshots_captured
   on conflict_snapshots (captured_at desc);
 
 -- ===========================================================================
+-- ACTORS (countries involved in each conflict, by role)
+-- Phase 1 of the multi-pass identification protocol.
+-- ===========================================================================
+create table if not exists conflict_actors (
+  id               uuid primary key default gen_random_uuid(),
+  conflict_id      text not null references conflict_hotspots(id) on delete cascade,
+  country_iso      text not null,
+  role             text not null check (role in (
+                     'territory',
+                     'principal',
+                     'direct',
+                     'sponsor',
+                     'supplier',
+                     'proxy',
+                     'basing',
+                     'mediator'
+                   )),
+  confidence       text not null default 'medium' check (confidence in ('high', 'medium', 'low')),
+  notes            text,
+  sources          jsonb not null default '[]'::jsonb,
+  first_documented date,
+  last_confirmed   timestamptz not null default now(),
+  unique (conflict_id, country_iso, role)
+);
+
+create index if not exists idx_conflict_actors_country
+  on conflict_actors (country_iso);
+create index if not exists idx_conflict_actors_conflict
+  on conflict_actors (conflict_id);
+create index if not exists idx_conflict_actors_role
+  on conflict_actors (role);
+
+alter table conflict_actors enable row level security;
+
+drop policy if exists "anon read actors"  on conflict_actors;
+drop policy if exists "auth read actors"  on conflict_actors;
+
+create policy "anon read actors" on conflict_actors for select to anon          using (true);
+create policy "auth read actors" on conflict_actors for select to authenticated using (true);
+
+-- ===========================================================================
 -- ROW-LEVEL SECURITY
 -- Public read, no public write.  Service role bypasses RLS automatically.
 -- ===========================================================================

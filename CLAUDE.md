@@ -237,31 +237,61 @@ journal timeline (paginated, all-time history).
 
 ### Data flow
 
-1. **Persistent journal in Supabase** (preferred, when configured):
-   - Read at request time by `getConflictData()` in `src/lib/conflict-data.ts`
-   - Tables: `conflict_hotspots`, `conflict_news` (URL-deduped journal),
-     `conflict_snapshots` (time series of global stats)
-   - Schema lives in `scripts/setup-supabase-conflict.sql` (idempotent;
-     run once in the Supabase SQL editor). RLS: anon read, service-role write.
+The system runs a **multi-pass identification protocol** to capture not
+just battlegrounds but the full taxonomy of conflict involvement
+(territory / principal / direct / basing / sponsor / supplier / proxy /
+mediator). Phase 1 (Gemini-only multi-pass) is live; Phase 2 (Claude
+auditor) and Phase 3 (ACLED/UCDP/SIPRI dataset reconciliation) are
+planned follow-ups.
 
-2. **Two cron jobs** (`vercel.json`) keep the journal fresh:
-   - `/api/cron/conflict-snapshot` every 30 min — global Gemini scan,
-     writes a snapshot row + upserts hotspots (marks resolved ones inactive),
-     stashes the global headlines.
-   - `/api/cron/conflict-journal` at :15 hourly — for each active hotspot,
-     runs a deep per-conflict Gemini scan and appends new URLs to
-     `conflict_news`. Designed to grow indefinitely.
-   - Both protected by `Authorization: Bearer ${CRON_SECRET}`.
+**Cron-driven ingestion (`/api/cron/conflict-snapshot`, every 30 min):**
 
-3. **Live fallback** (no Supabase): one-shot Gemini global scan per request,
-   no persistence. Page-level ISR caches the result for 15 min.
+  Pass 1 — `globalScan()`        Territorial / event-level scan.
+                                  Returns hotspots, stats, last-24h news.
+  Pass 2 — `belligerentsScan()`  Principals, direct ops, basing.
+                                  Takes Pass 1 output as input.
+                                  May emit NEW hotspots for great-power
+                                  direct ops missed by Pass 1.
+  Pass 3 — `proxyScan()`         Sponsors, suppliers, proxy directors.
+                                  STRICT threshold — only documented
+                                  relationships from reputable outlets,
+                                  sanctions designations, UN/ICC filings,
+                                  or recognized think-tank publications.
 
-4. **Static fallback**: `FALLBACK_CONFLICT_DATA` ships hand-curated April
-   2026 data so the page never goes blank.
+Every actor row must carry ≥1 source URL (https). Pass 3 additionally
+requires the source host to be in an allowlist of reputable domains
+(reuters/ap/bbc/aljazeera/guardian/nyt/ft/treasury.gov/state.gov/un.org
+/icj-cij.org/crisisgroup/acled/sipri/etc.). Unsourced rows are dropped
+silently in `coerceActor()` — that's how the "documented & sourced only"
+threshold gets enforced mechanically rather than rhetorically.
 
-5. **Public API**: `GET /api/global-conflict` (full payload) and
-   `GET /api/global-conflict/news?conflict=<id>&limit=25&before=<iso>`
-   (paginated per-conflict timeline; returns `nextBefore` cursor).
+**Per-conflict journal (`/api/cron/conflict-journal`, hourly at :15):**
+
+  For each active hotspot, runs a focused Gemini search and appends
+  new URLs to `conflict_news`. Designed to grow indefinitely.
+
+**At request time, `getConflictData()` reads from Supabase:**
+
+  1. Latest snapshot (stats)
+  2. Active hotspots
+  3. Last-24h news
+  4. All actors
+
+  Falls back to a one-shot live Gemini scan (no actors), then to
+  `FALLBACK_CONFLICT_DATA` (hand-curated, including a documented actor
+  set so the page renders the full taxonomy even without Supabase).
+
+**Tables:**
+
+  conflict_hotspots   territory + intensity + casualties + iso codes
+  conflict_news       URL-deduped journal (append-only)
+  conflict_snapshots  time series of global stats
+  conflict_actors     (conflict_id, country_iso, role, confidence,
+                       sources jsonb, notes, first_documented,
+                       last_confirmed) — unique on (conflict, country, role)
+
+Schema lives in `scripts/setup-supabase-conflict.sql` (idempotent;
+re-runnable). RLS: anon read, service-role write.
 
 ### Env vars (Vercel production)
 
@@ -297,19 +327,33 @@ journalism, not a primary-source dataset.
 
 ### Files
 
-- `src/lib/conflict-data.ts` — types, fallback dataset, `getConflictData()`
+- `src/lib/conflict-data.ts` — types (incl. `ActorRole` taxonomy), fallback dataset with sourced actors, `getConflictData()`
 - `src/lib/conflict-store.ts` — Supabase read/write layer (no-ops when unconfigured)
-- `src/lib/conflict-ingest.ts` — `globalScan()` and `perConflictScan(h)` Gemini helpers
+- `src/lib/conflict-ingest.ts` — Pass 1 `globalScan()`, Pass 2 `belligerentsScan()`, Pass 3 `proxyScan()`, `perConflictScan()`
 - `src/lib/cron-auth.ts` — Bearer-token verifier shared by cron routes
 - `src/app/global-conflict/page.tsx` — server component, ISR 15m
 - `src/app/api/global-conflict/route.ts` — public payload
 - `src/app/api/global-conflict/news/route.ts` — per-conflict timeline w/ cursor
-- `src/app/api/cron/conflict-snapshot/route.ts` — global scan cron
-- `src/app/api/cron/conflict-journal/route.ts` — per-conflict scan cron
+- `src/app/api/cron/conflict-snapshot/route.ts` — runs Passes 1-3 and persists
+- `src/app/api/cron/conflict-journal/route.ts` — per-conflict news scan cron
 - `src/components/GlobalConflict/` — UI: map, stats, timeline, detail panel
 - `public/countries-110m.json` — world-atlas TopoJSON (105 KB)
 - `vercel.json` — cron schedule
 - `scripts/setup-supabase-conflict.sql` — idempotent migration
+
+### Future phases (not yet shipped)
+
+Phase 2: Claude auditor as Pass 4 — independent cross-model check on the
+Gemini payload. Requires `ANTHROPIC_API_KEY`.
+
+Phase 3: dataset reconciliation as Pass 5 — pull ACLED REST API
+(`ACLED_KEY` + `ACLED_EMAIL`, register at acleddata.com), UCDP yearly
+CSVs, SIPRI arms transfers DB. Flag actor rows with `dataset_confirmed`
+for visual differentiation.
+
+Phase 4: map UI — three toggleable layers (territory / belligerents /
+sponsors). Click a country → side panel listing all its roles across
+active conflicts.
 
 ---
 

@@ -15,6 +15,32 @@ export type ConflictType =
   | 'insurgency'
   | 'criminal';
 
+// Phase 1 of the multi-pass identification protocol — the role a country plays
+// relative to a given conflict.  See CLAUDE.md → "Global Conflict Index" for
+// the full taxonomy.
+export type ActorRole =
+  | 'territory'   // soil where kinetic events occur
+  | 'principal'   // primary state party to the violence
+  | 'direct'      // state conducting strikes / ops in another's territory
+  | 'sponsor'     // funding / political backing
+  | 'supplier'    // arms / dual-use materiel
+  | 'proxy'       // operationally directing a non-state actor
+  | 'basing'      // forward-deployed combat-capable forces
+  | 'mediator';   // formal third-party negotiation role
+
+export type ActorConfidence = 'high' | 'medium' | 'low';
+
+export interface ConflictActor {
+  conflictId: string;
+  countryIso: string;            // ISO 3166-1 numeric, no leading zeros
+  role: ActorRole;
+  confidence: ActorConfidence;
+  notes?: string | null;
+  sources: string[];             // ≥1 https:// URL required by ingest validation
+  firstDocumented?: string | null; // ISO date
+  lastConfirmed?: string | null;
+}
+
 export interface ConflictHotspot {
   id: string;
   name: string;
@@ -49,6 +75,7 @@ export interface ConflictData {
   };
   hotspots: ConflictHotspot[];
   news: ConflictNewsItem[];
+  actors: ConflictActor[]; // multi-pass actor model; empty pre-Phase-1
 }
 
 export interface ConflictPayload extends ConflictData {
@@ -83,6 +110,7 @@ export const FALLBACK_CONFLICT_DATA: ConflictData = {
     { id: 'tha', name: 'Thailand — south', lat: 6.5, lng: 101.3, intensity: 1, casualties7d: 8, type: 'insurgency', since: '2004', iso: ['764'] },
     { id: 'mozam', name: 'Mozambique — Cabo Delgado', lat: -12.5, lng: 40.5, intensity: 2, casualties7d: 24, type: 'insurgency', since: '2017', iso: ['508'] },
     { id: 'cmr', name: 'Cameroon — Anglophone', lat: 5.5, lng: 10.0, intensity: 2, casualties7d: 18, type: 'civil-war', since: '2017', iso: ['120'] },
+    { id: 'irn', name: 'Iran–Israel direct exchanges', lat: 32.43, lng: 53.69, intensity: 3, casualties7d: 31, type: 'interstate', since: '2024', iso: ['364', '376'] },
   ],
   news: [
     { id: 1, source: 'REUTERS', time: '12 min ago', region: 'Eastern Europe', headline: 'Drone strikes hit energy infrastructure in three regions overnight, officials say', url: '#' },
@@ -97,6 +125,66 @@ export const FALLBACK_CONFLICT_DATA: ConflictData = {
     { id: 10, source: 'BBC', time: '14h ago', region: 'West Africa', headline: 'Insurgents claim attack on convoy near tri-border region; casualties unconfirmed', url: '#' },
     { id: 11, source: 'AP', time: '18h ago', region: 'Levant', headline: 'Mediators present new framework as parties agree to indirect talks in Doha', url: '#' },
     { id: 12, source: 'REUTERS', time: '22h ago', region: 'South Asia', headline: 'Suicide bombing targets security checkpoint; group claims responsibility', url: '#' },
+  ],
+  // Hand-curated, sourced actor relationships — the kind of structured output
+  // that the multi-pass ingestion pipeline will produce at runtime.  Used here
+  // as a sane default when Supabase isn't configured so the page renders the
+  // full taxonomy (territory / belligerent / sponsor / proxy / supplier / basing).
+  // Each row carries ≥1 source URL; that's the threshold the ingest validator
+  // enforces in production.
+  actors: [
+    // Ukraine — primary inter-state war
+    { conflictId: 'ukr', countryIso: '804', role: 'territory',  confidence: 'high',   notes: 'Theatre of operations',                                  sources: ['https://www.bbc.com/news/world-europe-60525350'] },
+    { conflictId: 'ukr', countryIso: '643', role: 'principal',  confidence: 'high',   notes: 'Russian Federation — invading state',                    sources: ['https://www.icj-cij.org/case/182'] },
+    { conflictId: 'ukr', countryIso: '840', role: 'supplier',   confidence: 'high',   notes: 'United States — primary materiel and intelligence',      sources: ['https://www.state.gov/u-s-security-cooperation-with-ukraine/'] },
+    { conflictId: 'ukr', countryIso: '826', role: 'supplier',   confidence: 'high',   notes: 'United Kingdom — Storm Shadow, Challenger, training',     sources: ['https://www.gov.uk/government/news/uk-defence-secretary-statement-on-ukraine'] },
+    { conflictId: 'ukr', countryIso: '276', role: 'supplier',   confidence: 'high',   notes: 'Germany — IRIS-T, Leopard 2, Patriot',                    sources: ['https://www.bundesregierung.de/breg-en/issues/military-support-ukraine-2054572'] },
+    { conflictId: 'ukr', countryIso: '364', role: 'supplier',   confidence: 'high',   notes: 'Iran — Shahed-136 drones to Russia',                      sources: ['https://www.reuters.com/world/europe/iran-acknowledges-supplying-drones-russia-before-war-2023-11-05/'] },
+    { conflictId: 'ukr', countryIso: '408', role: 'supplier',   confidence: 'high',   notes: 'DPRK — artillery shells, ballistic missiles, troops',     sources: ['https://www.state.gov/dprk-troop-deployment-to-russia/'] },
+
+    // Gaza & West Bank
+    { conflictId: 'gaza', countryIso: '275', role: 'territory', confidence: 'high',   notes: 'Occupied Palestinian territory',                          sources: ['https://www.un.org/unispal/'] },
+    { conflictId: 'gaza', countryIso: '376', role: 'principal', confidence: 'high',   notes: 'Israel — IDF combat operations',                          sources: ['https://www.icj-cij.org/case/192'] },
+    { conflictId: 'gaza', countryIso: '840', role: 'supplier',  confidence: 'high',   notes: 'United States — primary arms supplier',                   sources: ['https://www.state.gov/u-s-security-cooperation-with-israel/'] },
+    { conflictId: 'gaza', countryIso: '364', role: 'proxy',     confidence: 'high',   notes: 'Iran — funds and arms Hamas, PIJ',                        sources: ['https://home.treasury.gov/news/press-releases/jy1885'] },
+    { conflictId: 'gaza', countryIso: '634', role: 'mediator',  confidence: 'high',   notes: 'Qatar — hosts ceasefire talks',                           sources: ['https://www.reuters.com/world/middle-east/qatar-mediator-role-2024/'] },
+    { conflictId: 'gaza', countryIso: '818', role: 'mediator',  confidence: 'high',   notes: 'Egypt — co-mediator on hostage and aid talks',            sources: ['https://www.aljazeera.com/news/2024/egypt-mediation-gaza/'] },
+
+    // Sudan — RSF/SAF civil war
+    { conflictId: 'sdn', countryIso: '729', role: 'territory',  confidence: 'high',   notes: 'Sudan — battleground',                                   sources: ['https://www.crisisgroup.org/africa/horn-africa/sudan'] },
+    { conflictId: 'sdn', countryIso: '784', role: 'supplier',   confidence: 'high',   notes: 'United Arab Emirates — material support to RSF',          sources: ['https://www.nytimes.com/2024/09/29/world/africa/uae-sudan-rsf.html'] },
+    { conflictId: 'sdn', countryIso: '818', role: 'supplier',   confidence: 'medium', notes: 'Egypt — aligned with SAF, training and overflight',       sources: ['https://www.reuters.com/world/africa/egypt-sudan-saf-2024/'] },
+
+    // Yemen
+    { conflictId: 'yem', countryIso: '887', role: 'territory',  confidence: 'high',   notes: 'Yemen — multi-front civil war',                          sources: ['https://www.un.org/en/yemen/'] },
+    { conflictId: 'yem', countryIso: '682', role: 'principal',  confidence: 'high',   notes: 'Saudi Arabia — Saudi-led coalition',                     sources: ['https://www.bbc.com/news/world-middle-east-29319423'] },
+    { conflictId: 'yem', countryIso: '784', role: 'principal',  confidence: 'high',   notes: 'United Arab Emirates — coalition partner',                sources: ['https://www.crisisgroup.org/middle-east-north-africa/gulf-and-arabian-peninsula/yemen'] },
+    { conflictId: 'yem', countryIso: '364', role: 'proxy',      confidence: 'high',   notes: 'Iran — Houthi (Ansar Allah) materiel and direction',     sources: ['https://www.un.org/securitycouncil/sanctions/2140/panel-of-experts/work-and-mandate/reports'] },
+    { conflictId: 'yem', countryIso: '840', role: 'direct',     confidence: 'high',   notes: 'United States — strikes against Houthi launchers',       sources: ['https://www.centcom.mil/MEDIA/PRESS-RELEASES/'] },
+    { conflictId: 'yem', countryIso: '826', role: 'direct',     confidence: 'high',   notes: 'United Kingdom — joint strike operations',                sources: ['https://www.gov.uk/government/news/uk-strikes-houthi-targets-yemen'] },
+
+    // Syria
+    { conflictId: 'syr', countryIso: '760', role: 'territory',  confidence: 'high',   notes: 'Syria — multi-actor theatre',                            sources: ['https://www.crisisgroup.org/middle-east-north-africa/east-mediterranean-mena/syria'] },
+    { conflictId: 'syr', countryIso: '643', role: 'basing',     confidence: 'high',   notes: 'Russia — Khmeimim air base, Tartus naval facility',       sources: ['https://www.reuters.com/world/middle-east/russia-syria-bases/'] },
+    { conflictId: 'syr', countryIso: '364', role: 'proxy',      confidence: 'high',   notes: 'Iran — IRGC-QF, Hezbollah deployments',                  sources: ['https://www.state.gov/iran-syria-irgc/'] },
+    { conflictId: 'syr', countryIso: '792', role: 'direct',     confidence: 'high',   notes: 'Turkey — operations vs SDF in north',                     sources: ['https://www.bbc.com/news/world-middle-east-66043532'] },
+    { conflictId: 'syr', countryIso: '840', role: 'basing',     confidence: 'high',   notes: 'United States — al-Tanf and northeast outposts',          sources: ['https://www.centcom.mil/'] },
+
+    // Sahel — Russia / Africa Corps
+    { conflictId: 'sah', countryIso: '643', role: 'supplier',   confidence: 'high',   notes: 'Russia — Africa Corps (formerly Wagner) personnel',       sources: ['https://www.bbc.com/news/world-africa-66486999'] },
+
+    // DRC — North Kivu
+    { conflictId: 'drc', countryIso: '180', role: 'territory',  confidence: 'high',   notes: 'DR Congo — eastern provinces',                            sources: ['https://www.un.org/en/monusco/'] },
+    { conflictId: 'drc', countryIso: '646', role: 'supplier',   confidence: 'high',   notes: 'Rwanda — backing of M23 (UN GoE finding)',                sources: ['https://www.securitycouncilreport.org/un-documents/document/s-2022-967.php'] },
+
+    // Mexico — cartel violence; US firearms inflow
+    { conflictId: 'mex', countryIso: '484', role: 'territory',  confidence: 'high',   notes: 'Mexico — multi-cartel violence',                         sources: ['https://www.crisisgroup.org/latin-america-caribbean/mexico'] },
+    { conflictId: 'mex', countryIso: '840', role: 'supplier',   confidence: 'medium', notes: 'United States — civilian-firearm flows southbound',      sources: ['https://www.gao.gov/products/gao-21-322'] },
+
+    // Iran–Israel direct exchanges
+    { conflictId: 'irn', countryIso: '364', role: 'principal',  confidence: 'high',   notes: 'Iran — direct missile/drone exchanges',                   sources: ['https://www.bbc.com/news/world-middle-east-68811276'] },
+    { conflictId: 'irn', countryIso: '376', role: 'principal',  confidence: 'high',   notes: 'Israel — direct strikes on Iranian targets',              sources: ['https://www.reuters.com/world/middle-east/israel-strikes-iran-2024/'] },
+    { conflictId: 'irn', countryIso: '840', role: 'direct',     confidence: 'high',   notes: 'United States — interception support',                    sources: ['https://www.centcom.mil/MEDIA/PRESS-RELEASES/'] },
   ],
 };
 
@@ -142,6 +230,10 @@ export async function getConflictData(): Promise<ConflictPayload> {
         weeklyDelta: scan.weeklyDelta,
         hotspots: scan.hotspots,
         news,
+        // Multi-pass scans run in the cron, not at request time, so the live
+        // one-shot path returns no actors.  The persistent journal in Supabase
+        // is where the full picture lives.
+        actors: [],
         source: 'live',
       };
     }

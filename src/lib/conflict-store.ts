@@ -4,6 +4,9 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type {
+  ActorConfidence,
+  ActorRole,
+  ConflictActor,
   ConflictData,
   ConflictHotspot,
   ConflictNewsItem,
@@ -205,16 +208,17 @@ export async function readNewsTimeline(q: NewsQuery = {}): Promise<TimelineItem[
 }
 
 /**
- * Reads stats + active hotspots + last-24h news from Supabase.
+ * Reads stats + active hotspots + last-24h news + actors from Supabase.
  * Returns null if the store is empty (caller should fall back).
  */
 export async function readConflictData(): Promise<ConflictData | null> {
   if (!isConflictStoreConfigured()) return null;
 
-  const [snapshot, hotspots, news] = await Promise.all([
+  const [snapshot, hotspots, news, actors] = await Promise.all([
     readLatestSnapshot(),
     readActiveHotspots(),
     readNews({ sinceHours: 24, limit: 12 }),
+    readActors(),
   ]);
 
   if (!snapshot || hotspots.length === 0) return null;
@@ -228,7 +232,115 @@ export async function readConflictData(): Promise<ConflictData | null> {
     weeklyDelta: snapshot.weekly_delta,
     hotspots,
     news,
+    actors,
   };
+}
+
+// ===========================================================================
+// ACTORS — multi-pass identification protocol
+// ===========================================================================
+
+interface ActorRow {
+  conflict_id: string;
+  country_iso: string;
+  role: string;
+  confidence: string;
+  notes: string | null;
+  sources: unknown;
+  first_documented: string | null;
+  last_confirmed: string;
+}
+
+const VALID_ROLES: ReadonlySet<ActorRole> = new Set([
+  'territory',
+  'principal',
+  'direct',
+  'sponsor',
+  'supplier',
+  'proxy',
+  'basing',
+  'mediator',
+]);
+
+const VALID_CONFIDENCE: ReadonlySet<ActorConfidence> = new Set(['high', 'medium', 'low']);
+
+function rowToActor(r: ActorRow): ConflictActor {
+  const role = (VALID_ROLES.has(r.role as ActorRole) ? r.role : 'sponsor') as ActorRole;
+  const confidence = (
+    VALID_CONFIDENCE.has(r.confidence as ActorConfidence) ? r.confidence : 'medium'
+  ) as ActorConfidence;
+  const sources = Array.isArray(r.sources)
+    ? (r.sources as unknown[]).filter((s): s is string => typeof s === 'string')
+    : [];
+  return {
+    conflictId: r.conflict_id,
+    countryIso: r.country_iso,
+    role,
+    confidence,
+    notes: r.notes,
+    sources,
+    firstDocumented: r.first_documented,
+    lastConfirmed: r.last_confirmed,
+  };
+}
+
+export interface ActorQuery {
+  conflictId?: string;
+  countryIso?: string;
+  role?: ActorRole;
+  minConfidence?: ActorConfidence;
+}
+
+export async function readActors(q: ActorQuery = {}): Promise<ConflictActor[]> {
+  const sb = getReadClient();
+  if (!sb) return [];
+  let query = sb
+    .from('conflict_actors')
+    .select(
+      'conflict_id,country_iso,role,confidence,notes,sources,first_documented,last_confirmed',
+    );
+  if (q.conflictId) query = query.eq('conflict_id', q.conflictId);
+  if (q.countryIso) query = query.eq('country_iso', q.countryIso);
+  if (q.role) query = query.eq('role', q.role);
+  // Confidence filter handled client-side because Supabase has no enum ordering for it.
+  const { data, error } = await query;
+  if (error) {
+    console.error('readActors:', error);
+    return [];
+  }
+  let rows = ((data ?? []) as ActorRow[]).map(rowToActor);
+  if (q.minConfidence) {
+    const order: Record<ActorConfidence, number> = { low: 0, medium: 1, high: 2 };
+    const min = order[q.minConfidence];
+    rows = rows.filter((a) => order[a.confidence] >= min);
+  }
+  return rows;
+}
+
+/**
+ * Upserts actor relationships keyed by (conflict_id, country_iso, role).
+ * Caller is responsible for source validation (≥1 https URL) — we trust input.
+ */
+export async function upsertActors(actors: ConflictActor[]): Promise<number> {
+  if (actors.length === 0) return 0;
+  const sb = getWriteClient();
+  const now = new Date().toISOString();
+  const rows = actors.map((a) => ({
+    conflict_id: a.conflictId,
+    country_iso: a.countryIso,
+    role: a.role,
+    confidence: a.confidence,
+    notes: a.notes ?? null,
+    sources: a.sources,
+    first_documented: a.firstDocumented ?? null,
+    last_confirmed: now,
+  }));
+  const { data, error } = await sb
+    .from('conflict_actors')
+    .upsert(rows, { onConflict: 'conflict_id,country_iso,role' })
+    .select('country_iso');
+  if (error) throw error;
+  return data?.length ?? 0;
 }
 
 // ===========================================================================
