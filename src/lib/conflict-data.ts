@@ -197,7 +197,8 @@ function staticFallback(): ConflictPayload {
 }
 
 export async function getConflictData(): Promise<ConflictPayload> {
-  // 1. Prefer the persistent journal in Supabase.
+  // 1. Prefer the persistent journal in Supabase (populated by the daily
+  //    Claude Code Routine via POST /api/conflict/ingest).
   try {
     const { readConflictData, isConflictStoreConfigured } = await import('./conflict-store');
     if (isConflictStoreConfigured()) {
@@ -208,39 +209,7 @@ export async function getConflictData(): Promise<ConflictPayload> {
     console.error('getConflictData: Supabase read failed:', err);
   }
 
-  // 2. No store yet — try a one-shot live Gemini scan, no persistence.
-  try {
-    const { globalScan } = await import('./conflict-ingest');
-    const scan = await globalScan();
-    if (scan) {
-      const news: ConflictNewsItem[] = scan.news.slice(0, 12).map((n, i) => ({
-        id: i + 1,
-        source: n.source,
-        time: n.time,
-        region: n.region,
-        headline: n.headline,
-        url: n.url,
-      }));
-      return {
-        lastUpdated: scan.lastUpdated || new Date().toISOString(),
-        totalActive: scan.totalActive,
-        casualties7d: scan.casualties7d,
-        displaced: scan.displaced,
-        countriesInvolved: scan.countriesInvolved,
-        weeklyDelta: scan.weeklyDelta,
-        hotspots: scan.hotspots,
-        news,
-        // Multi-pass scans run in the cron, not at request time, so the live
-        // one-shot path returns no actors.  The persistent journal in Supabase
-        // is where the full picture lives.
-        actors: [],
-        source: 'live',
-      };
-    }
-  } catch (err) {
-    console.error('getConflictData: live scan failed:', err);
-  }
-
-  // 3. Ultimate fallback: hand-curated dataset.
+  // 2. Fallback: hand-curated dataset.  The website never calls an LLM at
+  //    request time — that's the Routine's job, off-cycle.
   return staticFallback();
 }

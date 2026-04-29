@@ -246,41 +246,44 @@ Phase 2 (cross-model audit via a second Claude call with a different
 prompt) and Phase 3 (ACLED/UCDP/SIPRI dataset reconciliation) are planned
 follow-ups.
 
-**LLM**: Claude Opus 4.7 via the Anthropic SDK, with the server-side
-`web_search_20260209` tool for grounding. Adaptive thinking on. The
-static system prompt (agent description + reputable-host allowlist + JSON
-output rules) is `cache_control: ephemeral` so passes 2 and 3 hit the
-prompt cache — input cost on the second/third pass drops to ~10% of fresh.
+**LLM**: Claude Opus 4.7, invoked via a daily **Claude Code Routine**
+(claude.ai/code/routines) — *not* the Anthropic API.  This burns the
+user's Max plan quota instead of separate API billing, and Anthropic
+handles the schedule + execution sandbox.  The Routine has the
+`web_search` tool plus `bash` for posting results.
 
-**Cron-driven ingestion (`/api/cron/conflict-snapshot`, daily at 06:00 UTC):**
+**Daily Routine (06:00 UTC):**
 
-  Pass 1 — `globalScan()`        Territorial / event-level scan.
-                                  Returns hotspots, stats, last-24h news.
-  Pass 2 — `belligerentsScan()`  Principals, direct ops, basing.
-                                  Takes Pass 1 output as input.
-                                  May emit NEW hotspots for great-power
-                                  direct ops missed by Pass 1.
-  Pass 3 — `proxyScan()`         Sponsors, suppliers, proxy directors.
-                                  STRICT threshold — only documented
-                                  relationships from reputable outlets,
-                                  sanctions designations, UN/ICC filings,
-                                  or recognized think-tank publications.
+The Routine prompt instructs Claude to (1) web-search every active armed
+conflict, (2) identify combatants and external backers per conflict, (3)
+collect last-24h headlines, (4) build a single JSON payload, and (5)
+POST it to this site at `/api/conflict/ingest` with the `CRON_SECRET`
+bearer token.  Strict source rules in the prompt: every actor row must
+cite at least one URL from a reputable-host allowlist (Reuters, AP, BBC,
+Crisis Group, UN, US Treasury sanctions filings, etc.).
 
-Each pass is capped at 3-4 web searches via `max_uses` on the tool. Total
-daily call budget: ~3 Claude calls × ~10 web searches = trivially small.
+**Why no API call at request time**: the website itself never talks to
+an LLM.  The Routine pushes data to Supabase via `/api/conflict/ingest`;
+the page reads from Supabase.  This keeps the Supabase service-role key
+on Vercel only, where it's properly scoped server-side.
 
-Every actor row must carry ≥1 source URL (https). Pass 3 additionally
-requires the source host to be in an allowlist of reputable domains
-(reuters/ap/bbc/aljazeera/guardian/nyt/ft/treasury.gov/state.gov/un.org
-/icj-cij.org/crisisgroup/acled/sipri/etc.). Unsourced rows are dropped
-silently in `coerceActor()` — that's how the "documented & sourced only"
-threshold gets enforced mechanically rather than rhetorically.
+**Ingest endpoint (`POST /api/conflict/ingest`):**
 
-**Per-conflict journal (`perConflictScan()`):** Implementation kept in
-`conflict-ingest.ts` but the corresponding cron is **paused** (removed
-from `vercel.json`). Re-enable later by adding back a cron entry pointing
-at `/api/cron/conflict-journal`. The hotspot detail panel currently falls
-back to the last-24h news pulled by Pass 1 of the snapshot cron.
+  - Auth: `Authorization: Bearer ${CRON_SECRET}` — same pattern as the
+    prior cron routes.  Low blast radius: token only authorizes pushing
+    validated payloads to this one endpoint.
+  - Validates the payload via `src/lib/conflict-validate.ts`:
+      * Hotspot shape (id slug, lat/lng, intensity 1-5, type enum)
+      * Actor shape (role enum, ISO numeric, ≥1 https source URL)
+      * News shape (URL, headline, optional ISO timestamp)
+      * Snapshot shape (numeric stats, weekly_delta object)
+  - Drops actor rows without ≥1 valid source URL.  Combat-tier actors
+    (territory / principal / direct / basing) accept any plausible https
+    URL; support-tier actors (sponsor / supplier / proxy) require a host
+    on the reputable allowlist.  This is the "documented & sourced only"
+    threshold doing its work in code, not rhetoric.
+  - Upserts hotspots first (FK target), then actors + news in parallel,
+    then writes a snapshot row.
 
 **At request time, `getConflictData()` reads from Supabase:**
 
@@ -289,10 +292,10 @@ back to the last-24h news pulled by Pass 1 of the snapshot cron.
   3. Last-24h news
   4. All actors
 
-  Falls back to a one-shot live Claude scan (no actors, since multi-pass
-  ingestion only runs in the cron), then to `FALLBACK_CONFLICT_DATA`
-  (hand-curated, including a documented actor set so the page renders the
-  full taxonomy even without Supabase).
+  If Supabase is empty, falls back to `FALLBACK_CONFLICT_DATA`
+  (hand-curated, including a documented actor set so the page renders
+  the full taxonomy even without the Routine having run).  No
+  request-time LLM call.
 
 **Tables:**
 
@@ -306,26 +309,28 @@ back to the last-24h news pulled by Pass 1 of the snapshot cron.
 Schema lives in `scripts/setup-supabase-conflict.sql` (idempotent;
 re-runnable). RLS: anon read, service-role write.
 
-### Env vars (Vercel production)
+### Env vars
 
-Required for live data:
-- `ANTHROPIC_API_KEY` — Claude Opus 4.7 powers all three ingestion passes
-
-Required for the persistent journal:
+**Vercel (production):**
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (cron writes — bypasses RLS)
-- `CRON_SECRET` (generate any high-entropy string; Vercel Cron adds the
-  matching `Authorization: Bearer …` automatically)
+- `SUPABASE_SERVICE_ROLE_KEY` (ingest endpoint writes — bypasses RLS)
+- `CRON_SECRET` (the Routine sends this in `Authorization: Bearer …`
+  when calling `/api/conflict/ingest`)
+
+**Claude Code Routine (per-Routine Environment):**
+- `CRON_SECRET` (same value as on Vercel — that's the only credential
+  the Routine needs; service-role key never leaves Vercel)
 
 ### One-time setup
 
 1. Run `scripts/setup-supabase-conflict.sql` in the Supabase SQL editor.
-2. Set the four env vars above in Vercel.
-3. Redeploy. Vercel Cron will pick up `vercel.json` and start invoking the jobs.
-4. Invoke `/api/cron/conflict-snapshot` manually once to seed (with the
-   `Authorization: Bearer $CRON_SECRET` header) so the page has data
-   before the first scheduled run.
+2. Set the env vars above in Vercel and redeploy.
+3. Create a Routine at claude.ai/code/routines: schedule daily 06:00 UTC,
+   add `CRON_SECRET` to its Environment, paste the prompt (see comment in
+   `src/app/api/conflict/ingest/route.ts` for the canonical version).
+4. Run the Routine manually once to seed Supabase before the first
+   scheduled run.
 
 ### Validation (be honest about scope)
 
@@ -342,16 +347,14 @@ journalism, not a primary-source dataset.
 
 - `src/lib/conflict-data.ts` — types (incl. `ActorRole` taxonomy), fallback dataset with sourced actors, `getConflictData()`
 - `src/lib/conflict-store.ts` — Supabase read/write layer (no-ops when unconfigured)
-- `src/lib/conflict-ingest.ts` — Pass 1 `globalScan()`, Pass 2 `belligerentsScan()`, Pass 3 `proxyScan()`, `perConflictScan()`
-- `src/lib/cron-auth.ts` — Bearer-token verifier shared by cron routes
+- `src/lib/conflict-validate.ts` — payload validators for the ingest endpoint (drops unsourced actor rows; reputable-host allowlist)
+- `src/lib/cron-auth.ts` — Bearer-token verifier
 - `src/app/global-conflict/page.tsx` — server component, ISR 15m
 - `src/app/api/global-conflict/route.ts` — public payload
 - `src/app/api/global-conflict/news/route.ts` — per-conflict timeline w/ cursor
-- `src/app/api/cron/conflict-snapshot/route.ts` — runs Passes 1-3 and persists
-- `src/app/api/cron/conflict-journal/route.ts` — per-conflict news scan cron
+- `src/app/api/conflict/ingest/route.ts` — POST endpoint the Routine calls daily
 - `src/components/GlobalConflict/` — UI: map, stats, timeline, detail panel
 - `public/countries-110m.json` — world-atlas TopoJSON (105 KB)
-- `vercel.json` — cron schedule
 - `scripts/setup-supabase-conflict.sql` — idempotent migration
 
 ### Future phases (not yet shipped)
