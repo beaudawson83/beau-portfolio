@@ -128,6 +128,7 @@ Font:         Inter (body, default), JetBrains Mono (monospace elements)
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `GEMINI_API_KEY` | Yes | AI chatbot (Ask Beau) |
+| `ANTHROPIC_API_KEY` | For conflict module | Claude Opus 4.7 — global conflict ingestion |
 | `RESEND_API_KEY` | Yes | Contact form emails |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | No | Google Analytics 4 |
 | `CONTENTFUL_SPACE_ID` | For blog | Contentful CMS |
@@ -240,11 +241,18 @@ journal timeline (paginated, all-time history).
 The system runs a **multi-pass identification protocol** to capture not
 just battlegrounds but the full taxonomy of conflict involvement
 (territory / principal / direct / basing / sponsor / supplier / proxy /
-mediator). Phase 1 (Gemini-only multi-pass) is live; Phase 2 (Claude
-auditor) and Phase 3 (ACLED/UCDP/SIPRI dataset reconciliation) are
-planned follow-ups.
+mediator). Phase 1 (Claude Opus 4.7 multi-pass with web_search) is live;
+Phase 2 (cross-model audit via a second Claude call with a different
+prompt) and Phase 3 (ACLED/UCDP/SIPRI dataset reconciliation) are planned
+follow-ups.
 
-**Cron-driven ingestion (`/api/cron/conflict-snapshot`, every 30 min):**
+**LLM**: Claude Opus 4.7 via the Anthropic SDK, with the server-side
+`web_search_20260209` tool for grounding. Adaptive thinking on. The
+static system prompt (agent description + reputable-host allowlist + JSON
+output rules) is `cache_control: ephemeral` so passes 2 and 3 hit the
+prompt cache — input cost on the second/third pass drops to ~10% of fresh.
+
+**Cron-driven ingestion (`/api/cron/conflict-snapshot`, daily at 06:00 UTC):**
 
   Pass 1 — `globalScan()`        Territorial / event-level scan.
                                   Returns hotspots, stats, last-24h news.
@@ -258,6 +266,9 @@ planned follow-ups.
                                   sanctions designations, UN/ICC filings,
                                   or recognized think-tank publications.
 
+Each pass is capped at 3-4 web searches via `max_uses` on the tool. Total
+daily call budget: ~3 Claude calls × ~10 web searches = trivially small.
+
 Every actor row must carry ≥1 source URL (https). Pass 3 additionally
 requires the source host to be in an allowlist of reputable domains
 (reuters/ap/bbc/aljazeera/guardian/nyt/ft/treasury.gov/state.gov/un.org
@@ -265,10 +276,11 @@ requires the source host to be in an allowlist of reputable domains
 silently in `coerceActor()` — that's how the "documented & sourced only"
 threshold gets enforced mechanically rather than rhetorically.
 
-**Per-conflict journal (`/api/cron/conflict-journal`, hourly at :15):**
-
-  For each active hotspot, runs a focused Gemini search and appends
-  new URLs to `conflict_news`. Designed to grow indefinitely.
+**Per-conflict journal (`perConflictScan()`):** Implementation kept in
+`conflict-ingest.ts` but the corresponding cron is **paused** (removed
+from `vercel.json`). Re-enable later by adding back a cron entry pointing
+at `/api/cron/conflict-journal`. The hotspot detail panel currently falls
+back to the last-24h news pulled by Pass 1 of the snapshot cron.
 
 **At request time, `getConflictData()` reads from Supabase:**
 
@@ -277,9 +289,10 @@ threshold gets enforced mechanically rather than rhetorically.
   3. Last-24h news
   4. All actors
 
-  Falls back to a one-shot live Gemini scan (no actors), then to
-  `FALLBACK_CONFLICT_DATA` (hand-curated, including a documented actor
-  set so the page renders the full taxonomy even without Supabase).
+  Falls back to a one-shot live Claude scan (no actors, since multi-pass
+  ingestion only runs in the cron), then to `FALLBACK_CONFLICT_DATA`
+  (hand-curated, including a documented actor set so the page renders the
+  full taxonomy even without Supabase).
 
 **Tables:**
 
@@ -296,7 +309,7 @@ re-runnable). RLS: anon read, service-role write.
 ### Env vars (Vercel production)
 
 Required for live data:
-- `GEMINI_API_KEY` (already configured for ask-beau)
+- `ANTHROPIC_API_KEY` — Claude Opus 4.7 powers all three ingestion passes
 
 Required for the persistent journal:
 - `NEXT_PUBLIC_SUPABASE_URL`
@@ -320,7 +333,7 @@ Validation is **shape-only**. The ingest helpers verify top-level types,
 required fields, and that URLs match `^https?://`. They do not:
 - Verify URLs resolve / aren't 404
 - Sanity-check casualty numbers against historical baselines
-- Cross-reference Gemini's claims against ACLED/UCDP datasets directly
+- Cross-reference Claude's claims against ACLED/UCDP datasets directly
 
 The methodology footer is honest about this — it's "agentic, LLM-assisted"
 journalism, not a primary-source dataset.
@@ -343,8 +356,10 @@ journalism, not a primary-source dataset.
 
 ### Future phases (not yet shipped)
 
-Phase 2: Claude auditor as Pass 4 — independent cross-model check on the
-Gemini payload. Requires `ANTHROPIC_API_KEY`.
+Phase 2: Cross-prompt audit as Pass 4 — second Claude call with a
+distinct "find the gaps and errors" prompt, run against the merged actor
+set, with results reconciled into a quarantine table for review before
+applying.
 
 Phase 3: dataset reconciliation as Pass 5 — pull ACLED REST API
 (`ACLED_KEY` + `ACLED_EMAIL`, register at acleddata.com), UCDP yearly

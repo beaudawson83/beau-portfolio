@@ -3,11 +3,7 @@
   "crons": [
     {
       "path": "/api/cron/conflict-snapshot",
-      "schedule": "*/30 * * * *"
-    },
-    {
-      "path": "/api/cron/conflict-journal",
-      "schedule": "15 * * * *"
+      "schedule": "0 6 * * *"
     }
   ]
 }

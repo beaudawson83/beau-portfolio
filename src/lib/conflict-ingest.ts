@@ -1,11 +1,15 @@
-// Conflict Heat Map — Gemini-powered ingestion.
-// Two scans are exposed:
+// Conflict Heat Map — Claude-powered ingestion.
+// Three scans are exposed for the snapshot cron, plus one for the journal:
 //   globalScan()         — discovers active conflicts + fresh stats + recent headlines
+//   belligerentsScan()   — Pass 2: principals, direct ops, basing
+//   proxyScan()          — Pass 3: sponsors, suppliers, proxies (strict source threshold)
 //   perConflictScan(h)   — deep search for one conflict, returns 10-20 stories with dates
 //
-// Both call Gemini 2.0 Flash with the google_search grounding tool.
-// Validation is shape-only; semantic accuracy is the LLM's job.
+// All passes call Claude Opus 4.7 with the web_search server-side tool for
+// grounding. Validation is shape-only; semantic accuracy is the LLM's job, but
+// every actor row must carry ≥1 https URL or it's silently dropped.
 
+import Anthropic from '@anthropic-ai/sdk';
 import type {
   ActorConfidence,
   ActorRole,
@@ -15,11 +19,14 @@ import type {
   ConflictNewsItem,
 } from './conflict-data';
 
-const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const CLAUDE_MODEL = 'claude-opus-4-7';
 
-interface GeminiResponse {
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+let _client: Anthropic | null = null;
+function getClient(): Anthropic | null {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  if (_client) return _client;
+  _client = new Anthropic();
+  return _client;
 }
 
 function extractJson(text: string): unknown | null {
@@ -49,37 +56,103 @@ function extractJson(text: string): unknown | null {
   }
 }
 
-async function callGemini(prompt: string, maxTokens = 8192): Promise<string | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'your_gemini_api_key_here') return null;
+// Static system prompt — cacheable across all three passes.  Every byte of this
+// must be deterministic; see shared/prompt-caching.md (no timestamps, no UUIDs).
+const SYSTEM_PROMPT = `You are an autonomous research agent producing structured JSON
+briefings on the state of global armed conflict. You have access to a web search tool —
+use it to ground every factual claim in current reporting from reputable outlets.
+
+Reputable hosts (use these for citations):
+  - Wire services: reuters.com, apnews.com, afp.com
+  - Major outlets: bbc.com, aljazeera.com, theguardian.com, nytimes.com, ft.com,
+    wsj.com, washingtonpost.com, economist.com
+  - Institutions: crisisgroup.org, acleddata.com, ucdp.uu.se, sipri.org,
+    understandingwar.org, rusi.org, iiss.org, csis.org, cfr.org, icct.nl
+  - UN / IGO: un.org, unhcr.org, unocha.org, icj-cij.org, icc-cpi.int
+  - Government: state.gov, treasury.gov, defense.gov, centcom.mil, gov.uk,
+    bundesregierung.de, europa.eu, consilium.europa.eu
+
+Output rules:
+  - Always wrap your final JSON output in a \`\`\`json fenced block.
+  - Output the JSON object ONLY — no prose before or after.
+  - Every URL in your output must be a real https URL you found via web search.
+  - Use ISO 3166-1 numeric country codes (e.g. Russia=643, US=840, Israel=376).`;
+
+interface CallOpts {
+  maxTokens?: number;
+  webSearchUses?: number; // cap per call; default 3
+}
+
+async function callClaude(userPrompt: string, opts: CallOpts = {}): Promise<string | null> {
+  const client = getClient();
+  if (!client) {
+    console.error('callClaude: ANTHROPIC_API_KEY is not set');
+    return null;
+  }
+  const maxTokens = opts.maxTokens ?? 16000;
+  const webSearchUses = opts.webSearchUses ?? 3;
+
+  const messages: Anthropic.MessageParam[] = [
+    { role: 'user', content: userPrompt },
+  ];
 
   try {
-    const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        tools: [{ google_search: {} }],
-        generationConfig: {
-          temperature: 0.2,
-          topK: 40,
-          topP: 0.9,
-          maxOutputTokens: maxTokens,
-        },
-      }),
-      cache: 'no-store',
-    });
+    let totalSearches = 0;
+    // Server-side tool loop: web_search runs server-side; if Claude hits its
+    // internal iteration cap, the API returns stop_reason=pause_turn and we
+    // re-send the conversation to continue.  Cap at 4 continuations.
+    for (let i = 0; i < 4; i++) {
+      const response = await client.messages.create({
+        model: CLAUDE_MODEL,
+        max_tokens: maxTokens,
+        thinking: { type: 'adaptive' },
+        system: [
+          {
+            type: 'text',
+            text: SYSTEM_PROMPT,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
+        tools: [
+          {
+            type: 'web_search_20260209',
+            name: 'web_search',
+            max_uses: webSearchUses,
+          },
+        ],
+        messages,
+      });
 
-    if (!res.ok) {
-      console.error('Gemini error:', res.status, await res.text().catch(() => ''));
-      return null;
+      const used = response.usage.server_tool_use?.web_search_requests ?? 0;
+      totalSearches += used;
+
+      if (response.stop_reason === 'pause_turn') {
+        messages.push({ role: 'assistant', content: response.content });
+        continue;
+      }
+
+      // Extract concatenated text from content blocks (skip tool_use, citations etc.)
+      const text = response.content
+        .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+        .map((b) => b.text)
+        .join('');
+      if (!text) {
+        console.error(
+          `callClaude: empty text in response (stop_reason=${response.stop_reason}, searches=${totalSearches})`,
+        );
+      }
+      return text || null;
     }
-    const json = (await res.json()) as GeminiResponse;
-    return (
-      json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? null
-    );
+    console.error('callClaude: exceeded 4 pause_turn continuations');
+    return null;
   } catch (err) {
-    console.error('Gemini fetch failed:', err);
+    if (err instanceof Anthropic.RateLimitError) {
+      console.error('callClaude: rate limited —', err.message);
+    } else if (err instanceof Anthropic.APIError) {
+      console.error(`callClaude: API error ${err.status} — ${err.message}`);
+    } else {
+      console.error('callClaude: unexpected error', err);
+    }
     return null;
   }
 }
@@ -91,7 +164,7 @@ async function callGemini(prompt: string, maxTokens = 8192): Promise<string | nu
 function buildGlobalPrompt(): string {
   const today = new Date().toISOString().slice(0, 10);
   return `You are an autonomous research agent producing a JSON briefing on the
-state of global armed conflict. Use Google Search to find current, sourced
+state of global armed conflict. Use web search to find current, sourced
 information from reputable outlets (Reuters, AP, BBC, Al Jazeera, Guardian,
 ACLED, UCDP, UN OCHA, Crisis Group). Today's date is ${today}.
 
@@ -166,7 +239,7 @@ function isValidGlobalScan(d: unknown): d is GlobalScanResult {
 }
 
 export async function globalScan(): Promise<GlobalScanResult | null> {
-  const text = await callGemini(buildGlobalPrompt());
+  const text = await callClaude(buildGlobalPrompt(), { maxTokens: 16000, webSearchUses: 4 });
   if (!text) return null;
   const parsed = extractJson(text);
   if (!isValidGlobalScan(parsed)) {
@@ -183,7 +256,7 @@ export async function globalScan(): Promise<GlobalScanResult | null> {
 function buildConflictPrompt(h: ConflictHotspot): string {
   const today = new Date().toISOString().slice(0, 10);
   return `You are a research agent compiling a news timeline for a single
-ongoing armed conflict. Use Google Search to find recent reporting from
+ongoing armed conflict. Use web search to find recent reporting from
 reputable outlets (Reuters, AP, BBC, Al Jazeera, Guardian, ACLED, UCDP,
 UN OCHA, Crisis Group). Today's date is ${today}.
 
@@ -236,7 +309,7 @@ function isValidScannedArray(d: unknown): d is ScannedNewsItem[] {
 }
 
 export async function perConflictScan(h: ConflictHotspot): Promise<ScannedNewsItem[]> {
-  const text = await callGemini(buildConflictPrompt(h), 4096);
+  const text = await callClaude(buildConflictPrompt(h), { maxTokens: 8000, webSearchUses: 3 });
   if (!text) return [];
   const parsed = extractJson(text);
   if (!isValidScannedArray(parsed)) {
@@ -379,7 +452,7 @@ not yet on the list (e.g. recurring US strikes in Somalia, Russia's Africa
 Corps kinetic ops, recent India-Pakistan exchanges, etc.). Use a short
 slug for the id, ISO 3166-1 numeric for affected territories.
 
-Use Google Search to find sources. Each actor row MUST include a
+Use web search to find sources. Each actor row MUST include a
 "sources" array with at least one full https URL from a reputable
 outlet, government statement, ICJ/ICC filing, UN report, or recognized
 think-tank publication. Drop any actor you cannot source.
@@ -440,7 +513,10 @@ export async function belligerentsScan(
 ): Promise<BelligerentsScanResult> {
   if (hotspots.length === 0) return { actors: [], newHotspots: [] };
 
-  const text = await callGemini(buildBelligerentsPrompt(hotspots), 8192);
+  const text = await callClaude(buildBelligerentsPrompt(hotspots), {
+    maxTokens: 16000,
+    webSearchUses: 4,
+  });
   if (!text) return { actors: [], newHotspots: [] };
 
   const parsed = extractJson(text) as Record<string, unknown> | null;
@@ -518,7 +594,7 @@ Do NOT include:
   - analyst speculation without a citation
   - historical relationships no longer active
 
-Use Google Search. For each actor row, "sources" MUST contain at least
+Use web search. For each actor row, "sources" MUST contain at least
 one full https URL pointing to such documentation, hosted on the domain
 of one of the above outlets/institutions. Drop any actor you cannot
 source from a reputable host.
@@ -547,7 +623,10 @@ export async function proxyScan(
 ): Promise<ConflictActor[]> {
   if (hotspots.length === 0) return [];
 
-  const text = await callGemini(buildProxyPrompt(hotspots, priorActors), 8192);
+  const text = await callClaude(buildProxyPrompt(hotspots, priorActors), {
+    maxTokens: 16000,
+    webSearchUses: 4,
+  });
   if (!text) return [];
 
   const parsed = extractJson(text) as Record<string, unknown> | null;

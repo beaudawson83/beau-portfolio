@@ -25,7 +25,9 @@ import {
 import type { ConflictHotspot } from '@/lib/conflict-data';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 120;
+// Claude Opus 4.7 with web_search across 3 passes can take 2-3 minutes.
+// Vercel Pro caps at 300s; Hobby caps at 60s and would not fit this workload.
+export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) {
