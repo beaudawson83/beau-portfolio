@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-05-01
 > **Live:** beaudawson.com
-> **Status:** Portfolio current. Recently completed a cleanup pass — stripped dead Contentful/NextAuth blog infrastructure, newsletter, post-view analytics, dormant ingest endpoint, and `/admin/chats/` UI.
+> **Status:** Portfolio current. Recently completed a cleanup pass — stripped dead Contentful/NextAuth blog infrastructure, newsletter, post-view analytics, dormant ingest endpoint, and `/admin/chats/` UI. Lint clean (0 errors, 0 warnings).
 
 ---
 
@@ -28,18 +28,6 @@ The previous blog (Contentful + NextAuth + admin password) is gone. When ready t
 6. "31 Promotions: How I Think About Growing People" — LEADERSHIP
 7. "I Automated 90% of CRM Admin. Here's What's Left." — AUTOMATION
 8. "Why I Built a CRM From Scratch" — CRM_ARCHITECTURE (Console origin)
-
----
-
-## Code-quality cleanup (deferred from May 2026 audit)
-
-Pre-existing tech debt that surfaced during the cleanup pass — non-blocking but worth doing in a focused sweep:
-
-- 8 `react-hooks/set-state-in-effect` violations (Next 16's new lint rule firing on legacy patterns) across `GlitchText`, `GoogleAnalytics`, `TerminalAnimation`, `PiEasterEgg/{ClassifiedLogin,HackingSequence,PiSymbol,screens/NSALogin}`
-- 4 `react/jsx-no-comment-textnodes` errors — was in `ChangeLog.tsx` (deleted) but worth a sweep elsewhere
-- `AnalyticsProvider` line 23: "Cannot call impure function during render" — Next 16 lint
-- `Hero.tsx` line 114: `<img>` should be `next/image`
-- A handful of `no-unused-vars` warnings
 
 ---
 
