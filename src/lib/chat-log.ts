@@ -1,6 +1,6 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
-import { getServerSupabase } from './supabase';
+import { getServerSupabase, isSupabaseConfigured } from './supabase';
 
 export type ChatSource = 'ai' | 'fallback';
 
@@ -26,9 +26,7 @@ export async function logConversation(args: {
   source: ChatSource;
 }): Promise<void> {
   if (!args.sessionId) return;
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return;
-  }
+  if (!isSupabaseConfigured()) return;
 
   const now = new Date().toISOString();
   const client = getServerSupabase();

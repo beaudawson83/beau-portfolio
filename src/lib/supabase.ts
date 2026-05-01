@@ -25,6 +25,10 @@ export const supabase: SupabaseClient | null = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
+export function isSupabaseConfigured(): boolean {
+  return Boolean(supabaseUrl && supabaseServiceKey);
+}
+
 export function getServerSupabase(): SupabaseClient {
   if (!supabaseUrl || !supabaseServiceKey) {
     throw new Error('SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy equivalents) are required for server operations');

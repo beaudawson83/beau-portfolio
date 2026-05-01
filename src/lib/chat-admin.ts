@@ -1,7 +1,7 @@
 import 'server-only';
 import { getServerSession } from 'next-auth';
 import { authOptions } from './auth';
-import { getServerSupabase } from './supabase';
+import { getServerSupabase, isSupabaseConfigured } from './supabase';
 
 export type ChatMessageLog = {
   role: 'user' | 'assistant';
@@ -42,7 +42,7 @@ export async function listChatSessions(opts: { limit: number; offset: number }):
   sessions: ChatSessionSummary[];
   total: number;
 }> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!isSupabaseConfigured()) {
     return { sessions: [], total: 0 };
   }
   const client = getServerSupabase();
@@ -79,9 +79,7 @@ export async function listChatSessions(opts: { limit: number; offset: number }):
 }
 
 export async function getChatSession(sessionId: string): Promise<ChatSessionDetail | null> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return null;
-  }
+  if (!isSupabaseConfigured()) return null;
   const client = getServerSupabase();
   const { data, error } = await client
     .from('chat_conversations')

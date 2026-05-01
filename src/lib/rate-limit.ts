@@ -1,6 +1,6 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
-import { getServerSupabase } from './supabase';
+import { getServerSupabase, isSupabaseConfigured } from './supabase';
 
 type RateLimitResult = {
   allowed: boolean;
@@ -22,7 +22,7 @@ export async function checkRateLimit(
   opts: { limit: number; windowSeconds: number }
 ): Promise<RateLimitResult> {
   // If Supabase isn't configured, fail open so dev / misconfig doesn't brick the site.
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!isSupabaseConfigured()) {
     return {
       allowed: true,
       remaining: opts.limit,
