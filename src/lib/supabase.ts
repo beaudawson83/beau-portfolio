@@ -9,17 +9,26 @@ import type {
 // Supabase Client Setup
 // ============================================
 
-// Read Marketplace-native names first; fall back to legacy NEXT_PUBLIC_*/_ROLE_KEY.
-// All current callers of this module are server-side API routes — no NEXT_PUBLIC_ needed.
+// Resolve Supabase config in priority order:
+//   1. BEAU_SUPABASE_*      — owned by us; Marketplace integration can't touch these
+//   2. SUPABASE_URL / *_SECRET_KEY / *_PUBLISHABLE_KEY — Marketplace native
+//   3. NEXT_PUBLIC_SUPABASE_URL / *_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY — legacy
+// All current callers are server-side, so no NEXT_PUBLIC_ prefix is needed.
 const supabaseUrl =
-  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  process.env.BEAU_SUPABASE_URL ||
+  process.env.SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  '';
 const supabaseAnonKey =
+  process.env.BEAU_SUPABASE_ANON_KEY ||
   process.env.SUPABASE_PUBLISHABLE_KEY ||
   process.env.SUPABASE_ANON_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   '';
 const supabaseServiceKey =
-  process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.BEAU_SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SECRET_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export const supabase: SupabaseClient | null = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)

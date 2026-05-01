@@ -13,13 +13,23 @@ import type {
   ConflictType,
 } from './conflict-data';
 
-// Read Marketplace-native names first; fall back to legacy NEXT_PUBLIC_*/_ROLE_KEY.
+// Resolve Supabase config in priority order:
+//   1. BEAU_SUPABASE_*      — owned by us; Marketplace integration can't touch these
+//   2. SUPABASE_URL / *_SECRET_KEY / *_PUBLISHABLE_KEY — Marketplace native
+//   3. NEXT_PUBLIC_SUPABASE_URL / *_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY — legacy
 // Server-side only — no NEXT_PUBLIC_ prefix needed.
 const SUPABASE_URL =
-  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  process.env.BEAU_SUPABASE_URL ||
+  process.env.SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  '';
 const SUPABASE_SERVICE_KEY =
-  process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  process.env.BEAU_SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SECRET_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  '';
 const SUPABASE_ANON_KEY =
+  process.env.BEAU_SUPABASE_ANON_KEY ||
   process.env.SUPABASE_PUBLISHABLE_KEY ||
   process.env.SUPABASE_ANON_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||

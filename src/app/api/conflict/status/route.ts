@@ -12,18 +12,36 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const url =
-    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    process.env.BEAU_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    '';
   const serviceKey =
-    process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    process.env.BEAU_SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    '';
   const anonKey =
+    process.env.BEAU_SUPABASE_ANON_KEY ||
     process.env.SUPABASE_PUBLISHABLE_KEY ||
     process.env.SUPABASE_ANON_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     '';
   const cronSecret = process.env.CRON_SECRET || '';
 
+  // Which name family resolved? Lets us see at a glance whether BEAU_* won,
+  // Marketplace native won, or legacy fell through.
+  const sourceOfUrl = process.env.BEAU_SUPABASE_URL
+    ? 'BEAU_*'
+    : process.env.SUPABASE_URL
+      ? 'marketplace-native'
+      : process.env.NEXT_PUBLIC_SUPABASE_URL
+        ? 'legacy'
+        : 'none';
+
   const env = {
     SUPABASE_URL: url ? new URL(url).hostname : null,
+    sourceOfUrl,
     serviceKeyPresent: serviceKey.length > 0,
     serviceKeyLength: serviceKey.length,
     serviceKeyKind: serviceKey.startsWith('sb_secret_')
