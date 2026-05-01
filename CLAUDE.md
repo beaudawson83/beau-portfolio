@@ -128,16 +128,26 @@ Font:         Inter (body, default), JetBrains Mono (monospace elements)
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `GEMINI_API_KEY` | Yes | AI chatbot (Ask Beau) |
-| `ANTHROPIC_API_KEY` | For conflict module | Claude Opus 4.7 — global conflict ingestion |
 | `RESEND_API_KEY` | Yes | Contact form emails |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | No | Google Analytics 4 |
 | `CONTENTFUL_SPACE_ID` | For blog | Contentful CMS |
 | `CONTENTFUL_ACCESS_TOKEN` | For blog | Contentful CMS |
 | `CONTENTFUL_MANAGEMENT_TOKEN` | For blog | Blog admin/create |
-| `NEXT_PUBLIC_SUPABASE_URL` | For blog | Blog views/likes |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | For blog | Blog views/likes |
+| `SUPABASE_URL` | Yes | Supabase project URL (chat / blog / conflict) |
+| `SUPABASE_ANON_KEY` | Yes | Supabase anon JWT |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service-role JWT (server-side only) |
+| `CRON_SECRET` | For dormant ingest | Auth for `/api/conflict/ingest` (Routine writes direct, doesn't use this) |
+| `CHAT_IP_SALT` | Yes | Hashing salt for IP-based rate limiting + chat logs |
 | `NEXTAUTH_SECRET` | For blog | Blog admin auth |
-| `ADMIN_EMAIL` | For blog | Authorized blog admin |
+| `NEXTAUTH_URL` | For blog | Blog admin auth |
+| `ADMIN_PASSWORD` | For blog | Single-password blog admin |
+
+Supabase env-name resolution priority is `BEAU_SUPABASE_*` → Marketplace
+native (`SUPABASE_URL` / `*_SECRET_KEY` / `*_PUBLISHABLE_KEY`) → legacy
+(`NEXT_PUBLIC_SUPABASE_URL` / `*_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`).
+See `src/lib/supabase.ts`. Use `BEAU_*` if the Vercel Marketplace
+integration ever gets reattached and starts overwriting the unprefixed
+names — those are app-owned and the Marketplace can't touch them.
 
 ---
 
@@ -238,66 +248,37 @@ journal timeline (paginated, all-time history).
 
 ### Data flow
 
-The system runs a **multi-pass identification protocol** to capture not
-just battlegrounds but the full taxonomy of conflict involvement
-(territory / principal / direct / basing / sponsor / supplier / proxy /
-mediator). Phase 1 (Claude Opus 4.7 multi-pass with web_search) is live;
-Phase 2 (cross-model audit via a second Claude call with a different
-prompt) and Phase 3 (ACLED/UCDP/SIPRI dataset reconciliation) are planned
-follow-ups.
+- **Daily 7am Central** — a Claude Code Routine (claude.ai/code/routines)
+  runs Claude Opus 4.7 with `web_search` + `bash` tools, researches every
+  active conflict per the actor taxonomy, collects last-24h headlines,
+  builds JSON, and writes **directly** to Supabase via PostgREST
+  (`POST $SUPABASE_URL/rest/v1/conflict_*`) with the project's
+  service-role key. The Routine **does not** call `/api/conflict/ingest` —
+  that endpoint is dormant (kept for future use; Routine bypasses it).
+- **At request time** — `/global-conflict` server-renders by reading
+  Supabase via `getConflictData()` → latest snapshot, active hotspots,
+  last-24h news, all actors. If Supabase is empty, the page renders an
+  explicit empty state pointing at `/api/conflict/status`. **No
+  request-time LLM call. No static fallback.**
 
-**LLM**: Claude Opus 4.7, invoked via a daily **Claude Code Routine**
-(claude.ai/code/routines) — *not* the Anthropic API.  This burns the
-user's Max plan quota instead of separate API billing, and Anthropic
-handles the schedule + execution sandbox.  The Routine has the
-`web_search` tool plus `bash` for posting results.
+The Routine prompt enforces a multi-pass identification protocol with the
+full taxonomy: territory / principal / direct / basing / sponsor /
+supplier / proxy / mediator. Combat-tier actors (territory / principal /
+direct / basing) accept any plausible https URL; support-tier actors
+(sponsor / supplier / proxy) require a host on the reputable allowlist
+(Reuters / AP / BBC / Crisis Group / UN / state.gov / etc.).
 
-**Daily Routine (06:00 UTC):**
+### Supabase project
 
-The Routine prompt instructs Claude to (1) web-search every active armed
-conflict, (2) identify combatants and external backers per conflict, (3)
-collect last-24h headlines, (4) build a single JSON payload, and (5)
-POST it to this site at `/api/conflict/ingest` with the `CRON_SECRET`
-bearer token.  Strict source rules in the prompt: every actor row must
-cite at least one URL from a reputable-host allowlist (Reuters, AP, BBC,
-Crisis Group, UN, US Treasury sanctions filings, etc.).
+Single user-managed project: **`ygvhoocbvraiplzmgufa`** (https://ygvhoocbvraiplzmgufa.supabase.co).
+**Do not** use the Vercel Marketplace Supabase integration — it provisions
+a separate empty project (e.g. `eymhi…`) and silently auto-syncs env vars
+to point at that ghost. The Marketplace integration was disconnected
+2026-05-01. If it ever gets reattached, use `BEAU_SUPABASE_*` env names
+(see env section below) — those are app-owned and the Marketplace can't
+touch them.
 
-**Why no API call at request time**: the website itself never talks to
-an LLM.  The Routine pushes data to Supabase via `/api/conflict/ingest`;
-the page reads from Supabase.  This keeps the Supabase service-role key
-on Vercel only, where it's properly scoped server-side.
-
-**Ingest endpoint (`POST /api/conflict/ingest`):**
-
-  - Auth: `Authorization: Bearer ${CRON_SECRET}` — same pattern as the
-    prior cron routes.  Low blast radius: token only authorizes pushing
-    validated payloads to this one endpoint.
-  - Validates the payload via `src/lib/conflict-validate.ts`:
-      * Hotspot shape (id slug, lat/lng, intensity 1-5, type enum)
-      * Actor shape (role enum, ISO numeric, ≥1 https source URL)
-      * News shape (URL, headline, optional ISO timestamp)
-      * Snapshot shape (numeric stats, weekly_delta object)
-  - Drops actor rows without ≥1 valid source URL.  Combat-tier actors
-    (territory / principal / direct / basing) accept any plausible https
-    URL; support-tier actors (sponsor / supplier / proxy) require a host
-    on the reputable allowlist.  This is the "documented & sourced only"
-    threshold doing its work in code, not rhetoric.
-  - Upserts hotspots first (FK target), then actors + news in parallel,
-    then writes a snapshot row.
-
-**At request time, `getConflictData()` reads from Supabase:**
-
-  1. Latest snapshot (stats)
-  2. Active hotspots
-  3. Last-24h news
-  4. All actors
-
-  If Supabase is empty, falls back to `FALLBACK_CONFLICT_DATA`
-  (hand-curated, including a documented actor set so the page renders
-  the full taxonomy even without the Routine having run).  No
-  request-time LLM call.
-
-**Tables:**
+### Tables (in `ygvhoocbvraiplzmgufa`)
 
   conflict_hotspots   territory + intensity + casualties + iso codes
   conflict_news       URL-deduped journal (append-only)
@@ -309,69 +290,90 @@ on Vercel only, where it's properly scoped server-side.
 Schema lives in `scripts/setup-supabase-conflict.sql` (idempotent;
 re-runnable). RLS: anon read, service-role write.
 
+### Diagnostic endpoint — your first stop when something looks off
+
+`GET /api/conflict/status` returns:
+- which env-name family resolved at runtime (`BEAU_*` / `marketplace-native` / `legacy`)
+- key formats detected (`legacy-jwt` / `new-opaque`)
+- per-table row counts
+- latest snapshot timestamp + total
+- latest news ingest
+- active hotspot count
+
+No secrets in the response. Single curl tells you the entire pipeline state.
+This is the difference between "back-and-forth diagnosis" and "one query."
+
 ### Env vars
 
 **Vercel (production):**
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (ingest endpoint writes — bypasses RLS)
-- `CRON_SECRET` (the Routine sends this in `Authorization: Bearer …`
-  when calling `/api/conflict/ingest`)
+- `SUPABASE_URL` (or `BEAU_SUPABASE_URL`) → user's project URL
+- `SUPABASE_ANON_KEY` (or `BEAU_*`) → anon JWT
+- `SUPABASE_SERVICE_ROLE_KEY` (or `BEAU_*`) → service-role JWT
+- `CRON_SECRET` → only needed if you ever revive `/api/conflict/ingest`
 
-**Claude Code Routine (per-Routine Environment):**
-- `CRON_SECRET` (same value as on Vercel — that's the only credential
-  the Routine needs; service-role key never leaves Vercel)
+Vercel marks all env vars as Sensitive on creation now (post-2025-hack
+hardening), so values are never visible after save. Use the diagnostic
+endpoint above to verify what's loaded at runtime.
 
-### One-time setup
+**Claude Code Routine (per-Routine Environment, separate from Vercel):**
+- `SUPABASE_URL` → `https://ygvhoocbvraiplzmgufa.supabase.co`
+- `SUPABASE_SERVICE_ROLE_KEY` → service-role JWT
 
-1. Run `scripts/setup-supabase-conflict.sql` in the Supabase SQL editor.
-2. Set the env vars above in Vercel and redeploy.
-3. Create a Routine at claude.ai/code/routines: schedule daily 06:00 UTC,
-   add `CRON_SECRET` to its Environment, paste the prompt (see comment in
-   `src/app/api/conflict/ingest/route.ts` for the canonical version).
-4. Run the Routine manually once to seed Supabase before the first
-   scheduled run.
+The Routine and Vercel must point at the **same project**. The Routine
+prompt's first command decodes the JWT to print the project ref — use
+that to verify parity.
 
-### Validation (be honest about scope)
+### One-time setup (or recovery)
 
-Validation is **shape-only**. The ingest helpers verify top-level types,
-required fields, and that URLs match `^https?://`. They do not:
-- Verify URLs resolve / aren't 404
-- Sanity-check casualty numbers against historical baselines
-- Cross-reference Claude's claims against ACLED/UCDP datasets directly
-
-The methodology footer is honest about this — it's "agentic, LLM-assisted"
-journalism, not a primary-source dataset.
+1. Create / use a Supabase project (skip the Vercel Marketplace).
+2. Run `scripts/setup-supabase-conflict.sql` in the Supabase SQL editor.
+3. Set the env vars above in Vercel.
+4. Create a Routine at claude.ai/code/routines: schedule daily 7am Central,
+   add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to its Environment,
+   paste the prompt.
+5. Run the Routine manually once to seed Supabase.
+6. Verify via `/api/conflict/status` — `sourceOfUrl` resolves cleanly,
+   row counts > 0, `latestSnapshot.capturedAt` is recent.
 
 ### Files
 
-- `src/lib/conflict-data.ts` — types (incl. `ActorRole` taxonomy), fallback dataset with sourced actors, `getConflictData()`
-- `src/lib/conflict-store.ts` — Supabase read/write layer (no-ops when unconfigured)
-- `src/lib/conflict-validate.ts` — payload validators for the ingest endpoint (drops unsourced actor rows; reputable-host allowlist)
+- `src/lib/conflict-data.ts` — types (incl. `ActorRole` taxonomy),
+  `getConflictData()`, `EMPTY_PAYLOAD`
+- `src/lib/conflict-store.ts` — Supabase read/write layer; delegates client
+  setup to `src/lib/supabase.ts`
+- `src/lib/conflict-validate.ts` — payload validators for the dormant
+  ingest endpoint (drops unsourced actor rows; reputable-host allowlist)
+- `src/lib/supabase.ts` — shared Supabase client factory + env resolution
 - `src/lib/cron-auth.ts` — Bearer-token verifier
-- `src/app/global-conflict/page.tsx` — server component, ISR 15m
+- `src/app/global-conflict/page.tsx` — server component, ISR 15m,
+  empty-state render when DB is dry
 - `src/app/api/global-conflict/route.ts` — public payload
 - `src/app/api/global-conflict/news/route.ts` — per-conflict timeline w/ cursor
-- `src/app/api/conflict/ingest/route.ts` — POST endpoint the Routine calls daily
+- `src/app/api/conflict/status/route.ts` — diagnostic heartbeat
+- `src/app/api/conflict/ingest/route.ts` — dormant POST endpoint (Routine
+  doesn't call it currently; safe to delete if you don't want the
+  optionality)
 - `src/components/GlobalConflict/` — UI: map, stats, timeline, detail panel
 - `public/countries-110m.json` — world-atlas TopoJSON (105 KB)
 - `scripts/setup-supabase-conflict.sql` — idempotent migration
 
-### Future phases (not yet shipped)
+### Validation (be honest about scope)
 
-Phase 2: Cross-prompt audit as Pass 4 — second Claude call with a
-distinct "find the gaps and errors" prompt, run against the merged actor
-set, with results reconciled into a quarantine table for review before
-applying.
+Validation in `conflict-validate.ts` is **shape-only**. It verifies top-level
+types, required fields, and `^https?://` URL prefixes. It does NOT verify
+URLs resolve, sanity-check casualty numbers against historical baselines,
+or cross-reference Claude's claims against ACLED/UCDP datasets directly.
+The methodology footer is honest about this — it's "agentic, LLM-assisted"
+journalism, not a primary-source dataset.
 
-Phase 3: dataset reconciliation as Pass 5 — pull ACLED REST API
-(`ACLED_KEY` + `ACLED_EMAIL`, register at acleddata.com), UCDP yearly
-CSVs, SIPRI arms transfers DB. Flag actor rows with `dataset_confirmed`
-for visual differentiation.
+Note: with the current Routine writing direct-to-Supabase, this validation
+isn't actually in the path. If you wire the Routine to use
+`/api/conflict/ingest` later, it kicks back in.
 
-Phase 4: map UI — three toggleable layers (territory / belligerents /
-sponsors). Click a country → side panel listing all its roles across
-active conflicts.
+### Future phases (parked)
+
+Phase 2: cross-prompt audit. Phase 3: ACLED/UCDP/SIPRI reconciliation.
+Phase 4: map UI layers (territory / belligerents / sponsors).
 
 ---
 
