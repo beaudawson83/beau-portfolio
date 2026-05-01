@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getConflictData } from '@/lib/conflict-data';
 
-// ISR: re-fetch from Gemini at most every 15 minutes.
+// ISR: re-read from Supabase at most every 15 minutes. The Routine writes
+// once daily — short stale-while-revalidate is fine.
 export const revalidate = 900;
 
 export async function GET() {

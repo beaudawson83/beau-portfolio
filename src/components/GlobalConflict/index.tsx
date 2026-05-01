@@ -65,8 +65,8 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
           </div>
           <h1 className="gc-title">Global Conflict Index</h1>
           <p className="gc-lede">
-            A continuously-updated synthesis of armed conflict data and breaking
-            reportage, refreshed every few minutes by an automated research agent.
+            A daily synthesis of armed conflict data and breaking reportage,
+            refreshed each morning at 7am Central by an AI research agent.
           </p>
         </div>
         <div className="gc-meta">

@@ -19,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Global Conflict Index — Beau Dawson',
   description:
-    'A continuously-updated synthesis of armed conflict data and breaking reportage, refreshed by an automated research agent.',
+    'A daily synthesis of armed conflict data and breaking reportage, refreshed each morning at 7am Central by an AI research agent.',
   robots: { index: false, follow: false },
 };
 
@@ -68,7 +68,31 @@ export default async function GlobalConflictPage() {
           beaudawson.com / lab
         </span>
       </div>
-      <GlobalConflictModule initialData={data} />
+      {data.source === 'empty' ? <EmptyState /> : <GlobalConflictModule initialData={data} />}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div
+      style={{
+        maxWidth: 720,
+        margin: '120px auto',
+        padding: '48px 32px',
+        textAlign: 'center',
+        color: '#a1a1aa',
+        fontFamily: 'ui-monospace, monospace',
+      }}
+    >
+      <div style={{ fontSize: 11, letterSpacing: '0.18em', color: '#52525b', textTransform: 'uppercase', marginBottom: 16 }}>
+        no data yet
+      </div>
+      <p style={{ fontSize: 15, lineHeight: 1.7, margin: 0 }}>
+        The conflict journal is empty. The Claude Routine populates it daily at
+        7am Central. Check <code style={{ color: '#71717a' }}>/api/conflict/status</code> for
+        diagnostics.
+      </p>
     </div>
   );
 }

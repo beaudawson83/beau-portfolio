@@ -371,7 +371,7 @@ export interface SnapshotInput {
   displaced: number;
   countriesInvolved: number;
   weeklyDelta: { conflicts: number; casualties: number; displaced: number };
-  source: 'live' | 'fallback';
+  source: 'live';
 }
 
 export async function writeSnapshot(s: SnapshotInput): Promise<void> {
