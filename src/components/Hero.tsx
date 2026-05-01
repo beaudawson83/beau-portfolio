@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import EnergyButton from './ui/EnergyButton';
 import AskBeau from './AskBeau';
 import { heroContent } from '@/lib/data';
@@ -111,9 +112,12 @@ export default function Hero() {
           >
             <div className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-72 md:h-72 lg:w-96 lg:h-96 2xl:w-[28rem] 2xl:h-[28rem]">
               <div className="w-full h-full rounded-2xl overflow-hidden border border-[#2A2A2A] shadow-2xl shadow-[#7C3AED]/5">
-                <img
+                <Image
                   src="/beau.jpg"
                   alt="Beau Dawson"
+                  width={448}
+                  height={448}
+                  priority
                   className="w-full h-full object-cover"
                 />
               </div>

@@ -20,7 +20,7 @@ export default function AnalyticsProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const sessionStartTime = useRef<number>(Date.now());
+  const sessionStartTime = useRef<number>(0);
   const trackedScrollDepths = useRef<Set<number>>(new Set());
   const hiddenTimestamp = useRef<number | null>(null);
   const interactionCount = useRef<number>(0);
@@ -30,6 +30,7 @@ export default function AnalyticsProvider({
   useEffect(() => {
     if (!isAnalyticsEnabled()) return;
 
+    sessionStartTime.current = Date.now();
     trackSessionStart();
     trackDeviceInfo();
   }, []);
@@ -105,7 +106,7 @@ export default function AnalyticsProvider({
   useEffect(() => {
     if (!isAnalyticsEnabled()) return;
 
-    const handleCopy = (e: ClipboardEvent) => {
+    const handleCopy = () => {
       const selection = window.getSelection();
       if (selection) {
         const copiedText = selection.toString();

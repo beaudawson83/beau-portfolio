@@ -19,8 +19,10 @@ export default function PiSymbol({ onClick }: PiSymbolProps) {
   const [position, setPosition] = useState<CornerPosition | null>(null);
 
   useEffect(() => {
-    const randomCorner = CORNERS[Math.floor(Math.random() * CORNERS.length)];
-    setPosition(randomCorner);
+    // SSR-safe random corner pick: server renders null, client picks at mount.
+    // Lazy useState init would cause a hydration mismatch — this pattern is intentional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPosition(CORNERS[Math.floor(Math.random() * CORNERS.length)]);
   }, []);
 
   if (!position) return null;

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LoginScreenProps, ScreenConfig } from './types';
+import { ScreenConfig } from './types';
 import GlitchTransition from './GlitchTransition';
 import {
   StanfordLogin,
@@ -37,14 +37,16 @@ export default function HackingSequence({ isActive, onComplete }: HackingSequenc
   const [showGlitch, setShowGlitch] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Reset state when deactivated
-  useEffect(() => {
+  // Reset state when deactivated (render-phase, not effect)
+  const [prevIsActive, setPrevIsActive] = useState(isActive);
+  if (prevIsActive !== isActive) {
+    setPrevIsActive(isActive);
     if (!isActive) {
       setCurrentIndex(0);
       setShowGlitch(false);
       setIsTransitioning(false);
     }
-  }, [isActive]);
+  }
 
   const handleScreenComplete = useCallback(() => {
     if (currentIndex >= SCREENS.length - 1) {

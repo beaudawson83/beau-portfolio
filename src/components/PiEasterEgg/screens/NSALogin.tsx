@@ -19,17 +19,27 @@ export default function NSALogin({ onPhaseChange, onComplete }: LoginScreenProps
     start();
   }, [start]);
 
-  useEffect(() => {
+  // React to phase + isComplete transitions during render, not in effects
+  const [prevPhase, setPrevPhase] = useState(phase);
+  if (prevPhase !== phase) {
+    setPrevPhase(phase);
     if (phase === 'username') {
       setTerminalLines(['> INITIALIZING SECURE CONNECTION...']);
     } else if (phase === 'password') {
       setTerminalLines(prev => [...prev, '> CREDENTIALS DETECTED']);
     }
-  }, [phase]);
+  }
+
+  const [prevIsComplete, setPrevIsComplete] = useState(isComplete);
+  if (prevIsComplete !== isComplete) {
+    setPrevIsComplete(isComplete);
+    if (isComplete && !showGranted) {
+      setTerminalLines(prev => [...prev, '> VERIFYING ACCESS LEVEL...']);
+    }
+  }
 
   useEffect(() => {
     if (isComplete && !showGranted) {
-      setTerminalLines(prev => [...prev, '> VERIFYING ACCESS LEVEL...']);
       onPhaseChange?.('authenticating');
       const authTimer = setTimeout(() => {
         setTerminalLines(prev => [...prev, '> ACCESS GRANTED']);

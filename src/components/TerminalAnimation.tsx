@@ -33,7 +33,7 @@ export default function TerminalAnimation() {
   const [displayedLines, setDisplayedLines] = useState<string[]>([]);
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [currentCharIndex, setCurrentCharIndex] = useState(0);
-  const [isTyping, setIsTyping] = useState(true);
+  const [, setIsTyping] = useState(true);
   const [showCursor, setShowCursor] = useState(true);
 
   // Cursor blink effect
@@ -71,8 +71,11 @@ export default function TerminalAnimation() {
         setIsTyping(true);
       }, currentLine.delay);
 
-      // Add a placeholder to track we're waiting
+      // Add a placeholder to track we're waiting. Synchronous setState is
+      // intentional: it triggers the effect to re-run, which is what advances
+      // the animation past the delay.
       if (!displayedLines[currentLineIndex]) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDisplayedLines(prev => [...prev, '']);
       }
       return () => clearTimeout(delayTimeout);

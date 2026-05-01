@@ -1,9 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
 
 const GLITCH_CHARS = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+function makeScrambledChars(text: string): string[] {
+  return text.split('').map((char) =>
+    char === ' ' ? ' ' : GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)]
+  );
+}
 
 interface GlitchTextProps {
   text: string;
@@ -20,11 +25,19 @@ export default function GlitchText({
   duration = 1500, // Reduced from 2000
   as: Tag = 'span',
 }: GlitchTextProps) {
-  const [displayText, setDisplayText] = useState<string[]>([]);
+  const [displayText, setDisplayText] = useState<string[]>(() => makeScrambledChars(text));
   const [isComplete, setIsComplete] = useState(false);
   const animationRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const lockedCharsRef = useRef<boolean[]>([]);
+
+  // Reset state when text prop changes (render-phase pattern, not effect)
+  const [prevText, setPrevText] = useState(text);
+  if (prevText !== text) {
+    setPrevText(text);
+    setDisplayText(makeScrambledChars(text));
+    setIsComplete(false);
+  }
 
   const characters = useMemo(() => text.split(''), [text]);
 
@@ -34,11 +47,6 @@ export default function GlitchText({
   }, []);
 
   useEffect(() => {
-    // Initialize with random characters
-    const initial = characters.map((char) =>
-      char === ' ' ? ' ' : getRandomChar()
-    );
-    setDisplayText(initial);
     lockedCharsRef.current = characters.map(() => false);
 
     // Start animation after delay using single rAF loop

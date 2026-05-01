@@ -30,7 +30,10 @@ export default function ClassifiedLogin({ isActive, onClose }: ClassifiedLoginPr
     }
   }, [isActive, handleEscape]);
 
-  useEffect(() => {
+  // Reset login state when modal closes (render-phase, not effect)
+  const [prevIsActive, setPrevIsActive] = useState(isActive);
+  if (prevIsActive !== isActive) {
+    setPrevIsActive(isActive);
     if (!isActive) {
       setLoginState({
         username: '',
@@ -39,7 +42,7 @@ export default function ClassifiedLogin({ isActive, onClose }: ClassifiedLoginPr
         attempts: 0,
       });
     }
-  }, [isActive]);
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

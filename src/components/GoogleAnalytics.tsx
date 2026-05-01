@@ -2,7 +2,7 @@
 
 import Script from 'next/script';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, Suspense, useState } from 'react';
+import { useEffect, Suspense } from 'react';
 import { pageview } from '@/lib/analytics';
 
 // Hardcode the GA ID to ensure it's available at runtime
@@ -23,13 +23,6 @@ function AnalyticsPageTracker() {
 }
 
 export default function GoogleAnalytics() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Always render the scripts - they'll load on the client
   return (
     <>
       {/* Google Analytics Script */}
@@ -55,11 +48,9 @@ export default function GoogleAnalytics() {
         }}
       />
       {/* Page view tracking on route changes */}
-      {mounted && (
-        <Suspense fallback={null}>
-          <AnalyticsPageTracker />
-        </Suspense>
-      )}
+      <Suspense fallback={null}>
+        <AnalyticsPageTracker />
+      </Suspense>
     </>
   );
 }
