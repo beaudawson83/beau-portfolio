@@ -8,6 +8,10 @@ Context for AI coding assistants working on this codebase.
 
 GitHub state is yours to maintain. Treat it as **Level 1 attention** — same priority as not breaking the build. The repo must be in pristine order at all times when you are making changes, regardless of size or type of change.
 
+### Canonical local working copy
+
+The single source of truth on this machine is **`~/Desktop/beau-portfolio`**. There is no other authoritative local clone — if you find one elsewhere, surface it; do not silently work in it. Future Claude Code sessions should be launched from `~/Desktop/beau-portfolio` so the working copy, `git push` target, and your project memory all align.
+
 ### At session start
 
 - Run `git status` and `git log --oneline -10` before any work begins.
