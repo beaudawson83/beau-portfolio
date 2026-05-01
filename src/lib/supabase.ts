@@ -9,20 +9,25 @@ import type {
 // Supabase Client Setup
 // ============================================
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Read Marketplace-native names first; fall back to legacy NEXT_PUBLIC_*/_ROLE_KEY.
+// All current callers of this module are server-side API routes — no NEXT_PUBLIC_ needed.
+const supabaseUrl =
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey =
+  process.env.SUPABASE_PUBLISHABLE_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  '';
+const supabaseServiceKey =
+  process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Public client (for client-side operations)
-// Only create if URL is available (may not be during build)
 export const supabase: SupabaseClient | null = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
-// Server client with service role (for protected operations)
 export function getServerSupabase(): SupabaseClient {
   if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL are required for server operations');
+    throw new Error('SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy equivalents) are required for server operations');
   }
   return createClient(supabaseUrl, supabaseServiceKey);
 }
