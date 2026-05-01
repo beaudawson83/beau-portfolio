@@ -1,9 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type {
-  NewsletterSubscriber,
-  PostAnalytics,
-  AdminWhitelist,
-} from '@/types/blog';
+import type { NewsletterSubscriber, PostAnalytics } from '@/types/blog';
 
 // ============================================
 // Supabase Client Setup
@@ -216,95 +212,6 @@ export async function getAllPostAnalytics(): Promise<PostAnalytics[]> {
   }
 
   return data || [];
-}
-
-// ============================================
-// Admin Whitelist Functions
-// ============================================
-
-export async function isEmailWhitelisted(email: string): Promise<boolean> {
-  // During build time, return false if Supabase isn't configured
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.warn('Supabase not configured, whitelist check skipped');
-    return false;
-  }
-
-  const serverClient = getServerSupabase();
-
-  const { data, error } = await serverClient
-    .from('admin_whitelist')
-    .select('id')
-    .eq('email', email.toLowerCase())
-    .eq('is_active', true)
-    .single();
-
-  if (error || !data) {
-    return false;
-  }
-
-  return true;
-}
-
-export async function getWhitelistedEmails(): Promise<AdminWhitelist[]> {
-  if (!supabaseUrl || !supabaseServiceKey) {
-    return [];
-  }
-  const serverClient = getServerSupabase();
-
-  const { data, error } = await serverClient
-    .from('admin_whitelist')
-    .select('*')
-    .eq('is_active', true)
-    .order('email', { ascending: true });
-
-  if (error) {
-    console.error('Error fetching whitelist:', error);
-    return [];
-  }
-
-  return data || [];
-}
-
-export async function addToWhitelist(
-  email: string
-): Promise<{ success: boolean; error?: string }> {
-  if (!supabaseUrl || !supabaseServiceKey) {
-    return { success: false, error: 'Database not configured' };
-  }
-  const serverClient = getServerSupabase();
-
-  const { error } = await serverClient.from('admin_whitelist').insert({
-    email: email.toLowerCase(),
-  });
-
-  if (error) {
-    if (error.code === '23505') {
-      return { success: false, error: 'Email already in whitelist' };
-    }
-    return { success: false, error: 'Failed to add email' };
-  }
-
-  return { success: true };
-}
-
-export async function removeFromWhitelist(
-  email: string
-): Promise<{ success: boolean; error?: string }> {
-  if (!supabaseUrl || !supabaseServiceKey) {
-    return { success: false, error: 'Database not configured' };
-  }
-  const serverClient = getServerSupabase();
-
-  const { error } = await serverClient
-    .from('admin_whitelist')
-    .update({ is_active: false })
-    .eq('email', email.toLowerCase());
-
-  if (error) {
-    return { success: false, error: 'Failed to remove email' };
-  }
-
-  return { success: true };
 }
 
 // ============================================

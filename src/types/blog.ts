@@ -94,16 +94,6 @@ export interface PostAnalytics {
 }
 
 // ============================================
-// Admin Types (Supabase)
-// ============================================
-
-export interface AdminWhitelist {
-  id: string;
-  email: string;
-  is_active: boolean;
-}
-
-// ============================================
 // API Response Types
 // ============================================
 
