@@ -105,8 +105,8 @@ function rowToHotspot(r: HotspotRow): ConflictHotspot {
     type: r.type as ConflictType,
     since: r.since ?? '',
     iso: Array.isArray(r.iso) ? r.iso : [],
-    casualties_7d: r.casualties_7d,
-  } as unknown as ConflictHotspot;
+    casualties7d: r.casualties_7d,
+  };
 }
 
 function rowToNewsItem(r: NewsRow, idx: number): ConflictNewsItem {
