@@ -83,12 +83,24 @@ src/
 │   ├── layout.tsx                     # Fonts, metadata, GA bootstrap
 │   ├── globals.css                    # Theme tokens
 │   ├── global-conflict/page.tsx       # Hidden /global-conflict page
+│   ├── blog/
+│   │   ├── layout.tsx                 # tn-shell wrapper, theme cookie, Source Serif font
+│   │   ├── blog.css                   # Terminal Notebook tokens (scoped to .tn-shell)
+│   │   ├── page.tsx                   # /blog index (server, ISR 15m)
+│   │   ├── [slug]/page.tsx            # /blog/[slug] article (server, ISR 15m)
+│   │   └── edit/                      # Editor (client, BLOG_EDITOR_SECRET-gated)
+│   │       ├── page.tsx               # Drafts list
+│   │       ├── new/page.tsx           # Create + redirect
+│   │       └── [slug]/page.tsx        # The editor
 │   └── api/
 │       ├── ask-beau/route.ts          # Gemini chatbot, rate-limited
 │       ├── contact/route.ts           # Resend email, rate-limited, HTML-escaped
 │       ├── global-conflict/route.ts   # Public payload, ISR 15m
 │       ├── global-conflict/news/route.ts  # Per-conflict timeline
 │       ├── conflict/status/route.ts   # Diagnostic, CRON_SECRET-gated
+│       ├── blog/admin/auth/route.ts   # BLOG_EDITOR_SECRET probe
+│       ├── blog/posts/route.ts        # GET (list) + POST (create) — Bearer-gated
+│       ├── blog/posts/[slug]/route.ts # GET + PATCH + DELETE — Bearer-gated
 │       └── pi-challenge/{issue,validate}/route.ts
 ├── components/
 │   ├── Header.tsx, Hero.tsx, AskBeau.tsx
@@ -98,6 +110,11 @@ src/
 │   ├── GoogleAnalytics.tsx, AnalyticsProvider.tsx
 │   ├── GlobalConflict/                # Map, stats, journal UI
 │   ├── PiEasterEgg/                   # Hidden interactive feature
+│   ├── Blog/                          # Terminal Notebook reader + builder
+│   │   ├── Topbar.tsx, ThemeToggle.tsx
+│   │   ├── blocks/Blocks.tsx          # All 17 read-mode blocks + TOC + ReadingProgress
+│   │   ├── Reader/{IndexView,ArticleView}.tsx
+│   │   └── Builder/                   # Editor + slash menu + cmd+K + sidebar + modals
 │   └── ui/                            # EnergyButton, Button, Skeleton
 ├── lib/
 │   ├── data.ts                        # All portfolio content (single source of truth)
@@ -108,6 +125,10 @@ src/
 │   ├── conflict-data.ts               # Conflict types + read entry point
 │   ├── conflict-store.ts              # Conflict Supabase read layer (read-only)
 │   ├── cron-auth.ts                   # Bearer-token verifier (CRON_SECRET)
+│   ├── blog-data.ts                   # Blog read entrypoints (published only / any-status)
+│   ├── blog-store.ts                  # Blog Supabase CRUD (reads + writes)
+│   ├── blog-auth.ts                   # Bearer-token verifier (BLOG_EDITOR_SECRET)
+│   ├── blog-utils.ts                  # Block helpers (word count, headings, slugify)
 │   └── pi-challenge/                  # HMAC token + challenges
 ├── hooks/useTrackSection.ts
 ├── types/index.ts                     # All portfolio types
@@ -136,6 +157,12 @@ src/
 | `/api/global-conflict`      | GET    | Conflict payload         | ISR 15m                        |
 | `/api/global-conflict/news` | GET    | Per-conflict timeline    | Cursor pagination              |
 | `/api/conflict/status`      | GET    | Diagnostic heartbeat     | `Bearer $CRON_SECRET`          |
+| `/api/blog/admin/auth`      | POST   | Editor-secret probe      | `Bearer $BLOG_EDITOR_SECRET`   |
+| `/api/blog/posts`           | GET    | List posts (admin sees drafts) | Optional `Bearer $BLOG_EDITOR_SECRET` |
+| `/api/blog/posts`           | POST   | Create draft             | `Bearer $BLOG_EDITOR_SECRET`   |
+| `/api/blog/posts/[slug]`    | GET    | Read post (admin any status) | Optional Bearer            |
+| `/api/blog/posts/[slug]`    | PATCH  | Update post + status     | `Bearer $BLOG_EDITOR_SECRET`   |
+| `/api/blog/posts/[slug]`    | DELETE | Delete post              | `Bearer $BLOG_EDITOR_SECRET`   |
 | `/api/pi-challenge/issue`   | POST   | Issue HMAC challenge     | —                              |
 | `/api/pi-challenge/validate`| POST   | Validate response        | —                              |
 
@@ -154,6 +181,7 @@ src/
 | `CHAT_IP_SALT`                    | Yes      | IP hashing for chat logs + rate limits |
 | `CRON_SECRET`                     | Yes      | Gates `/api/conflict/status`           |
 | `PI_CHALLENGE_SECRET`             | Yes      | Pi easter egg HMAC tokens              |
+| `BLOG_EDITOR_SECRET`              | Yes      | Gates all `/api/blog/posts*` writes + the editor UI |
 
 Supabase env-name resolution in [`src/lib/supabase.ts`](src/lib/supabase.ts) follows priority:
 `BEAU_SUPABASE_*` → Marketplace native (`SUPABASE_URL` / `*_SECRET_KEY` / `*_PUBLISHABLE_KEY`) → legacy (`NEXT_PUBLIC_SUPABASE_URL` / `*_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`).
@@ -168,6 +196,46 @@ Vercel marks all env vars as Sensitive on creation, so values are never visible 
 `/api/ask-beau` uses Gemini 2.0 Flash with a detailed system prompt containing professional + personal facts, conversation handling rules, and deterministic fallbacks. The system prompt is the single source of truth for chatbot personality — edit in [`src/app/api/ask-beau/route.ts`](src/app/api/ask-beau/route.ts).
 
 Conversations are logged to Supabase (`chat_conversations`) via [`src/lib/chat-log.ts`](src/lib/chat-log.ts). To view them, use the Supabase dashboard's table editor (no in-app admin UI).
+
+---
+
+## Blog (Terminal Notebook) — LIVE but hidden
+
+Live at `/blog` and `/blog/[slug]`. Hidden from the homepage; accessible via the Pi easter egg dashboard (`> ACCESS_NOTES [BETA]`). `robots: noindex` everywhere until the first real post is published and the gate is opened.
+
+The Terminal Notebook design (handed off from Claude Design) uses its own dark-purple palette (`#0e0c14` background, `#a855f7` accent) scoped under `.tn-shell` so it doesn't leak into the rest of the site. Light theme is supported via a topbar toggle and persisted in a `tn-theme` cookie (read in [`src/app/blog/layout.tsx`](src/app/blog/layout.tsx) for SSR-safe initial render).
+
+### Read path
+
+- **`/blog`** — directory-listing index with category filter (OPS / AI / CRAFT / NOTE) and title search. Server component, ISR 15m via [`getPublishedPosts()`](src/lib/blog-data.ts). Empty state when no posts are published.
+- **`/blog/[slug]`** — full article: cover band, title, dek, tag chips, 3-column layout (TOC w/ scrollspy | content | meta + share sidebar), reading-progress bar, prev/next footer derived from publish order. 404 for unpublished or future-dated.
+
+### Write path (builder)
+
+- **`/blog/edit`** — drafts/posts grid + "+ new draft" button.
+- **`/blog/edit/new`** — POSTs a fresh draft with a placeholder slug, redirects to `/blog/edit/[slug]`.
+- **`/blog/edit/[slug]`** — Notion-style block editor: slash menu (`/`), floating text-format toolbar on selection, drag-reorder handles, autosave (800ms debounce), ⌘K command palette, right sidebar (slug / status / category / tags / cover / SEO + SERP preview / stats), publish modal (publish / schedule / draft).
+
+The editor is gated client-side by `<AuthGate>`: prompts for `BLOG_EDITOR_SECRET` once per browser, stores in `localStorage`, sends as `Authorization: Bearer …` on every API call. A bad/missing secret clears the cache and re-prompts. Server-side, every write endpoint also re-verifies via [`isBlogEditorAuthorized()`](src/lib/blog-auth.ts) — there is no path to write without the env-var match.
+
+### Block model
+
+A post body is a `BlogBlock[]` stored as a single jsonb column. 17 block types: text (h1/h2/h3/p, ul/ol, pullquote, callout, divider), media (image, gallery, video, audio), rich (code, table, chart, wordart, embed/tweet, button, twocol). Inline editing is supported for text/heading/list/pullquote/callout/code/image-caption/wordart-text. Other rich blocks render with sample content; v2 will add edit modals for table/chart/embed data.
+
+Word count + read time are computed server-side on every PATCH via [`computeWordCount()`](src/lib/blog-utils.ts) so the displayed values stay authoritative.
+
+### Image handling
+
+- **Cover**: 4 preset gradient covers (`cover-mesh`, `cover-grid`, `cover-stripe`, `none`) plus URL-paste (`cover-photo` + `cover_url`). No upload pipeline in v1 — Vercel Blob integration is deferred.
+- **Content images**: paste-URL via the image block; falls back to a striped placeholder when no URL is set.
+
+### Tables
+
+```
+blog_posts — single table; body is a jsonb BlogBlock[]; status is draft/scheduled/published
+```
+
+Schema: [`scripts/setup-supabase-blog.sql`](scripts/setup-supabase-blog.sql) (idempotent). RLS enforces `status='published' AND publish_at <= now()` for the anon role; service-role (used by all server reads/writes) bypasses RLS, with application-level filters reproducing the same constraint for the public read path.
 
 ---
 
@@ -272,9 +340,9 @@ npm run typecheck    # tsc --noEmit
 
 ## What's intentionally NOT here
 
-- **No blog.** A previous Contentful + NextAuth blog ("System Logs") was stripped 2026-05-01. The next blog will be custom-built; nothing in the repo references the old infrastructure.
 - **No newsletter capture.**
-- **No post-view analytics.** Site-wide GA4 covers page views; AskBeau conversations are logged to Supabase.
+- **No post-view analytics.** Site-wide GA4 covers page views; AskBeau conversations are logged to Supabase. The blog inherits that — no per-post analytics yet.
 - **No email-out from the site.** Resend is used only for the inbound contact form (visitor → Beau's inbox).
 - **No `/api/conflict/ingest` endpoint.** The Routine writes direct-to-Supabase via PostgREST.
-- **No `/admin/*` UI.** View chat logs via the Supabase dashboard.
+- **No `/admin/*` UI for chat logs.** View those via the Supabase dashboard. The blog editor at `/blog/edit/*` is the only authenticated admin surface.
+- **No image upload pipeline.** Blog covers are preset gradients or pasted URLs; content images are paste-URL only. Vercel Blob integration is deferred.
