@@ -112,6 +112,18 @@ export default function Dashboard({ onClose }: DashboardProps) {
               {'>'} ACCESS_GLOBAL_CONFLICT <span className="text-red-500/60">[LIVE]</span>
             </Link>
           </motion.div>
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.7 }}
+          >
+            <Link
+              href="/blog"
+              className="block text-green-500/60 hover:text-green-500 font-mono text-sm transition-colors"
+            >
+              {'>'} ACCESS_NOTES <span className="text-yellow-500/60">[BETA]</span>
+            </Link>
+          </motion.div>
         </div>
       </motion.div>
     </motion.div>

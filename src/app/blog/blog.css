@@ -1,0 +1,212 @@
+/* Terminal Notebook — design tokens + utility classes for the blog.
+ *
+ * Tokens are scoped to .tn-shell so they don't leak into the rest of the site.
+ * Theme is selected by [data-tn-theme="dark"|"light"] on the same element.
+ *
+ * Inline styles in components reference these vars (var(--tn-bg) etc.); the
+ * classes below cover topbar/shell/buttons/chips/animations where reuse is
+ * valuable enough to warrant a class.
+ */
+
+.tn-shell {
+  /* dark theme defaults */
+  --tn-bg:    #0e0c14;
+  --tn-bg2:   #161220;
+  --tn-bg3:   #1f1a2c;
+  --tn-bg4:   #2a2438;
+  --tn-ink:   #f5f3ff;
+  --tn-dim:   #8a82a0;
+  --tn-dim2:  #5a5468;
+  --tn-line:  #2a2438;
+  --tn-line2: #3a3450;
+  --tn-ok:    #7eaa92;
+  --tn-warn:  #d4a96a;
+  --tn-err:   #e07a8e;
+  --tn-shadow: 0 12px 40px rgba(0, 0, 0, .5);
+
+  --tn-accent:      #a855f7;
+  --tn-accent-dim:  #a855f733;
+  --tn-accent-glow: #a855f722;
+
+  --tn-sans:  var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --tn-serif: var(--font-source-serif), Charter, "Iowan Old Style", Georgia, serif;
+  --tn-mono:  var(--font-jetbrains-mono), "SF Mono", Menlo, Consolas, monospace;
+}
+
+.tn-shell[data-tn-theme="light"] {
+  --tn-bg:    #fbfaf6;
+  --tn-bg2:   #f3f1ea;
+  --tn-bg3:   #ebe7dc;
+  --tn-bg4:   #dcd6c5;
+  --tn-ink:   #1a1812;
+  --tn-dim:   #6e6a5e;
+  --tn-dim2:  #9a9588;
+  --tn-line:  #dcd6c5;
+  --tn-line2: #c5bfa9;
+  --tn-ok:    #3d6a52;
+  --tn-warn:  #a4762a;
+  --tn-err:   #a04050;
+  --tn-shadow: 0 12px 40px rgba(60, 50, 30, .12);
+}
+
+.tn-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--tn-bg);
+  color: var(--tn-ink);
+  font-family: var(--tn-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.tn-shell *,
+.tn-shell *::before,
+.tn-shell *::after { box-sizing: border-box; }
+
+.tn-shell button { font-family: inherit; cursor: pointer; }
+.tn-shell input,
+.tn-shell textarea { font-family: inherit; color: inherit; }
+
+.tn-shell ::selection { background: var(--tn-accent-dim); color: var(--tn-ink); }
+
+.tn-mono { font-family: var(--tn-mono); }
+.tn-serif { font-family: var(--tn-serif); }
+.tn-sans { font-family: var(--tn-sans); }
+
+/* ============== TOPBAR ============== */
+.tn-topbar {
+  display: flex;
+  align-items: center;
+  height: 46px;
+  border-bottom: 1px solid var(--tn-line);
+  background: var(--tn-bg);
+  padding: 0 16px;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  backdrop-filter: blur(10px);
+}
+.tn-topbar .lights { display: flex; gap: 7px; }
+.tn-topbar .lights span { width: 11px; height: 11px; border-radius: 50%; }
+.tn-topbar .lights .r { background: #e07a8e; }
+.tn-topbar .lights .y { background: #d4a96a; }
+.tn-topbar .lights .g { background: #7eaa92; }
+.tn-topbar .crumb {
+  font-family: var(--tn-mono);
+  font-size: 12px;
+  color: var(--tn-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tn-topbar .crumb b { color: var(--tn-ink); font-weight: 500; }
+.tn-topbar .crumb .accent { color: var(--tn-accent); }
+.tn-topbar .actions { display: flex; align-items: center; gap: 6px; }
+.tn-topbar .iconbtn,
+.tn-topbar .pill {
+  font-family: var(--tn-mono);
+  font-size: 11.5px;
+  color: var(--tn-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 5px 9px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: .15s;
+}
+.tn-topbar .iconbtn:hover,
+.tn-topbar .pill:hover { background: var(--tn-bg2); color: var(--tn-ink); border-color: var(--tn-line); }
+.tn-topbar .pill.on { background: var(--tn-accent-glow); color: var(--tn-accent); border-color: var(--tn-accent-dim); }
+.tn-topbar .kbd {
+  font-family: var(--tn-mono);
+  font-size: 10px;
+  padding: 1px 5px;
+  border: 1px solid var(--tn-line2);
+  border-radius: 3px;
+  color: var(--tn-dim);
+  background: var(--tn-bg2);
+}
+
+/* ============== CHIPS ============== */
+.tn-shell .tn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-family: var(--tn-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  border: 1px solid var(--tn-line2);
+  color: var(--tn-dim);
+  background: var(--tn-bg2);
+}
+.tn-shell .tn-chip.ok { color: var(--tn-ok); border-color: color-mix(in oklab, var(--tn-ok) 40%, transparent); }
+.tn-shell .tn-chip.warn { color: var(--tn-warn); border-color: color-mix(in oklab, var(--tn-warn) 40%, transparent); }
+.tn-shell .tn-chip.acc { color: var(--tn-accent); border-color: var(--tn-accent-dim); background: var(--tn-accent-glow); }
+
+/* ============== BUTTONS ============== */
+.tn-shell .tn-btn {
+  font-family: var(--tn-mono);
+  font-size: 12px;
+  padding: 7px 13px;
+  border-radius: 5px;
+  border: 1px solid var(--tn-line2);
+  background: var(--tn-bg2);
+  color: var(--tn-ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: .15s;
+  font-weight: 500;
+}
+.tn-shell .tn-btn:hover { background: var(--tn-bg3); border-color: var(--tn-accent-dim); }
+.tn-shell .tn-btn.pri { background: var(--tn-accent); color: #fff; border-color: var(--tn-accent); }
+.tn-shell .tn-btn.pri:hover { filter: brightness(1.1); }
+.tn-shell .tn-btn.gh { background: transparent; color: var(--tn-dim); }
+.tn-shell .tn-btn.gh:hover { color: var(--tn-ink); background: var(--tn-bg2); }
+.tn-shell .tn-btn.sm { padding: 5px 10px; font-size: 11px; }
+
+/* ============== SCROLLBARS ============== */
+.tn-shell ::-webkit-scrollbar { width: 10px; height: 10px; }
+.tn-shell ::-webkit-scrollbar-track { background: transparent; }
+.tn-shell ::-webkit-scrollbar-thumb {
+  background: var(--tn-line);
+  border-radius: 5px;
+  border: 2px solid var(--tn-bg);
+}
+.tn-shell ::-webkit-scrollbar-thumb:hover { background: var(--tn-line2); }
+
+/* ============== ANIMATIONS ============== */
+@keyframes tn-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes tn-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+@keyframes tn-spin { to { transform: rotate(360deg); } }
+
+.tn-shell .tn-fade { animation: tn-fade .18s ease-out; }
+.tn-shell .tn-pulse { animation: tn-pulse 1.4s ease-in-out infinite; }
+
+/* ============== FOCUS RING ============== */
+.tn-shell .tn-focus:focus,
+.tn-shell .tn-focus:focus-visible {
+  outline: none;
+  border-color: var(--tn-accent) !important;
+  box-shadow: 0 0 0 3px var(--tn-accent-glow);
+}
+
+/* ============== EDITABLE PLACEHOLDER ============== */
+.tn-shell [data-editable][data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--tn-dim2);
+  pointer-events: none;
+}
