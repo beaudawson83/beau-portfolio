@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code — ignore ephemeral scratch + machine-local settings only.
+# Leave room for future shareable config (.claude/settings.json, .claude/commands/).
+/.claude/worktrees/
+/.claude/settings.local.json
