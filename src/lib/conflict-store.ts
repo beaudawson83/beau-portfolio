@@ -1,8 +1,9 @@
 // Conflict Heat Map — Supabase persistence layer.
-// All functions gracefully no-op (or return empty/null) when Supabase is unconfigured,
-// matching the pattern in src/lib/supabase.ts.
+// Both reads and writes share the single Supabase client factory in
+// ./supabase, so env-var resolution lives in exactly one place.
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { getServerSupabase, isSupabaseConfigured } from './supabase';
 import type {
   ActorConfidence,
   ActorRole,
@@ -13,47 +14,14 @@ import type {
   ConflictType,
 } from './conflict-data';
 
-// Resolve Supabase config in priority order:
-//   1. BEAU_SUPABASE_*      — owned by us; Marketplace integration can't touch these
-//   2. SUPABASE_URL / *_SECRET_KEY / *_PUBLISHABLE_KEY — Marketplace native
-//   3. NEXT_PUBLIC_SUPABASE_URL / *_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY — legacy
-// Server-side only — no NEXT_PUBLIC_ prefix needed.
-const SUPABASE_URL =
-  process.env.BEAU_SUPABASE_URL ||
-  process.env.SUPABASE_URL ||
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  '';
-const SUPABASE_SERVICE_KEY =
-  process.env.BEAU_SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_SECRET_KEY ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  '';
-const SUPABASE_ANON_KEY =
-  process.env.BEAU_SUPABASE_ANON_KEY ||
-  process.env.SUPABASE_PUBLISHABLE_KEY ||
-  process.env.SUPABASE_ANON_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  '';
-
-export function isConflictStoreConfigured(): boolean {
-  return Boolean(SUPABASE_URL && (SUPABASE_ANON_KEY || SUPABASE_SERVICE_KEY));
-}
+export const isConflictStoreConfigured = isSupabaseConfigured;
 
 function getReadClient(): SupabaseClient | null {
-  if (!SUPABASE_URL) return null;
-  // Prefer the service key on the server (it's only present server-side); fall back to anon.
-  const key = SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY;
-  if (!key) return null;
-  return createClient(SUPABASE_URL, key);
+  return isSupabaseConfigured() ? getServerSupabase() : null;
 }
 
 function getWriteClient(): SupabaseClient {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    throw new Error(
-      'conflict-store: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for writes',
-    );
-  }
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  return getServerSupabase();
 }
 
 // ===========================================================================
