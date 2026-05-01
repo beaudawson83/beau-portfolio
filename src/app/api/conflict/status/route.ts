@@ -3,14 +3,23 @@
 // Diagnostic heartbeat. Returns the live state of the conflict-module
 // data pipeline — which env vars are populated, whether the database
 // is reachable, row counts per table, freshness of the latest snapshot.
-// Reveals only metadata; no secret values are returned.
+//
+// Locked behind `Authorization: Bearer <CRON_SECRET>` because the response
+// fingerprints infrastructure (hostname, key kind, table layout, row counts)
+// — useful diagnostically, not for the public.
 
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isCronAuthorized } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!isCronAuthorized(req)) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+
+
   const url =
     process.env.BEAU_SUPABASE_URL ||
     process.env.SUPABASE_URL ||

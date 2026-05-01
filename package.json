@@ -7,32 +7,27 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "setup:contentful": "node --env-file-if-exists=.env.local scripts/setup-contentful.mjs"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contentful/rich-text-react-renderer": "^16.1.6",
     "@supabase/supabase-js": "^2.90.1",
-    "contentful": "^11.10.2",
-    "contentful-management": "^11.67.2",
     "d3-geo": "^3.1.1",
     "framer-motion": "^12.24.10",
     "lucide-react": "^0.562.0",
-    "next": "16.1.1",
-    "next-auth": "^4.24.13",
+    "next": "^16.2.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "topojson-client": "^3.1.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@tailwindcss/typography": "^0.5.19",
     "@types/d3-geo": "^3.1.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/topojson-client": "^3.1.5",
     "eslint": "^9",
-    "eslint-config-next": "16.1.1",
+    "eslint-config-next": "^16.2.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

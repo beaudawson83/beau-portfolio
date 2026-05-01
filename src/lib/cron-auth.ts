@@ -1,25 +1,19 @@
+import { timingSafeEqual } from 'node:crypto';
 import type { NextRequest } from 'next/server';
 
 /**
- * Verifies a request was made by Vercel Cron (or a trusted caller).
- * Vercel Cron sends `Authorization: Bearer ${process.env.CRON_SECRET}`.
+ * Verifies a `Authorization: Bearer <CRON_SECRET>` header.
+ * Used to gate /api/conflict/status and any future privileged endpoints.
  */
 export function isCronAuthorized(req: NextRequest): boolean {
   const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    // No secret set — refuse to run rather than expose an unauthenticated job.
-    return false;
-  }
-  const auth = req.headers.get('authorization');
-  if (!auth) return false;
-  const match = auth.match(/^Bearer\s+(.+)$/i);
+  if (!expected) return false;
+
+  const match = req.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i);
   if (!match) return false;
-  // Constant-time-ish: lengths match and equal-by-char.
-  const provided = match[1];
-  if (provided.length !== expected.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < expected.length; i++) {
-    mismatch |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
-  }
-  return mismatch === 0;
+
+  const a = Buffer.from(match[1]);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }

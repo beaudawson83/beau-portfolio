@@ -1,47 +1,45 @@
 # Beau Dawson Portfolio
 
-Professional portfolio showcasing 10+ years of operations leadership and AI architecture expertise. Built with a "System Architecture" theme featuring a mission-critical dashboard aesthetic with industrial minimalism.
+Professional portfolio for an Operations Director, Systems Builder, and AI Architect.
+Clean dark theme, substance-first design, no theatrical effects.
 
-**Live Site:** Deployed on Vercel
-**Author:** Beau Dawson (BAD Labs)
+**Live:** [beaudawson.com](https://beaudawson.com)
+**Author:** Beau Dawson — Founder, BAD Labs
 
 ---
 
 ## Tech Stack
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Next.js | 16.1.1 | React framework (App Router) |
-| React | 19.2.3 | UI library |
-| TypeScript | 5.x | Type safety |
-| Tailwind CSS | 4.x | Utility-first styling |
-| Framer Motion | 12.24.10 | Animations |
-| Lucide React | 0.562.0 | Icons |
-| Resend | - | Contact form email delivery |
-| Google Gemini | 2.0 Flash | AI chatbot ("Ask Beau" feature) |
+| Layer       | Tool                                  |
+|-------------|---------------------------------------|
+| Framework   | Next.js 16 (App Router) + React 19    |
+| Language    | TypeScript 5                          |
+| Styling     | Tailwind CSS 4                        |
+| Animation   | Framer Motion 12                      |
+| Icons       | Lucide React                          |
+| Database    | Supabase (Postgres)                   |
+| Email       | Resend (contact form)                 |
+| AI          | Google Gemini 2.0 Flash (Ask Beau)    |
+| Analytics   | Google Analytics 4                    |
+| Hosting     | Vercel (auto-deploy on push to main)  |
 
 ---
 
 ## Quick Start
 
 ```bash
-# Install dependencies
 npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
-
-# Run linting
-npm run lint
+cp .env.example .env.local      # fill in keys
+npm run dev                     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the site.
+| Script             | What it does                            |
+|--------------------|-----------------------------------------|
+| `npm run dev`      | Local dev server                        |
+| `npm run build`    | Production build (also runs typecheck)  |
+| `npm run start`    | Serve production build                  |
+| `npm run lint`     | ESLint                                  |
+| `npm run typecheck`| `tsc --noEmit`                          |
 
 ---
 
@@ -50,170 +48,130 @@ Open [http://localhost:3000](http://localhost:3000) to view the site.
 ```
 src/
 ├── app/
-│   ├── layout.tsx        # Root layout, fonts, metadata
-│   ├── page.tsx          # Main page composing all sections
-│   ├── globals.css       # CSS variables, theme, animations
+│   ├── page.tsx                # Main page composition
+│   ├── layout.tsx              # Fonts, metadata, GA bootstrap
+│   ├── globals.css             # Theme tokens, animations
+│   ├── global-conflict/        # Hidden /global-conflict page (Pi-egg-only)
 │   └── api/
-│       ├── contact/route.ts    # Contact form email handler (Resend)
-│       └── ask-beau/route.ts   # AI chatbot endpoint (Gemini)
+│       ├── ask-beau/           # Gemini-backed chatbot
+│       ├── contact/            # Contact form → Resend → inbox
+│       ├── global-conflict/    # Public payload + per-conflict news timeline
+│       ├── conflict/status/    # Diagnostic heartbeat (CRON_SECRET-gated)
+│       └── pi-challenge/       # Easter-egg challenge issue + validate
 ├── components/
-│   ├── Header.tsx        # Fixed terminal-style header bar
-│   ├── Hero.tsx          # Split hero (headline + headshot + Ask Beau)
-│   ├── TelemetryGrid.tsx # Key metrics with count-up animation
-│   ├── ChaosToClarity/   # Interactive particle animation
-│   │   ├── index.tsx     # Main component
-│   │   ├── useParticleSystem.ts  # Canvas animation hook
-│   │   ├── constants.ts  # Particle configuration
-│   │   └── types.ts      # TypeScript interfaces
-│   ├── ArchitectureShowcase.tsx  # Code editor mockup
-│   ├── ChangeLog.tsx     # Git-style experience timeline
-│   ├── SystemKernel.tsx  # Skills grid (3 columns)
-│   ├── SystemMonitor.tsx # Performance chart visualization
-│   ├── HookSection.tsx   # Featured quote section
-│   ├── Footer.tsx        # Contact form + social links
-│   ├── AskBeau.tsx       # AI chatbot component
-│   ├── TerminalAnimation.tsx  # Terminal typing effect
-│   ├── AnalyticsProvider.tsx  # GA4 integration wrapper
-│   ├── GoogleAnalytics.tsx    # Analytics script injection
-│   ├── PiEasterEgg/      # Hidden Easter egg feature (14 files)
-│   └── ui/
-│       └── Button.tsx    # Reusable button component
-├── hooks/
-│   └── useTrackSection.ts  # Section visibility tracking hook
+│   ├── Header.tsx              # Fixed nav bar
+│   ├── Hero.tsx                # Headline + headshot + AskBeau widget
+│   ├── AskBeau.tsx             # AI chatbot
+│   ├── TelemetryGrid.tsx       # Animated metrics grid
+│   ├── CaseStudies.tsx         # Expandable case-study cards
+│   ├── BadLabsShowcase.tsx     # Current venture
+│   ├── SystemKernel.tsx        # Tools & platforms grid
+│   ├── Timeline.tsx            # Career history (CSS-only collapse)
+│   ├── Footer.tsx              # Contact form + social links
+│   ├── GlobalConflict/         # Map + stats + journal UI
+│   ├── PiEasterEgg/            # Hidden interactive feature
+│   └── ui/                     # Reusable button + skeleton
 ├── lib/
-│   ├── data.ts           # All content data (single source of truth)
-│   └── analytics.ts      # GA4 tracking utilities (35+ events)
-└── types/
-    └── index.ts          # TypeScript interfaces
+│   ├── data.ts                 # All portfolio content (single source of truth)
+│   ├── analytics.ts            # GA4 helpers + event taxonomy
+│   ├── supabase.ts             # Shared Supabase client factory + env resolution
+│   ├── chat-log.ts             # AI-chat conversation logging (server-only)
+│   ├── rate-limit.ts           # Per-IP rate-limit RPC wrapper
+│   ├── conflict-data.ts        # Conflict types + read entry point
+│   ├── conflict-store.ts       # Conflict Supabase read layer
+│   ├── cron-auth.ts            # Bearer-token verifier (CRON_SECRET)
+│   └── pi-challenge/           # HMAC token + Star Trek + sort-code challenges
+├── hooks/
+│   └── useTrackSection.ts      # IntersectionObserver wrapper
+├── types/
+│   └── index.ts                # Portfolio interfaces
+└── proxy.ts                    # Next 16 middleware: security headers + CSP
 ```
 
 ---
 
-## Design System
+## Design Tokens
 
-### Color Palette
+| Token                | Hex       | Usage                          |
+|----------------------|-----------|--------------------------------|
+| Background           | `#111111` | Page background                |
+| Surface              | `#1A1A1A` | Cards, surfaces                |
+| Deep / inputs        | `#0D0D0D` | Form inputs, deep panels       |
+| Border               | `#2A2A2A` | Default border                 |
+| Border (hover)       | `#7C3AED/30` | Accent on hover             |
+| Text primary         | white     | Headings, body text            |
+| Text secondary       | `#94A3B8` | Labels, supporting copy        |
+| Accent               | `#7C3AED` | CTAs, highlights, links        |
+| Success              | `#10B981` | Status pulse                   |
 
-| Token | Name | Hex | Usage |
-|-------|------|-----|-------|
-| `--bg-carbon` | Matte Carbon | `#111111` | Page background |
-| `--surface-gunmetal` | Deep Gunmetal | `#1F1F1F` | Cards, surfaces, borders |
-| `--text-primary` | White | `#FFFFFF` | Primary text, headings |
-| `--text-secondary` | Cold Steel | `#94A3B8` | Secondary text, labels |
-| `--accent-violet` | Royal Violet | `#7C3AED` | CTAs, highlights, metrics |
-
-### Typography
-
-- **Headings/Terminal:** JetBrains Mono (monospace)
-- **Body Text:** Inter (sans-serif)
-- Loaded via `next/font` for optimal performance
-
-### Custom Effects
-
-- `status-pulse` - Violet glow animation for status indicator
-- `scanlines` - CRT-style overlay for images
-- `cursor-blink` - Terminal cursor animation
-- `text-gradient` - Violet gradient text effect
+Fonts: **Inter** (body) + **JetBrains Mono** (terminal/monospace), loaded via `next/font`.
 
 ---
 
-## Content Management
+## Page Flow (`src/app/page.tsx`)
 
-All portfolio content is centralized in `src/lib/data.ts`:
-
-| Export | Type | Description |
-|--------|------|-------------|
-| `metrics` | `Metric[]` | Key achievement statistics (Telemetry Grid) |
-| `experiences` | `Experience[]` | Work history with impacts and tech |
-| `skills` | `Skill[]` | Skills organized by category |
-| `socialLinks` | `SocialLink[]` | Contact links (LinkedIn, phone, email) |
-| `badLabsCode` | `string` | Code block for Architecture Showcase |
-| `heroContent` | `object` | Headline, subheader, CTA text |
-| `hookQuote` | `string` | Featured philosophy quote |
-
-### Updating Content
-
-1. Edit `src/lib/data.ts`
-2. Follow existing TypeScript interfaces in `src/types/index.ts`
-3. Changes reflect immediately in development mode
+1. **Header** — name, "Operations + AI", availability status
+2. **Hero** — name, trifecta positioning, proof line, CTAs, headshot, AskBeau
+3. **TelemetryGrid** — 8 metrics, animated count-up
+4. **CaseStudies** — Expedia, Union, BAD Labs (problem → built → results)
+5. **BadLabsShowcase** — Console CRM, custom AI tooling, fractional leadership
+6. **SystemKernel** — 4-column tools grid
+7. **Timeline** — Collapsible full career history
+8. **Footer** — Contact form + social links
+9. **PiEasterEgg** — hidden, click π in footer corner
 
 ---
 
-## Component Architecture
+## API Routes
 
-All components use:
-- `'use client'` directive (client-side rendering)
-- Framer Motion for scroll-triggered animations
-- `useInView` hook for viewport detection
-- Staggered animation delays for visual polish
-
-### Animation Pattern
-
-```tsx
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  whileInView={{ opacity: 1, y: 0 }}
-  viewport={{ once: true }}
-  transition={{ duration: 0.6 }}
->
-```
+| Route                          | Method | Purpose                           | Notes                          |
+|--------------------------------|--------|-----------------------------------|--------------------------------|
+| `/api/ask-beau`                | POST   | AI chatbot                        | Rate-limited (20/hr per IP)    |
+| `/api/contact`                 | POST   | Contact form → email              | Rate-limited (5/hr per IP)     |
+| `/api/global-conflict`         | GET    | Conflict payload (hotspots, stats)| ISR 15m                        |
+| `/api/global-conflict/news`    | GET    | Per-conflict news timeline        | Cursor pagination              |
+| `/api/conflict/status`         | GET    | Diagnostic heartbeat              | `Authorization: Bearer $CRON_SECRET` |
+| `/api/pi-challenge/issue`      | POST   | Issue HMAC challenge token        | Easter egg                     |
+| `/api/pi-challenge/validate`   | POST   | Validate challenge response       | Easter egg                     |
 
 ---
 
 ## Environment Variables
 
-Copy `.env.example` to `.env.local` and configure:
+See [.env.example](./.env.example) for the complete list with generation commands.
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GEMINI_API_KEY` | Yes | Google Gemini API key for "Ask Beau" AI chatbot. Get free key at [aistudio.google.com](https://aistudio.google.com/app/apikey) |
-| `RESEND_API_KEY` | Yes | Resend API key for contact form emails. Get key at [resend.com](https://resend.com/api-keys) |
-| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | No | Google Analytics 4 Measurement ID. Get from [analytics.google.com](https://analytics.google.com) (Admin > Data Streams > Web). Falls back to hardcoded ID if not set. |
+| Variable                          | Required | Used by                         |
+|-----------------------------------|----------|---------------------------------|
+| `GEMINI_API_KEY`                  | Yes      | Ask Beau chatbot                |
+| `RESEND_API_KEY`                  | Yes      | Contact form                    |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID`   | Yes      | Google Analytics 4              |
+| `SUPABASE_URL`                    | Yes      | All Supabase reads/writes       |
+| `SUPABASE_ANON_KEY`               | Yes      | Supabase client                 |
+| `SUPABASE_SERVICE_ROLE_KEY`       | Yes      | Server-only Supabase ops        |
+| `PI_CHALLENGE_SECRET`             | Yes      | Pi easter egg HMAC tokens       |
+| `CHAT_IP_SALT`                    | Yes      | Hashing IPs for chat + rate-limit |
+| `CRON_SECRET`                     | Yes      | Gates `/api/conflict/status`    |
 
----
-
-## Deployment
-
-### Vercel (Automatic)
-
-Connected to GitHub for automatic deployments:
-- Push to `main` triggers production deploy
-- Pull requests generate preview deployments
-- **Required:** Set `GEMINI_API_KEY` and `RESEND_API_KEY` in Vercel project settings
-
-### Manual Deployment
-
-```bash
-npx vercel           # Deploy to preview
-npx vercel --prod    # Deploy to production
-```
-
----
-
-## Analytics
-
-Comprehensive Google Analytics 4 integration tracking:
-
-- Section visibility and scroll depth
-- Contact form interactions
-- CTA and social link clicks
-- Easter egg discovery
-- Chatbot usage
-- Device and session data
-
-See `src/lib/analytics.ts` for all tracked events.
-
----
-
-## Browser Support
-
-- Chrome, Firefox, Safari, Edge (latest versions)
-- Responsive: mobile-first with `sm`, `md`, `lg`, `2xl` breakpoints
+The Supabase env names support three families: `BEAU_SUPABASE_*` → `SUPABASE_*` → legacy `NEXT_PUBLIC_SUPABASE_*`. See [`src/lib/supabase.ts`](./src/lib/supabase.ts) for resolution order. Use `BEAU_*` if the Vercel Marketplace ever gets reattached and starts overwriting the unprefixed names.
 
 ---
 
 ## Hidden Features
 
-**Easter Egg:** Click the π symbol in the footer to discover a hidden interactive feature with multiple phases including a hacking simulation and login challenges.
+The Pi easter egg lives in the footer corner. Click π to enter. The dashboard exposes:
+
+- `> ACCESS_GLOBAL_CONFLICT [LIVE]` — sober data-journalism module: live world map of armed conflicts, journal-style news feed per conflict, daily refresh from a Claude Code Routine. `robots: noindex`.
+
+---
+
+## Deployment
+
+Connected to GitHub for automatic deploys on push to `main`. Preview URLs on every PR. All env vars set in Vercel project settings.
+
+```bash
+npx vercel             # Preview
+npx vercel --prod      # Production
+```
 
 ---
 

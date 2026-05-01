@@ -1,8 +1,7 @@
 // Google Analytics 4 Utility Library
 // Comprehensive tracking for page views, events, and user interactions
 
-// Fallback to hardcoded ID if env var is not available at build time
-export const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-CHK1H7XQV3';
+export const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 // Type definitions for gtag
 type GTagEvent = {

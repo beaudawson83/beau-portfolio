@@ -11,6 +11,9 @@ function hashIp(ip: string | null): string | null {
   return createHash('sha256').update(`${ip}:${salt}`).digest('hex').slice(0, 16);
 }
 
+// Trusts x-forwarded-for[0]. Safe on Vercel — the platform overwrites
+// these headers with values it controls. If this ever runs elsewhere,
+// the headers become client-spoofable and rate limiting collapses.
 export function extractClientIp(headers: Headers): string | null {
   const fwd = headers.get('x-forwarded-for');
   if (fwd) return fwd.split(',')[0].trim();

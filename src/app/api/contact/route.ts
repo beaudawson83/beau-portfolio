@@ -3,6 +3,15 @@ import { ContactFormData, OBJECTIVE_LABELS } from '@/types';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { extractClientIp } from '@/lib/chat-log';
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export async function POST(request: NextRequest) {
   try {
     const ip = extractClientIp(request.headers);
@@ -45,6 +54,9 @@ export async function POST(request: NextRequest) {
     }
 
     const objectiveLabel = OBJECTIVE_LABELS[objective] || objective;
+    const safeName = escapeHtml(name);
+    const safeObjective = escapeHtml(objectiveLabel);
+    const safeMessage = escapeHtml(message);
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -59,10 +71,10 @@ export async function POST(request: NextRequest) {
         html: `
           <div style="font-family: monospace; padding: 20px; background: #0a0a0a; color: #fff;">
             <h2 style="color: #7C3AED; margin-bottom: 20px;">> NEW_TRANSMISSION_RECEIVED</h2>
-            <p><strong style="color: #94A3B8;">> FROM:</strong> ${name}</p>
-            <p><strong style="color: #94A3B8;">> OBJECTIVE:</strong> ${objectiveLabel}</p>
+            <p><strong style="color: #94A3B8;">> FROM:</strong> ${safeName}</p>
+            <p><strong style="color: #94A3B8;">> OBJECTIVE:</strong> ${safeObjective}</p>
             <p><strong style="color: #94A3B8;">> MESSAGE:</strong></p>
-            <div style="background: #1F1F1F; padding: 16px; margin-top: 8px; white-space: pre-wrap;">${message}</div>
+            <div style="background: #1F1F1F; padding: 16px; margin-top: 8px; white-space: pre-wrap;">${safeMessage}</div>
           </div>
         `,
         text: `New Portfolio Contact\n\nFrom: ${name}\nObjective: ${objectiveLabel}\n\nMessage:\n${message}`,

@@ -14,8 +14,7 @@ const CSP_DIRECTIVES = [
   // 'unsafe-inline' + 'unsafe-eval' required for Next.js hydration + Framer Motion runtime styles.
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com",
   "style-src 'self' 'unsafe-inline'",
-  // Contentful serves blog images from images.ctfassets.net + assets.ctfassets.net.
-  "img-src 'self' data: blob: https://images.ctfassets.net https://assets.ctfassets.net https://www.google-analytics.com https://www.googletagmanager.com",
+  "img-src 'self' data: blob: https://www.google-analytics.com https://www.googletagmanager.com",
   "font-src 'self' data:",
   "connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com https://*.supabase.co wss://*.supabase.co",
   "frame-ancestors 'none'",

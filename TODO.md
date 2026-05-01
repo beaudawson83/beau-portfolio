@@ -1,100 +1,53 @@
 # Portfolio TODO
 
-> **Last updated:** 2026-04-04
+> **Last updated:** 2026-05-01
 > **Live:** beaudawson.com
-> **Status:** Portfolio complete. Blog infrastructure built, needs content.
+> **Status:** Portfolio current. Recently completed a cleanup pass — stripped dead Contentful/NextAuth blog infrastructure, newsletter, post-view analytics, dormant ingest endpoint, and `/admin/chats/` UI.
 
 ---
 
-## Completed
+## Next Project — Custom Blog-Maker
 
-- [x] Portfolio redesign — story-driven, substance-first, no theatrical effects
-- [x] Hero with trifecta positioning (name, title, proof line, clean headshot)
-- [x] 8-metric TelemetryGrid with animated count-up
-- [x] 3 case studies (Expedia, Union, BAD Labs) with expandable detail
-- [x] BAD Labs showcase with live link
-- [x] Tools & Platforms 4-column grid
-- [x] Collapsible career timeline (pure CSS, no JS)
-- [x] Clean contact form with objective selector
-- [x] Ask Beau AI chatbot with rich personal details
-- [x] Stripped all theatrical elements (Three.js, particles, boot sequences, terminal chrome)
-- [x] Removed 7 dead dependencies, 10 orphaned components (~5,800 lines)
-- [x] Mobile polish pass
-- [x] Updated metadata/SEO for new positioning
-- [x] Professional email: email@beaudawson.com
-- [x] GlitchText word-break fix (words no longer split across lines)
+The previous blog (Contentful + NextAuth + admin password) is gone. When ready to revisit:
 
----
+- Decide auth model (passkey? GitHub OAuth? simpler than the old `ADMIN_PASSWORD` flow)
+- Decide storage (Supabase vs filesystem MDX vs custom Postgres)
+- Decide editor surface (in-app rich text vs MDX-in-repo vs hybrid)
+- Decide rendering (RSC server-render vs ISR vs static at build)
+- Tag taxonomy: AI_STRATEGY, OPS_EFFICIENCY, FRACTIONAL_INSIGHTS, AUTOMATION, CRM_ARCHITECTURE, LEADERSHIP (carry over from prior design)
+- OG-image generation per post
+- Hidden behind Pi easter egg until first post is live
 
-## Blog — System Logs
+### Drafted post backlog (from prior planning, still relevant)
 
-Infrastructure is built and deployed. Needs content in Contentful CMS.
-
-### Setup (already done)
-- [x] Contentful CMS integration with rich text rendering
-- [x] Supabase for view counts and likes
-- [x] ISR with 60s revalidation
-- [x] 6 tags: AI_STRATEGY, OPS_EFFICIENCY, FRACTIONAL_INSIGHTS, AUTOMATION, CRM_ARCHITECTURE, LEADERSHIP
-- [x] Admin create page at `/system-logs/create` (NextAuth protected)
-- [x] Auto-generated OG images per post
-- [x] Post listing with tag filtering
-
-### Content to Write (priority order)
-
-1. **"Operations Is the Most Underleveraged Function in Your Company"**
-   - Tag: OPS_EFFICIENCY
-   - Your thesis statement / manifesto. Broadest, most shareable.
-   - Angle: why ops is treated as cost center when it should be profit engine.
-
-2. **"The Million-Dollar Billing Error Nobody Was Looking For"**
-   - Tag: OPS_EFFICIENCY
-   - Your Expedia story. Forensic ops thinking finds money.
-   - Angle: narrative — the discovery, the investigation, the recovery.
-
-3. **"Onboarding Is a System, Not a Vibe"**
-   - Tag: LEADERSHIP
-   - 50%→90% success rate at Union.
-   - Angle: what the structured curriculum looks like, why "trial by firehose" fails.
-
-4. **"The Case for Fractional Ops Leadership"**
-   - Tag: FRACTIONAL_INSIGHTS
-   - When to hire full-time vs. bring in someone for 90 days.
-   - Angle: practical guide for CEOs/VPs evaluating this option.
-
-5. **"What Happens When Your AI Actually Works"**
-   - Tag: AI_STRATEGY
-   - Real examples from Console and BAD Labs clients.
-   - Angle: what 90% reduction in admin overhead looks like day-to-day.
-
-6. **"31 Promotions: How I Think About Growing People"**
-   - Tag: LEADERSHIP
-   - Kevin's 160% pay increase, Sam's Dev Ambassador role.
-   - Angle: the framework for identifying and developing talent.
-
-7. **"I Automated 90% of CRM Admin. Here's What's Left."**
-   - Tag: AUTOMATION
-   - The 10% that still needs humans and why.
-   - Angle: honest take on AI limits, not just hype.
-
-8. **"Why I Built a CRM From Scratch"**
-   - Tag: CRM_ARCHITECTURE
-   - Console's origin story, mount architecture, why existing CRMs frustrated you.
-   - Angle: technical decisions that shaped the product.
-
-### Blog TODO
-- [ ] Add "System Logs" link to Header nav
-- [ ] Write and publish post #1 in Contentful
-- [ ] Test post rendering, OG image, tag filtering on live site
-- [ ] Add blog post preview cards to main page (below BAD Labs, above skills)
+1. "Operations Is the Most Underleveraged Function in Your Company" — OPS_EFFICIENCY
+2. "The Million-Dollar Billing Error Nobody Was Looking For" — OPS_EFFICIENCY (Expedia story)
+3. "Onboarding Is a System, Not a Vibe" — LEADERSHIP (50%→90% Union)
+4. "The Case for Fractional Ops Leadership" — FRACTIONAL_INSIGHTS
+5. "What Happens When Your AI Actually Works" — AI_STRATEGY (Console + clients)
+6. "31 Promotions: How I Think About Growing People" — LEADERSHIP
+7. "I Automated 90% of CRM Admin. Here's What's Left." — AUTOMATION
+8. "Why I Built a CRM From Scratch" — CRM_ARCHITECTURE (Console origin)
 
 ---
 
-## Future Enhancements (not urgent)
+## Code-quality cleanup (deferred from May 2026 audit)
 
-- [ ] Social proof section (testimonials from colleagues/direct reports)
-- [ ] Downloadable resume PDF (link in hero or contact section)
-- [ ] Custom OG image for homepage social sharing (1200x630)
-- [ ] Add structured data (JSON-LD) for SEO
-- [ ] Lighthouse audit and performance optimization pass
+Pre-existing tech debt that surfaced during the cleanup pass — non-blocking but worth doing in a focused sweep:
+
+- 8 `react-hooks/set-state-in-effect` violations (Next 16's new lint rule firing on legacy patterns) across `GlitchText`, `GoogleAnalytics`, `TerminalAnimation`, `PiEasterEgg/{ClassifiedLogin,HackingSequence,PiSymbol,screens/NSALogin}`
+- 4 `react/jsx-no-comment-textnodes` errors — was in `ChangeLog.tsx` (deleted) but worth a sweep elsewhere
+- `AnalyticsProvider` line 23: "Cannot call impure function during render" — Next 16 lint
+- `Hero.tsx` line 114: `<img>` should be `next/image`
+- A handful of `no-unused-vars` warnings
 
 ---
+
+## Future enhancements (no urgency)
+
+- Social proof section (testimonials)
+- Downloadable resume PDF link in hero / contact
+- Custom OG image for homepage social sharing (1200x630)
+- Structured data (JSON-LD) for SEO
+- Lighthouse audit + perf pass
+- Migrate Supabase JWT keys → opaque keys (`sb_publishable_*` / `sb_secret_*`) — only if already rotating for another reason
