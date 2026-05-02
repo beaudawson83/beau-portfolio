@@ -217,9 +217,35 @@
   box-shadow: 0 0 0 3px var(--tn-accent-glow);
 }
 
-/* ============== EDITABLE PLACEHOLDER ============== */
+/* ============== EDITABLE BLOCKS ============== */
+/* Make typing cursor visible against dim text. */
+.tn-shell [data-editable] {
+  caret-color: var(--tn-accent);
+  border-radius: 3px;
+  transition: background-color .12s ease-out;
+}
+
+/* Subtle hover tint so empty blocks look interactive. */
+.tn-shell [data-editable]:hover {
+  background-color: rgba(168, 85, 247, 0.05);
+}
+
+/* Stronger tint on focus — clearly shows where you're typing. */
+.tn-shell [data-editable]:focus,
+.tn-shell [data-editable]:focus-visible {
+  outline: none;
+  background-color: rgba(168, 85, 247, 0.08);
+}
+
+/* Placeholder for empty editables. Brighter than the surrounding chrome. */
 .tn-shell [data-editable][data-placeholder]:empty::before {
   content: attr(data-placeholder);
-  color: var(--tn-dim2);
+  color: var(--tn-dim);
   pointer-events: none;
+}
+
+/* Block row click target — covers the 36px hover-handle gutter so clicking
+ * anywhere in the row's horizontal extent counts as a click on the block. */
+.tn-shell .tn-block-row {
+  cursor: text;
 }

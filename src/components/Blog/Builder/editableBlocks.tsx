@@ -66,7 +66,7 @@ const PLACEHOLDERS: Record<'h1' | 'h2' | 'h3' | 'p', string> = {
   h1: 'Heading 1',
   h2: 'Heading 2',
   h3: 'Heading 3',
-  p: "Type / for commands…",
+  p: 'Begin writing… (type / for blocks)',
 };
 
 export function EditableLine({

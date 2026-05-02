@@ -58,7 +58,13 @@ export default function Editor({
   // Editor state — this is the source of truth, sync'd to Supabase via PATCH.
   const [title, setTitle] = useState(initial.title);
   const [dek, setDek] = useState(initial.dek);
-  const [blocks, setBlocks] = useState<BlogBlock[]>(initial.body);
+  // Auto-seed a single empty paragraph for posts with no body — saves the
+  // user from clicking "+ start writing" before they can type anything.
+  // The autosave skip-first guard means this seed isn't persisted until
+  // the user actually edits something.
+  const [blocks, setBlocks] = useState<BlogBlock[]>(() =>
+    initial.body.length > 0 ? initial.body : [makeBlock('p')],
+  );
   const [tags, setTags] = useState<string[]>(initial.tags);
   const [category, setCategory] = useState<BlogCategory | null>(initial.category);
   const [coverId, setCoverId] = useState<BlogCoverId>(initial.coverId);
@@ -763,8 +769,17 @@ function BlockRow({
   return (
     <div
       id={'block-' + block.id}
+      className="tn-block-row"
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
+      onClick={(e) => {
+        // Click in the gutter or below the contenteditable: focus the
+        // editable inside. Clicks on actual interactive children (buttons,
+        // inputs, the editable itself) bubble normally.
+        if (e.target !== e.currentTarget) return;
+        const editable = e.currentTarget.querySelector<HTMLElement>('[data-editable]');
+        editable?.focus();
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         onDragOver();
