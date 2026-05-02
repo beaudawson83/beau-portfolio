@@ -157,8 +157,31 @@ export function EditableList({
   onChange: (next: string[]) => void;
 }) {
   const Tag = ordered ? 'ol' : 'ul';
+  const listRef = useRef<HTMLOListElement | HTMLUListElement>(null);
+
+  // After deleting an item, focus the previous item's contenteditable so the
+  // caret lands somewhere sensible.
+  const focusItem = (idx: number) => {
+    queueMicrotask(() => {
+      const root = listRef.current;
+      if (!root) return;
+      const editables = root.querySelectorAll<HTMLElement>('[data-editable]');
+      const target = editables[Math.max(0, Math.min(editables.length - 1, idx))];
+      if (!target) return;
+      target.focus();
+      // Caret to end of the focused item.
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    });
+  };
+
   return (
     <Tag
+      ref={listRef as React.Ref<HTMLOListElement & HTMLUListElement>}
       style={{
         paddingLeft: 24,
         margin: '0 0 18px',
@@ -179,29 +202,86 @@ export function EditableList({
             marginBottom: 6,
           }}
         >
-          <span
-            data-editable
-            contentEditable
-            suppressContentEditableWarning
-            onBlur={(e) => {
+          <EditableListItem
+            html={it}
+            isOnly={items.length === 1}
+            onUpdate={(html) => {
               const next = [...items];
-              next[i] = (e.currentTarget as HTMLSpanElement).innerHTML;
+              next[i] = html;
               onChange(next);
             }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                const next = [...items];
-                next.splice(i + 1, 0, '');
-                onChange(next);
-              }
+            onEnter={() => {
+              const next = [...items];
+              next.splice(i + 1, 0, '');
+              onChange(next);
+              focusItem(i + 1);
             }}
-            style={{ outline: 'none' }}
-            dangerouslySetInnerHTML={{ __html: it }}
+            onBackspaceEmpty={() => {
+              if (items.length <= 1) return;
+              const next = items.filter((_, idx) => idx !== i);
+              onChange(next);
+              focusItem(i - 1);
+            }}
           />
         </li>
       ))}
     </Tag>
+  );
+}
+
+/**
+ * Single editable list item. The `useEffect` below guards against the classic
+ * React + contentEditable bug: rendering with `dangerouslySetInnerHTML` on
+ * every change can clobber the caret and re-instate stale content if a parent
+ * re-renders while the user is mid-edit. We only mutate the DOM when its
+ * innerHTML genuinely differs from the source-of-truth string — which it
+ * doesn't after a local keystroke (because onInput already pushed that value
+ * into state).
+ */
+function EditableListItem({
+  html,
+  isOnly,
+  onUpdate,
+  onEnter,
+  onBackspaceEmpty,
+}: {
+  html: string;
+  isOnly: boolean;
+  onUpdate: (html: string) => void;
+  onEnter: () => void;
+  onBackspaceEmpty: () => void;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    if (ref.current.innerHTML !== html) {
+      ref.current.innerHTML = html;
+    }
+  }, [html]);
+
+  return (
+    <span
+      ref={ref}
+      data-editable
+      contentEditable
+      suppressContentEditableWarning
+      onInput={(e) => {
+        onUpdate((e.currentTarget as HTMLSpanElement).innerHTML);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          onEnter();
+          return;
+        }
+        if (e.key === 'Backspace' && (e.currentTarget as HTMLSpanElement).innerText === '') {
+          e.preventDefault();
+          if (!isOnly) onBackspaceEmpty();
+        }
+      }}
+      style={{ outline: 'none' }}
+    />
   );
 }
 
