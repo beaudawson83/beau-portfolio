@@ -346,10 +346,10 @@ export default function Editor({
       <Topbar
         theme={theme}
         crumb={[
-          { text: '~/' },
-          { text: 'beaudawson', accent: true },
-          { text: 'blog' },
-          { text: 'drafts', accent: true },
+          { text: '~/', href: '/' },
+          { text: 'beaudawson', accent: true, href: '/' },
+          { text: 'blog', href: '/blog' },
+          { text: 'drafts', accent: true, href: '/blog/edit' },
           { text: `${slug}.md`, bold: true },
         ]}
         actions={
@@ -496,7 +496,7 @@ export default function Editor({
                   autoSize(e.target);
                 }}
                 onInput={(e) => autoSize(e.currentTarget)}
-                placeholder="Untitled"
+                placeholder="Title"
                 rows={1}
                 style={{
                   width: '100%',
@@ -523,7 +523,7 @@ export default function Editor({
                   autoSize(e.target);
                 }}
                 onInput={(e) => autoSize(e.currentTarget)}
-                placeholder="Add a deck — one sentence."
+                placeholder="Subtitle — one sentence."
                 rows={2}
                 style={{
                   width: '100%',

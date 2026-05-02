@@ -30,9 +30,9 @@ export default function ArticleView({
       <Topbar
         theme={theme}
         crumb={[
-          { text: '~/' },
-          { text: 'beaudawson', accent: true },
-          { text: 'blog' },
+          { text: '~/', href: '/' },
+          { text: 'beaudawson', accent: true, href: '/' },
+          { text: 'blog', href: '/blog' },
           { text: post.slug, bold: true },
         ]}
       />

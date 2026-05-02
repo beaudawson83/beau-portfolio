@@ -108,6 +108,19 @@
 }
 .tn-topbar .crumb b { color: var(--tn-ink); font-weight: 500; }
 .tn-topbar .crumb .accent { color: var(--tn-accent); }
+.tn-topbar .crumb .crumb-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  transition: background-color .15s;
+}
+.tn-topbar .crumb .crumb-link:hover { background: var(--tn-bg2); }
+.tn-topbar .crumb .crumb-link:hover b,
+.tn-topbar .crumb .crumb-link:hover span { color: var(--tn-accent); }
 .tn-topbar .actions { display: flex; align-items: center; gap: 6px; }
 .tn-topbar .iconbtn,
 .tn-topbar .pill {

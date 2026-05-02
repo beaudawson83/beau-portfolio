@@ -50,8 +50,8 @@ export default function IndexView({
       <Topbar
         theme={theme}
         crumb={[
-          { text: '~/' },
-          { text: 'beaudawson', accent: true },
+          { text: '~/', href: '/' },
+          { text: 'beaudawson', accent: true, href: '/' },
           { text: 'blog', bold: true },
         ]}
       />

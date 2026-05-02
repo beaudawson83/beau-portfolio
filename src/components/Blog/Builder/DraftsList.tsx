@@ -21,9 +21,9 @@ export default function DraftsList({ theme }: { theme: 'dark' | 'light' }) {
           <Topbar
             theme={theme}
             crumb={[
-              { text: '~/' },
-              { text: 'beaudawson', accent: true },
-              { text: 'blog' },
+              { text: '~/', href: '/' },
+              { text: 'beaudawson', accent: true, href: '/' },
+              { text: 'blog', href: '/blog' },
               { text: 'drafts', accent: true, bold: true },
             ]}
           />

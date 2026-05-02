@@ -14,10 +14,10 @@ export default function NewPostFlow({ theme }: { theme: 'dark' | 'light' }) {
           <Topbar
             theme={theme}
             crumb={[
-              { text: '~/' },
-              { text: 'beaudawson', accent: true },
-              { text: 'blog' },
-              { text: 'drafts', accent: true },
+              { text: '~/', href: '/' },
+              { text: 'beaudawson', accent: true, href: '/' },
+              { text: 'blog', href: '/blog' },
+              { text: 'drafts', accent: true, href: '/blog/edit' },
               { text: 'new', bold: true },
             ]}
           />
