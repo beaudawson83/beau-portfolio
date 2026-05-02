@@ -1,4 +1,4 @@
-import { Metric, Experience, Skill, SocialLink, BadLabsFeature } from '@/types';
+import { Metric, Experience, Skill, SocialLink, BadLabsFeature, ModuleEntry } from '@/types';
 
 export const metrics: Metric[] = [
   {
@@ -308,3 +308,23 @@ export const heroContent = {
   primaryCTA: 'Get in Touch',
   secondaryCTA: 'See My Work',
 };
+
+// MODULES — public destinations on the portfolio. Live telemetry per card
+// is computed at request time via src/lib/module-telemetry.ts; this array
+// is the static content (name, description, href, status).
+export const modules: ModuleEntry[] = [
+  {
+    id: 'conflict',
+    name: 'GLOBAL CONFLICT INDEX',
+    description: 'Daily-ingested journal of active world conflicts.',
+    href: '/global-conflict',
+    status: 'LIVE',
+  },
+  {
+    id: 'blog',
+    name: 'NOTES',
+    description: 'Operations writing — twenty years of building, now turning toward AI.',
+    href: '/blog',
+    status: 'LIVE',
+  },
+];

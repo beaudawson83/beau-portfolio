@@ -175,3 +175,34 @@ export interface BlogHeading {
   label: string;
   depth: 2 | 3;
 }
+
+// ============================================
+// MODULES — homepage control panel section
+// ============================================
+
+export type ModuleStatus = 'LIVE' | 'BETA' | 'PLANNED';
+
+/** Static content per module. Lives in src/lib/data.ts. */
+export interface ModuleEntry {
+  id: 'conflict' | 'blog';
+  name: string;
+  description: string;
+  href: string;
+  status: ModuleStatus;
+}
+
+/** Live telemetry pulled from Supabase per render. `null` if unavailable. */
+export interface ConflictTelemetry {
+  active: number;
+  lastIngest: string | null;
+}
+
+export interface BlogTelemetry {
+  posts: number;
+  latest: string | null;
+}
+
+export interface ModuleTelemetry {
+  conflict: ConflictTelemetry | null;
+  blog: BlogTelemetry | null;
+}

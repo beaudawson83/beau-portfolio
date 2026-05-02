@@ -66,6 +66,7 @@ Hero            Name, trifecta positioning, proof line, CTAs, headshot, AskBeau
 TelemetryGrid   8 metrics, 4x2 grid, animated count-up
 CaseStudies     Expedia, Union, BAD Labs — problem → built → results
 BadLabsShowcase Current venture: Console CRM, AI tooling, fractional leadership
+Modules         Owned-systems control panel: Conflict + Notes cards w/ live telemetry
 SystemKernel    4-column tools/platforms grid
 Timeline        Collapsible full career history (CSS-only)
 Footer          Contact form + social links
@@ -106,6 +107,7 @@ src/
 ├── components/
 │   ├── Header.tsx, Hero.tsx, AskBeau.tsx
 │   ├── TelemetryGrid.tsx, CaseStudies.tsx, BadLabsShowcase.tsx
+│   ├── Modules/                       # Owned-systems control panel
 │   ├── SystemKernel.tsx, Timeline.tsx, Footer.tsx
 │   ├── GlitchText.tsx, TerminalAnimation.tsx (used by Pi egg)
 │   ├── GoogleAnalytics.tsx, AnalyticsProvider.tsx
@@ -131,6 +133,7 @@ src/
 │   ├── blog-auth.ts                   # Bearer-token verifier (BLOG_EDITOR_SECRET)
 │   ├── blog-utils.ts                  # Block helpers (word count, headings, slugify)
 │   ├── blog-media.ts                  # Signed-upload-URL helper for blog-media bucket
+│   ├── module-telemetry.ts            # Reads Conflict + Blog stats for the homepage MODULES section
 │   └── pi-challenge/                  # HMAC token + challenges
 ├── hooks/useTrackSection.ts
 ├── types/index.ts                     # All portfolio types
@@ -203,9 +206,9 @@ Conversations are logged to Supabase (`chat_conversations`) via [`src/lib/chat-l
 
 ---
 
-## Blog (Terminal Notebook) — LIVE but hidden
+## Blog (Terminal Notebook) — LIVE
 
-Live at `/blog` and `/blog/[slug]`. Hidden from the homepage; accessible via the Pi easter egg dashboard (`> ACCESS_NOTES [BETA]`). `robots: noindex` everywhere until the first real post is published and the gate is opened.
+Live at `/blog` and `/blog/[slug]`, surfaced publicly via the homepage `MODULES` section. `robots: noindex` is still set in [`src/app/blog/layout.tsx`](src/app/blog/layout.tsx) — flip that to `index: true` once the index/article pages are tuned for SEO.
 
 The Terminal Notebook design (handed off from Claude Design) uses its own dark-purple palette (`#0e0c14` background, `#a855f7` accent) scoped under `.tn-shell` so it doesn't leak into the rest of the site. Light theme is supported via a topbar toggle and persisted in a `tn-theme` cookie (read in [`src/app/blog/layout.tsx`](src/app/blog/layout.tsx) for SSR-safe initial render).
 
@@ -249,9 +252,9 @@ Schema: [`scripts/setup-supabase-blog.sql`](scripts/setup-supabase-blog.sql) (id
 
 ---
 
-## Global Conflict Index — LIVE but hidden
+## Global Conflict Index — LIVE
 
-Live at `/global-conflict`, accessible only via the Pi easter egg dashboard (`> ACCESS_GLOBAL_CONFLICT [LIVE]`). `robots: noindex`.
+Live at `/global-conflict`, surfaced publicly via the homepage `MODULES` section. `robots: noindex` for now — flip when the experience is hardened.
 
 A sober data-journalism module: real TopoJSON world map (countries tinted red by intensity), animated stat row, hotspot markers, wire feed. Click any hotspot → news section becomes that conflict's full journal timeline (paginated, all-time history).
 
