@@ -43,6 +43,9 @@ interface HotspotRow {
   since: string | null;
   iso: string[];
   casualties_7d: number;
+  displaced_7d: number;
+  summary: string | null;
+  resolution_outlook: string | null;
   is_active: boolean;
   last_seen: string;
 }
@@ -70,6 +73,9 @@ function rowToHotspot(r: HotspotRow): ConflictHotspot {
     since: r.since ?? '',
     iso: Array.isArray(r.iso) ? r.iso : [],
     casualties7d: r.casualties_7d,
+    displaced7d: r.displaced_7d ?? 0,
+    summary: r.summary ?? null,
+    resolutionOutlook: r.resolution_outlook ?? null,
   };
 }
 
@@ -121,7 +127,9 @@ export async function readActiveHotspots(): Promise<ConflictHotspot[]> {
   if (!sb) return [];
   const { data, error } = await sb
     .from('conflict_hotspots')
-    .select('id,name,lat,lng,intensity,type,since,iso,casualties_7d,is_active,last_seen')
+    .select(
+      'id,name,lat,lng,intensity,type,since,iso,casualties_7d,displaced_7d,summary,resolution_outlook,is_active,last_seen',
+    )
     .eq('is_active', true)
     .order('intensity', { ascending: false });
   if (error) {

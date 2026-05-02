@@ -48,9 +48,15 @@ export interface ConflictHotspot {
   lng: number;
   intensity: 1 | 2 | 3 | 4 | 5;
   casualties7d: number;
+  /** People newly displaced from this conflict in the last 7 days. */
+  displaced7d: number;
   type: ConflictType;
   since: string;
   iso: string[];
+  /** 1–2 sentence narrative summary written by the Routine. Null until populated. */
+  summary: string | null;
+  /** Short note on resolution outlook written by the Routine. Null until populated. */
+  resolutionOutlook: string | null;
 }
 
 export interface ConflictNewsItem {

@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter_Tight, JetBrains_Mono } from 'next/font/google';
-import Link from 'next/link';
 import { getConflictData } from '@/lib/conflict-data';
 import GlobalConflictModule from '@/components/GlobalConflict';
+import GlobalConflictPageHeader from '@/components/GlobalConflict/PageHeader';
 
 const interTight = Inter_Tight({
   weight: ['300', '400', '500', '600'],
@@ -33,41 +33,9 @@ export default async function GlobalConflictPage() {
       className={`${interTight.className} ${jetbrainsMono.className}`}
       style={{ background: '#0a0a0a', minHeight: '100vh' }}
     >
-      <div
-        style={{
-          maxWidth: 1280,
-          margin: '0 auto',
-          padding: '24px 32px 0',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <Link
-          href="/"
-          style={{
-            fontFamily: 'ui-monospace, monospace',
-            fontSize: 11,
-            letterSpacing: '0.16em',
-            color: '#71717a',
-            textTransform: 'uppercase',
-            textDecoration: 'none',
-          }}
-        >
-          ← back to portfolio
-        </Link>
-        <span
-          style={{
-            fontFamily: 'ui-monospace, monospace',
-            fontSize: 10,
-            letterSpacing: '0.18em',
-            color: '#52525b',
-            textTransform: 'uppercase',
-          }}
-        >
-          beaudawson.com / lab
-        </span>
-      </div>
+      <GlobalConflictPageHeader
+        lastUpdated={data.source === 'empty' ? null : data.lastUpdated}
+      />
       {data.source === 'empty' ? <EmptyState /> : <GlobalConflictModule initialData={data} />}
     </div>
   );

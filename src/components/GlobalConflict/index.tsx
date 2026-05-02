@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import type { ConflictHotspot, ConflictPayload } from '@/lib/conflict-data';
+import { useMemo, useState } from 'react';
+import type { ConflictActor, ConflictHotspot, ConflictPayload } from '@/lib/conflict-data';
 import StatCard from './StatCard';
 import ConflictMap, { project } from './ConflictMap';
 import ConflictTimeline from './ConflictTimeline';
 import Sparkline from './Sparkline';
 import './global-conflict.css';
+
+// UN member states + observers; rough denominator for "% of nations in active conflict".
+const TOTAL_NATIONS = 195;
 
 interface GlobalConflictModuleProps {
   initialData: ConflictPayload;
@@ -16,21 +19,6 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
   const data = initialData;
   const [hovered, setHovered] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
-  const [now, setNow] = useState(() => new Date());
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const [updateBlip, setUpdateBlip] = useState(false);
-  useEffect(() => {
-    const id = setInterval(() => {
-      setUpdateBlip(true);
-      setTimeout(() => setUpdateBlip(false), 1200);
-    }, 8000);
-    return () => clearInterval(id);
-  }, []);
 
   const focusedHotspot = useMemo(
     () => (focused ? data.hotspots.find((h) => h.id === focused) ?? null : null),
@@ -41,81 +29,56 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
     [hovered, data.hotspots],
   );
 
-  const updatedAt = new Date(data.lastUpdated);
-  const secondsAgo = Math.max(0, Math.floor((now.getTime() - updatedAt.getTime()) / 1000));
-  const updatedLabel =
-    secondsAgo < 60
-      ? `${secondsAgo}s ago`
-      : secondsAgo < 3600
-        ? `${Math.floor(secondsAgo / 60)}m ago`
-        : `${Math.floor(secondsAgo / 3600)}h ${Math.floor((secondsAgo % 3600) / 60)}m ago`;
+  const nationsAtWarPct = Math.min(
+    100,
+    Math.round((data.countriesInvolved / TOTAL_NATIONS) * 1000) / 10,
+  );
 
   return (
     <div className="gc-root">
       <header className="gc-header">
-        <div>
-          <div className="gc-kicker">
-            <span
-              className="gc-kicker-dot"
-              style={{
-                boxShadow: updateBlip ? '0 0 0 6px rgba(217,70,53,0.2)' : 'none',
-              }}
-            />
-            Live · auto-updated by Claude routine
-          </div>
-          <h1 className="gc-title">Global Conflict Index</h1>
-          <p className="gc-lede">
-            A daily synthesis of armed conflict data and breaking reportage,
-            refreshed each morning at 7am Central by an AI research agent.
-          </p>
-        </div>
-        <div className="gc-meta">
-          <div>SYNCED&nbsp;&nbsp;{updatedLabel}</div>
-          <div>SOURCES&nbsp;&nbsp;ACLED · UCDP · OCHA</div>
-          <div>METHOD&nbsp;&nbsp;agentic · LLM-assisted</div>
-          <div className="gc-meta-source">FEED&nbsp;&nbsp;{data.source.toUpperCase()}</div>
-        </div>
+        <h1 className="gc-title">Global Conflict Audit</h1>
+        <p className="gc-lede">
+          An up-to-date synthesis of armed conflict data and breaking reportage,
+          refreshed daily by Anthropic&rsquo;s Claude AI.
+        </p>
       </header>
 
       <div className="gc-stats">
         <StatCard
           label="Active armed conflicts"
           value={data.totalActive}
-          sub="state-based + non-state"
+          sub="documented active armed conflicts between nation-states"
           delta={data.weeklyDelta.conflicts}
           deltaLabel="vs last week"
           big
         />
         <StatCard
-          label="Casualties · 7-day"
+          label="Casualties"
           value={data.casualties7d}
-          sub="reported fatalities"
+          sub="documented fatalities in armed-conflict regions over the last 7 days"
           delta={data.weeklyDelta.casualties}
           deltaLabel="vs prev. 7-day"
           big
         />
         <StatCard
           label="Forcibly displaced"
-          value={data.displaced}
-          sub="cumulative · global"
-          delta={data.weeklyDelta.displaced}
-          deltaLabel="this week"
+          value={data.weeklyDelta.displaced}
+          sub="documented displaced people from armed-conflict regions over the last 7 days"
           format={(n) => (n / 1_000_000).toFixed(1) + 'M'}
           big
         />
         <StatCard
-          label="Countries involved"
+          label="Countries involved in active conflict"
           value={data.countriesInvolved}
-          sub="as principal or proxy"
+          sub="countries documented to have been directly involved or provided material assistance or direction toward the conflict"
           big
         />
       </div>
 
       <section className="gc-map-section">
         <div className="gc-map-header">
-          <div className="gc-fig-label">
-            Fig. 01 &nbsp;/&nbsp; Geographic distribution of active hostilities
-          </div>
+          <div className="gc-fig-label">Active conflict world map</div>
           <div className="gc-legend">
             <span className="gc-legend-item">
               <span className="gc-legend-dot" style={{ background: 'var(--gc-accent)' }} />
@@ -123,7 +86,7 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
             </span>
             <span className="gc-legend-item">
               <span className="gc-legend-dot" style={{ background: '#3a3a3a' }} />
-              Stable
+              No documented hotspot
             </span>
           </div>
         </div>
@@ -137,10 +100,13 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
             setFocused={setFocused}
           />
 
-          {hoveredHotspot && !focusedHotspot && <HoverTooltip h={hoveredHotspot} />}
+          {hoveredHotspot && !focusedHotspot && (
+            <HoverTooltip h={hoveredHotspot} actors={data.actors} />
+          )}
           {focusedHotspot && (
             <DetailPanel
               h={focusedHotspot}
+              actors={data.actors}
               onClose={() => setFocused(null)}
             />
           )}
@@ -159,7 +125,7 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
           </div>
           <span>Low → Severe</span>
           <span style={{ flex: 1 }} />
-          <span>{data.hotspots.length} ZONES MAPPED</span>
+          <span>{nationsAtWarPct}% of nations in active conflict</span>
         </div>
       </section>
 
@@ -173,15 +139,15 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
         {[
           [
             'Methodology',
-            "Conflict events sourced from ACLED & UCDP datasets and recent reportage, refreshed on a 15-minute cadence by an automated agent. Casualty figures are reported lower bounds — actual figures are typically higher.",
+            'Conflict events sourced from ACLED & UCDP datasets and recent reportage from reputable wire sources. Data is refreshed on a daily cadence by Anthropic’s Claude AI. Casualty figures are reported based on lower bounds — actual figures are typically higher.',
           ],
           [
             "About 'peace'",
-            'The absence of red marks on this map is not the presence of peace. Many regions experience structural violence, repression, and political instability not captured by armed-conflict datasets.',
+            'The absence of red marks on this map is not an indication of the presence of peace. Many regions experience structural violence, repression, and political instability not captured by armed-conflict datasets.',
           ],
           [
             "Author's note",
-            "This module is part of an exploration in agentic data journalism — what becomes possible when an LLM acts as a continuous, opinionated editor over public datasets and news feeds.",
+            'This page is part of an exploration in agentic data journalism — what becomes possible when an LLM acts as a continuous, opinionated editor over public datasets and news feeds. Your feedback is invaluable in helping me develop and grow this program.',
           ],
         ].map(([title, body]) => (
           <div key={title}>
@@ -194,10 +160,31 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
   );
 }
 
-function HoverTooltip({ h }: { h: ConflictHotspot }) {
+/** Distinct countries from conflict_actors that aren't already in the hotspot's
+ * primary territory list — i.e., "other involved countries". */
+function otherInvolvedCountries(h: ConflictHotspot, actors: ConflictActor[]): string[] {
+  const territory = new Set(h.iso);
+  const seen = new Set<string>();
+  for (const a of actors) {
+    if (a.conflictId !== h.id) continue;
+    if (territory.has(a.countryIso)) continue;
+    if (seen.has(a.countryIso)) continue;
+    seen.add(a.countryIso);
+  }
+  return Array.from(seen);
+}
+
+function HoverTooltip({
+  h,
+  actors,
+}: {
+  h: ConflictHotspot;
+  actors: ConflictActor[];
+}) {
   const [x, y] = project(h.lng, h.lat);
   const left = (x / 1200) * 100;
   const top = (y / 600) * 100;
+  const others = otherInvolvedCountries(h, actors);
   return (
     <div
       className="gc-tooltip"
@@ -209,21 +196,38 @@ function HoverTooltip({ h }: { h: ConflictHotspot }) {
       <div className="gc-tooltip-kicker">Active · since {h.since}</div>
       <div className="gc-tooltip-name">{h.name}</div>
       <div className="gc-tooltip-grid">
-        <span className="gc-tooltip-key">CASUALTIES 7D</span>
+        <span className="gc-tooltip-key">CASUALTIES (7-DAY TOTAL)</span>
         <span className="gc-tooltip-val">{h.casualties7d.toLocaleString()}</span>
         <span className="gc-tooltip-key">INTENSITY</span>
         <span className="gc-tooltip-val">
           {'█'.repeat(h.intensity)}
           {'░'.repeat(5 - h.intensity)}
         </span>
-        <span className="gc-tooltip-key">TYPE</span>
-        <span className="gc-tooltip-val">{h.type}</span>
+        <span className="gc-tooltip-key">DISPLACED (7-DAY TOTAL)</span>
+        <span className="gc-tooltip-val">
+          {h.displaced7d > 0 ? h.displaced7d.toLocaleString() : '—'}
+        </span>
+        <span className="gc-tooltip-key">OTHER INVOLVED</span>
+        <span className="gc-tooltip-val">
+          {others.length > 0
+            ? `${others.length} ${others.length === 1 ? 'country' : 'countries'}`
+            : '—'}
+        </span>
       </div>
     </div>
   );
 }
 
-function DetailPanel({ h, onClose }: { h: ConflictHotspot; onClose: () => void }) {
+function DetailPanel({
+  h,
+  actors,
+  onClose,
+}: {
+  h: ConflictHotspot;
+  actors: ConflictActor[];
+  onClose: () => void;
+}) {
+  const others = otherInvolvedCountries(h, actors);
   return (
     <div className="gc-detail">
       <div className="gc-detail-head">
@@ -233,14 +237,21 @@ function DetailPanel({ h, onClose }: { h: ConflictHotspot; onClose: () => void }
         </button>
       </div>
       <div className="gc-detail-name">{h.name}</div>
+
       <div className="gc-detail-grid">
         {[
           ['Active since', h.since],
-          ['Conflict type', h.type],
-          ['Casualties · 7d', h.casualties7d.toLocaleString()],
+          ['Casualties (7-Day total)', h.casualties7d.toLocaleString()],
+          [
+            'Displaced (7-Day total)',
+            h.displaced7d > 0 ? h.displaced7d.toLocaleString() : '—',
+          ],
           ['Intensity', `${h.intensity} / 5`],
-          ['Latitude', h.lat.toFixed(2) + '°'],
-          ['Longitude', h.lng.toFixed(2) + '°'],
+          [
+            'Other involved countries',
+            others.length > 0 ? others.join(' · ') : '—',
+          ],
+          ['Conflict type', h.type],
         ].map(([k, v]) => (
           <div key={k}>
             <div className="gc-detail-k">{k}</div>
@@ -248,6 +259,27 @@ function DetailPanel({ h, onClose }: { h: ConflictHotspot; onClose: () => void }
           </div>
         ))}
       </div>
+
+      <div className="gc-detail-section">
+        <div className="gc-detail-section-title">Summary</div>
+        <p className="gc-detail-section-body">
+          {h.summary || (
+            <span className="gc-detail-empty">Not yet documented.</span>
+          )}
+        </p>
+      </div>
+
+      <div className="gc-detail-section">
+        <div className="gc-detail-section-title">Resolution outlook</div>
+        <p className="gc-detail-section-body">
+          {h.resolutionOutlook || (
+            <span className="gc-detail-empty">
+              There is no expected resolution documented at this time.
+            </span>
+          )}
+        </p>
+      </div>
+
       <div className="gc-detail-spark-label">Bar chart · 7d casualty trend</div>
       <Sparkline seed={h.id} />
       <button

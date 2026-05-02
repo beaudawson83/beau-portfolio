@@ -26,13 +26,55 @@
   color: #fff;
 }
 
-/* ---------- Header ---------- */
+/* ---------- Page header strip (above the module) ---------- */
+.gc-page-header {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 32px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.gc-page-header-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gc-page-header-col-right {
+  align-items: flex-end;
+}
+.gc-page-back {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: #71717a;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color .15s;
+}
+.gc-page-back:hover { color: #e8e6e3; }
+.gc-page-domain {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: #52525b;
+  text-transform: uppercase;
+}
+.gc-page-synced {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: #71717a;
+  white-space: nowrap;
+}
+
+/* ---------- Header (centered title + lede) ---------- */
 .gc-header {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding-bottom: 24px;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0;
+  padding-bottom: 32px;
   border-bottom: 1px solid #1f1f1f;
 }
 
@@ -71,8 +113,8 @@
   font-family: var(--gc-display);
   font-size: 15px;
   color: #9ca3af;
-  margin: 12px 0 0;
-  max-width: 560px;
+  margin: 12px auto 0;
+  max-width: 640px;
   line-height: 1.5;
   text-wrap: pretty;
 }
@@ -316,6 +358,33 @@
   letter-spacing: 0.08em;
   color: #71717a;
   text-transform: uppercase;
+}
+
+/* Detail panel — Summary / Resolution sections */
+.gc-detail-section {
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid #1f1f1f;
+}
+.gc-detail-section-title {
+  font-family: var(--gc-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #71717a;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.gc-detail-section-body {
+  font-family: var(--gc-display);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #d1d1d1;
+  margin: 0;
+  text-wrap: pretty;
+}
+.gc-detail-empty {
+  color: #71717a;
+  font-style: italic;
 }
 
 /* ---------- News ---------- */

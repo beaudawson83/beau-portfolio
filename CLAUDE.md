@@ -265,6 +265,14 @@ A sober data-journalism module: real TopoJSON world map (countries tinted red by
 
 The Routine prompt enforces a multi-pass identification protocol with the full taxonomy: territory / principal / direct / basing / sponsor / supplier / proxy / mediator. Combat-tier roles (territory / principal / direct / basing) accept any plausible https URL; support-tier roles (sponsor / supplier / proxy) require a host on the reputable allowlist (Reuters / AP / BBC / Crisis Group / UN / state.gov / etc.).
 
+**Per-conflict narrative fields** (`displaced_7d`, `summary`, `resolution_outlook`) were added to `conflict_hotspots` in the May 2026 UI pass. The Routine should populate them for each active hotspot:
+
+- `displaced_7d` (integer): people newly displaced from this specific conflict in the last 7 days. Defaults to 0 — UI shows `—` until populated.
+- `summary` (text, nullable): 1–2 sentence narrative summary written by the agent. Example: *"Complicated dispute between several factions relating to land, religion, and water resources."*
+- `resolution_outlook` (text, nullable): short note on resolution prospects. Example: *"There is no expected resolution documented at this time."*
+
+Until the Routine prompt is updated to populate them, the detail panel renders empty-state placeholders ("Not yet documented." / "There is no expected resolution documented at this time.").
+
 ### Supabase project
 
 Single user-managed project: **`ygvhoocbvraiplzmgufa`** (https://ygvhoocbvraiplzmgufa.supabase.co). **Do not** use the Vercel Marketplace Supabase integration — it provisions a separate ghost project and silently auto-syncs env vars to it. The Marketplace integration was disconnected 2026-05-01.
@@ -272,7 +280,7 @@ Single user-managed project: **`ygvhoocbvraiplzmgufa`** (https://ygvhoocbvraiplz
 ### Tables (in `ygvhoocbvraiplzmgufa`)
 
 ```
-conflict_hotspots    territory + intensity + casualties + iso codes
+conflict_hotspots    territory + intensity + casualties + iso codes + displaced_7d + summary + resolution_outlook
 conflict_news        URL-deduped journal (append-only)
 conflict_snapshots   time series of global stats
 conflict_actors      (conflict_id, country_iso, role, confidence, sources jsonb)

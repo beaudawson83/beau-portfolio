@@ -29,6 +29,14 @@ create table if not exists conflict_hotspots (
   last_seen     timestamptz not null default now()
 );
 
+-- Per-conflict telemetry beyond the original schema. Routines populate these
+-- via the same daily PostgREST upsert path. All optional — UI renders an
+-- empty-state when null/zero so the Routine can backfill incrementally.
+alter table conflict_hotspots
+  add column if not exists displaced_7d        integer not null default 0,
+  add column if not exists summary             text,
+  add column if not exists resolution_outlook  text;
+
 create index if not exists idx_conflict_hotspots_active
   on conflict_hotspots (is_active, last_seen desc);
 
