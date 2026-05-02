@@ -322,7 +322,7 @@ export default function Editor({
     {
       label: 'Open in Reader (preview)',
       kbd: '↗',
-      do: () => window.open(`/blog/${savedSlugRef.current}`, '_blank'),
+      do: () => window.open(`/blog/preview/${encodeURIComponent(savedSlugRef.current)}`, '_blank'),
     },
     { label: 'Publish post…', kbd: '⌘P', do: () => setShowPublishModal(true) },
     { label: 'Save as draft', kbd: '⌘S', do: () => setStatus('draft') },
@@ -438,7 +438,7 @@ export default function Editor({
               <button
                 type="button"
                 className="tn-btn sm"
-                onClick={() => window.open(`/blog/${savedSlugRef.current}`, '_blank')}
+                onClick={() => window.open(`/blog/preview/${encodeURIComponent(savedSlugRef.current)}`, '_blank')}
               >
                 preview ↗
               </button>
