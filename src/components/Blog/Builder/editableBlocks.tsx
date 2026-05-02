@@ -17,6 +17,9 @@ import {
   VideoBlock,
   WordArtBlock,
 } from '../blocks/Blocks';
+import ImageUploadButton from './ImageUploadButton';
+
+const IMAGE_SIZE_HINT = 'Up to 1600px wide · JPG/PNG/WEBP/GIF, max 10 MB.';
 
 // ---------------------------------------------------------------------------
 // EDITABLE LINE — h1/h2/h3/p
@@ -394,7 +397,7 @@ export function EditableImage({
           </div>
         )}
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'flex-start' }}>
         <input
           value={url || ''}
           onChange={(e) => onChange({ url: e.target.value || undefined, caption, label })}
@@ -412,6 +415,20 @@ export function EditableImage({
             outline: 'none',
           }}
         />
+        <ImageUploadButton
+          compact
+          onUploaded={(publicUrl) => onChange({ url: publicUrl, caption, label })}
+        />
+      </div>
+      <div
+        style={{
+          fontFamily: 'var(--tn-mono)',
+          fontSize: 10,
+          color: 'var(--tn-dim2)',
+          marginTop: 4,
+        }}
+      >
+        {IMAGE_SIZE_HINT}
       </div>
       <input
         value={caption || ''}

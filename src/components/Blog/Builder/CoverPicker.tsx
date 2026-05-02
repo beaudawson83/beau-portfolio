@@ -2,6 +2,10 @@
 
 import { type CSSProperties, useState } from 'react';
 import type { BlogCoverId } from '@/types';
+import ImageUploadButton from './ImageUploadButton';
+
+const COVER_SIZE_HINT =
+  'Recommended: 1600 × 400 (4:1 banner) · JPG/PNG/WEBP/GIF, max 10 MB.';
 
 interface CoverOption {
   id: BlogCoverId;
@@ -85,22 +89,43 @@ export default function CoverPicker({
           ))}
         </div>
         {value === 'cover-photo' ? (
-          <input
-            value={url || ''}
-            onChange={(e) => onChange({ coverId: 'cover-photo', coverUrl: e.target.value })}
-            placeholder="paste cover image URL…"
-            className="tn-focus"
-            style={{
-              background: 'var(--tn-bg)',
-              border: '1px solid var(--tn-line2)',
-              borderRadius: 4,
-              padding: '6px 10px',
-              fontFamily: 'var(--tn-mono)',
-              fontSize: 11,
-              color: 'var(--tn-ink)',
-              outline: 'none',
-            }}
-          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+              <input
+                value={url || ''}
+                onChange={(e) => onChange({ coverId: 'cover-photo', coverUrl: e.target.value })}
+                placeholder="paste cover image URL…"
+                className="tn-focus"
+                style={{
+                  flex: 1,
+                  background: 'var(--tn-bg)',
+                  border: '1px solid var(--tn-line2)',
+                  borderRadius: 4,
+                  padding: '6px 10px',
+                  fontFamily: 'var(--tn-mono)',
+                  fontSize: 11,
+                  color: 'var(--tn-ink)',
+                  outline: 'none',
+                }}
+              />
+              <ImageUploadButton
+                compact
+                onUploaded={(publicUrl) =>
+                  onChange({ coverId: 'cover-photo', coverUrl: publicUrl })
+                }
+              />
+            </div>
+            <span
+              style={{
+                fontFamily: 'var(--tn-mono)',
+                fontSize: 10,
+                color: 'var(--tn-dim2)',
+                lineHeight: 1.4,
+              }}
+            >
+              {COVER_SIZE_HINT}
+            </span>
+          </div>
         ) : null}
       </div>
     );
@@ -201,24 +226,43 @@ export default function CoverPicker({
             ))}
           </div>
           {value === 'cover-photo' ? (
-            <input
-              value={url || ''}
-              onChange={(e) => onChange({ coverId: 'cover-photo', coverUrl: e.target.value })}
-              placeholder="paste cover image URL…"
-              className="tn-focus"
-              style={{
-                width: '100%',
-                marginTop: 8,
-                background: 'var(--tn-bg)',
-                border: '1px solid var(--tn-line2)',
-                borderRadius: 4,
-                padding: '6px 10px',
-                fontFamily: 'var(--tn-mono)',
-                fontSize: 11,
-                color: 'var(--tn-ink)',
-                outline: 'none',
-              }}
-            />
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                <input
+                  value={url || ''}
+                  onChange={(e) => onChange({ coverId: 'cover-photo', coverUrl: e.target.value })}
+                  placeholder="paste cover image URL…"
+                  className="tn-focus"
+                  style={{
+                    flex: 1,
+                    background: 'var(--tn-bg)',
+                    border: '1px solid var(--tn-line2)',
+                    borderRadius: 4,
+                    padding: '6px 10px',
+                    fontFamily: 'var(--tn-mono)',
+                    fontSize: 11,
+                    color: 'var(--tn-ink)',
+                    outline: 'none',
+                  }}
+                />
+                <ImageUploadButton
+                  compact
+                  onUploaded={(publicUrl) =>
+                    onChange({ coverId: 'cover-photo', coverUrl: publicUrl })
+                  }
+                />
+              </div>
+              <span
+                style={{
+                  fontFamily: 'var(--tn-mono)',
+                  fontSize: 10,
+                  color: 'var(--tn-dim2)',
+                  lineHeight: 1.4,
+                }}
+              >
+                {COVER_SIZE_HINT}
+              </span>
+            </div>
           ) : null}
         </div>
       ) : null}

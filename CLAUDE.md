@@ -101,6 +101,7 @@ src/
 │       ├── blog/admin/auth/route.ts   # BLOG_EDITOR_SECRET probe
 │       ├── blog/posts/route.ts        # GET (list) + POST (create) — Bearer-gated
 │       ├── blog/posts/[slug]/route.ts # GET + PATCH + DELETE — Bearer-gated
+│       ├── blog/media/sign/route.ts   # Signed upload URL → blog-media bucket
 │       └── pi-challenge/{issue,validate}/route.ts
 ├── components/
 │   ├── Header.tsx, Hero.tsx, AskBeau.tsx
@@ -129,6 +130,7 @@ src/
 │   ├── blog-store.ts                  # Blog Supabase CRUD (reads + writes)
 │   ├── blog-auth.ts                   # Bearer-token verifier (BLOG_EDITOR_SECRET)
 │   ├── blog-utils.ts                  # Block helpers (word count, headings, slugify)
+│   ├── blog-media.ts                  # Signed-upload-URL helper for blog-media bucket
 │   └── pi-challenge/                  # HMAC token + challenges
 ├── hooks/useTrackSection.ts
 ├── types/index.ts                     # All portfolio types
@@ -163,6 +165,7 @@ src/
 | `/api/blog/posts/[slug]`    | GET    | Read post (admin any status) | Optional Bearer            |
 | `/api/blog/posts/[slug]`    | PATCH  | Update post + status     | `Bearer $BLOG_EDITOR_SECRET`   |
 | `/api/blog/posts/[slug]`    | DELETE | Delete post              | `Bearer $BLOG_EDITOR_SECRET`   |
+| `/api/blog/media/sign`      | POST   | One-shot signed upload URL for blog-media bucket | `Bearer $BLOG_EDITOR_SECRET` |
 | `/api/pi-challenge/issue`   | POST   | Issue HMAC challenge     | —                              |
 | `/api/pi-challenge/validate`| POST   | Validate response        | —                              |
 
@@ -226,8 +229,10 @@ Word count + read time are computed server-side on every PATCH via [`computeWord
 
 ### Image handling
 
-- **Cover**: 4 preset gradient covers (`cover-mesh`, `cover-grid`, `cover-stripe`, `none`) plus URL-paste (`cover-photo` + `cover_url`). No upload pipeline in v1 — Vercel Blob integration is deferred.
-- **Content images**: paste-URL via the image block; falls back to a striped placeholder when no URL is set.
+- **Cover**: 4 preset gradient covers (`cover-mesh`, `cover-grid`, `cover-stripe`, `none`) plus a `cover-photo` mode that accepts either a pasted URL or a direct upload to Supabase Storage. Recommended dimensions surfaced in the editor: 1600 × 400 (4:1 banner).
+- **Content images**: paste-URL or upload via the image block. Falls back to a striped placeholder when no URL is set.
+- **Upload pipeline**: `POST /api/blog/media/sign` returns a one-shot signed upload URL; the file flows browser → Supabase Storage (bucket `blog-media`, public read), bypassing Vercel's 4.5 MB function-body limit. Server validates content-type allowlist (image/jpeg, png, webp, gif) and 10 MB size cap. Set up via [`scripts/setup-supabase-blog-storage.sql`](scripts/setup-supabase-blog-storage.sql).
+- **Audio / video**: URL-only for now (paste a YouTube/Vimeo URL for video). Direct upload of media is a deferred v2 feature given the cost/storage profile.
 
 ### Tables
 
@@ -345,4 +350,4 @@ npm run typecheck    # tsc --noEmit
 - **No email-out from the site.** Resend is used only for the inbound contact form (visitor → Beau's inbox).
 - **No `/api/conflict/ingest` endpoint.** The Routine writes direct-to-Supabase via PostgREST.
 - **No `/admin/*` UI for chat logs.** View those via the Supabase dashboard. The blog editor at `/blog/edit/*` is the only authenticated admin surface.
-- **No image upload pipeline.** Blog covers are preset gradients or pasted URLs; content images are paste-URL only. Vercel Blob integration is deferred.
+- **No video/audio upload.** Both are URL-only (paste YouTube/Vimeo for video). Blog images do upload directly to Supabase Storage — see the Blog section.
