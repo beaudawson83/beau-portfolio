@@ -158,6 +158,10 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #71717a;
+  /* Reserve two lines of label space so longer titles don't push the value
+   * and sub-line down a row relative to neighboring cards. */
+  min-height: 2.8em;
+  line-height: 1.4;
 }
 .gc-stat-value {
   font-family: var(--gc-display);
