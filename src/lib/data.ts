@@ -214,7 +214,7 @@ export const badLabsContent = {
       description: 'Deploy with a technical crew to overhaul client tooling and infrastructure. Scope: operational audits, support org design, CRM implementation, AI integration strategy.',
     },
   ] as BadLabsFeature[],
-  liveUrl: 'https://testconsole.badlabs.systems',
+  liveUrl: 'https://console.badlabs.systems',
 };
 
 export interface CaseStudy {
