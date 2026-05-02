@@ -6,20 +6,11 @@ import StatCard from './StatCard';
 import ConflictMap, { project } from './ConflictMap';
 import ConflictTimeline from './ConflictTimeline';
 import Sparkline from './Sparkline';
+import { COUNTRY_NAMES } from './iso-countries';
 import './global-conflict.css';
 
 // UN member states + observers; rough denominator for "% of nations in active conflict".
 const TOTAL_NATIONS = 195;
-
-// Intl.DisplayNames accepts ISO 3166-1 alpha-2 OR UN M.49 numeric codes (which
-// match ISO 3166-1 numeric for individual countries). Routine writes numeric.
-const COUNTRY_DISPLAY = (() => {
-  try {
-    return new Intl.DisplayNames(['en'], { type: 'region' });
-  } catch {
-    return null;
-  }
-})();
 
 function isPlausibleIso(s: string): boolean {
   if (typeof s !== 'string') return false;
@@ -27,16 +18,26 @@ function isPlausibleIso(s: string): boolean {
   return /^\d{3}$/.test(t) || /^[A-Z]{2,3}$/.test(t);
 }
 
-/** Resolve an ISO code to a human-readable country name. Falls back to the raw
- * code if the API isn't available or the value is unrecognized. */
+/** Resolve an ISO code (numeric or alpha-2) to an English country name. Falls
+ * back to the raw value if unrecognized. We use a static lookup rather than
+ * Intl.DisplayNames because numeric (M.49) support is inconsistent across
+ * browsers — Safari and some older Chromiums silently return undefined. */
 function formatCountry(iso: string): string {
   if (!iso) return '';
-  if (!COUNTRY_DISPLAY) return iso;
-  try {
-    return COUNTRY_DISPLAY.of(iso) ?? iso;
-  } catch {
-    return iso;
-  }
+  // Numeric entries in the lookup are zero-padded to 3 digits (e.g. '004').
+  // Pad incoming numeric values so '4', '040', and '40' all match.
+  const padded = /^\d{1,3}$/.test(iso) ? iso.padStart(3, '0') : iso.toUpperCase();
+  return COUNTRY_NAMES[padded] ?? iso;
+}
+
+/** Display formatter for population-scale metrics: '—' for zero (data not yet
+ * available), 'X.XK' or 'X.XM' otherwise. Avoids the "0.0M" rendering for
+ * values smaller than 100k. */
+function formatPopulationCount(n: number): string {
+  if (!n || n <= 0) return '—';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+  return n.toLocaleString();
 }
 
 interface GlobalConflictModuleProps {
@@ -61,6 +62,18 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
     100,
     Math.round((data.countriesInvolved / TOTAL_NATIONS) * 1000) / 10,
   );
+
+  // Sum the per-conflict 7-day displaced totals. The Routine populates
+  // displaced_7d per hotspot; this aggregates across all active conflicts.
+  // Falls back to weeklyDelta.displaced if the per-conflict numbers haven't
+  // been populated yet (legacy data / first run after migration).
+  const totalDisplaced7d = useMemo(() => {
+    const fromHotspots = data.hotspots.reduce(
+      (sum, h) => sum + (h.displaced7d || 0),
+      0,
+    );
+    return fromHotspots > 0 ? fromHotspots : data.weeklyDelta.displaced;
+  }, [data.hotspots, data.weeklyDelta.displaced]);
 
   return (
     <div className="gc-root">
@@ -91,9 +104,9 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
         />
         <StatCard
           label="Forcibly displaced"
-          value={data.weeklyDelta.displaced}
+          value={totalDisplaced7d}
           sub="documented displaced people from armed-conflict regions over the last 7 days"
-          format={(n) => (n / 1_000_000).toFixed(1) + 'M'}
+          format={formatPopulationCount}
           big
         />
         <StatCard
