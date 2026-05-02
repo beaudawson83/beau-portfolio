@@ -21,6 +21,81 @@ import ImageUploadButton from './ImageUploadButton';
 const IMAGE_SIZE_HINT = 'Up to 1600px wide · JPG/PNG/WEBP/GIF, max 10 MB.';
 
 // ---------------------------------------------------------------------------
+// SHARED HELPERS — contentEditable elements that survive React re-renders.
+//
+// React + dangerouslySetInnerHTML + contentEditable is a known footgun: a
+// parent re-render mid-edit clobbers the user's caret and re-instates stale
+// content (e.g., autosave tick fires while you're still typing). Both helpers
+// below sync the DOM imperatively via a ref and only when the source-of-truth
+// string differs from what's already there. Local keystrokes don't trigger a
+// re-set because onInput propagates the typed value into state, so the next
+// render's compare is a no-op.
+//
+// Saves happen on input rather than blur so a remount or navigation can't
+// drop in-progress edits.
+// ---------------------------------------------------------------------------
+
+interface EditableTextProps<E extends HTMLElement> {
+  html: string;
+  onChange: (html: string) => void;
+  onBlur?: (e: React.FocusEvent<E>) => void;
+  onKeyDown?: (e: React.KeyboardEvent<E>) => void;
+  style?: CSSProperties;
+}
+
+function EditableDiv({
+  html,
+  onChange,
+  onBlur,
+  onKeyDown,
+  style,
+}: EditableTextProps<HTMLDivElement>) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    if (ref.current.innerHTML !== html) ref.current.innerHTML = html;
+  }, [html]);
+  return (
+    <div
+      ref={ref}
+      data-editable
+      contentEditable
+      suppressContentEditableWarning
+      onInput={(e) => onChange(e.currentTarget.innerHTML)}
+      onBlur={onBlur}
+      onKeyDown={onKeyDown}
+      style={{ outline: 'none', ...style }}
+    />
+  );
+}
+
+function EditableSpan({
+  html,
+  onChange,
+  onBlur,
+  onKeyDown,
+  style,
+}: EditableTextProps<HTMLSpanElement>) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    if (ref.current.innerHTML !== html) ref.current.innerHTML = html;
+  }, [html]);
+  return (
+    <span
+      ref={ref}
+      data-editable
+      contentEditable
+      suppressContentEditableWarning
+      onInput={(e) => onChange(e.currentTarget.innerHTML)}
+      onBlur={onBlur}
+      onKeyDown={onKeyDown}
+      style={{ outline: 'none', ...style }}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
 // EDITABLE LINE — h1/h2/h3/p
 // ---------------------------------------------------------------------------
 
@@ -230,13 +305,8 @@ export function EditableList({
 }
 
 /**
- * Single editable list item. The `useEffect` below guards against the classic
- * React + contentEditable bug: rendering with `dangerouslySetInnerHTML` on
- * every change can clobber the caret and re-instate stale content if a parent
- * re-renders while the user is mid-edit. We only mutate the DOM when its
- * innerHTML genuinely differs from the source-of-truth string — which it
- * doesn't after a local keystroke (because onInput already pushed that value
- * into state).
+ * Single editable list item — uses EditableSpan for the safe DOM-sync pattern,
+ * adds list-specific keyboard handling on top.
  */
 function EditableListItem({
   html,
@@ -251,36 +321,21 @@ function EditableListItem({
   onEnter: () => void;
   onBackspaceEmpty: () => void;
 }) {
-  const ref = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    if (!ref.current) return;
-    if (ref.current.innerHTML !== html) {
-      ref.current.innerHTML = html;
-    }
-  }, [html]);
-
   return (
-    <span
-      ref={ref}
-      data-editable
-      contentEditable
-      suppressContentEditableWarning
-      onInput={(e) => {
-        onUpdate((e.currentTarget as HTMLSpanElement).innerHTML);
-      }}
+    <EditableSpan
+      html={html}
+      onChange={onUpdate}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
           onEnter();
           return;
         }
-        if (e.key === 'Backspace' && (e.currentTarget as HTMLSpanElement).innerText === '') {
+        if (e.key === 'Backspace' && e.currentTarget.innerText === '') {
           e.preventDefault();
           if (!isOnly) onBackspaceEmpty();
         }
       }}
-      style={{ outline: 'none' }}
     />
   );
 }
@@ -308,22 +363,16 @@ export function EditablePullquote({
         borderRadius: '0 6px 6px 0',
       }}
     >
-      <div
-        data-editable
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) =>
-          onChange({ text: (e.currentTarget as HTMLDivElement).innerHTML, attr })
-        }
+      <EditableDiv
+        html={text}
+        onChange={(html) => onChange({ text: html, attr })}
         style={{
           fontFamily: 'var(--tn-serif)',
           fontSize: 22,
           fontWeight: 500,
           lineHeight: 1.4,
           color: 'var(--tn-ink)',
-          outline: 'none',
         }}
-        dangerouslySetInnerHTML={{ __html: text }}
       />
       <div
         style={{
@@ -336,15 +385,9 @@ export function EditablePullquote({
         }}
       >
         <span style={{ userSelect: 'none' }}>— </span>
-        <span
-          data-editable
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={(e) =>
-            onChange({ text, attr: (e.currentTarget as HTMLSpanElement).innerHTML })
-          }
-          style={{ outline: 'none' }}
-          dangerouslySetInnerHTML={{ __html: attr ?? '' }}
+        <EditableSpan
+          html={attr ?? ''}
+          onChange={(html) => onChange({ text, attr: html })}
         />
       </div>
     </figure>
@@ -429,21 +472,15 @@ export function EditableCallout({
           }}
         />
       </div>
-      <div
-        data-editable
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) =>
-          onChange({ kind, title, text: (e.currentTarget as HTMLDivElement).innerHTML })
-        }
+      <EditableDiv
+        html={text}
+        onChange={(html) => onChange({ kind, title, text: html })}
         style={{
           fontFamily: 'var(--tn-serif)',
           fontSize: 15.5,
           lineHeight: 1.55,
           color: 'var(--tn-ink)',
-          outline: 'none',
         }}
-        dangerouslySetInnerHTML={{ __html: text }}
       />
     </aside>
   );
@@ -721,15 +758,10 @@ export function EditableTable({
                     borderBottom: '1px solid var(--tn-line)',
                   }}
                 >
-                  <span
-                    data-editable
-                    contentEditable
-                    suppressContentEditableWarning
-                    onBlur={(e) =>
-                      updateHeader(i, (e.currentTarget as HTMLSpanElement).innerHTML)
-                    }
+                  <EditableSpan
+                    html={h}
+                    onChange={(html) => updateHeader(i, html)}
                     style={cellEditableStyle}
-                    dangerouslySetInnerHTML={{ __html: h }}
                   />
                 </th>
               ))}
@@ -756,15 +788,10 @@ export function EditableTable({
                           : 'var(--tn-sans)',
                       }}
                     >
-                      <span
-                        data-editable
-                        contentEditable
-                        suppressContentEditableWarning
-                        onBlur={(e) =>
-                          updateCell(ri, ci, (e.currentTarget as HTMLSpanElement).innerHTML)
-                        }
+                      <EditableSpan
+                        html={cell}
+                        onChange={(html) => updateCell(ri, ci, html)}
                         style={cellEditableStyle}
-                        dangerouslySetInnerHTML={{ __html: cell }}
                       />
                     </td>
                   );
