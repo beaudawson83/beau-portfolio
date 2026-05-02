@@ -788,9 +788,10 @@ function BlockRow({
         e.preventDefault();
         onDrop();
       }}
-      style={{ position: 'relative', marginLeft: -36, paddingLeft: 36 }}
+      style={{ position: 'relative', marginLeft: -84, paddingLeft: 84 }}
     >
-      {/* Hover handle */}
+      {/* Hover handles sit in the 84px gutter (3×22px + 2×4px gap = 74px,
+          ~10px breathing room) so they never overlap the editable. */}
       <div
         style={{
           position: 'absolute',
@@ -799,7 +800,7 @@ function BlockRow({
           opacity: isHover ? 1 : 0,
           transition: 'opacity .12s',
           display: 'flex',
-          gap: 2,
+          gap: 4,
           alignItems: 'center',
         }}
       >
