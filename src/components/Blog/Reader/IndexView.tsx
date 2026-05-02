@@ -88,17 +88,6 @@ export default function IndexView({
           }}
         >
           <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-            <div
-              style={{
-                fontFamily: 'var(--tn-mono)',
-                fontSize: 11,
-                color: 'var(--tn-accent)',
-                letterSpacing: '.1em',
-                marginBottom: 14,
-              }}
-            >
-              $ ls -lh ~/blog
-            </div>
             <h1
               style={{
                 fontFamily: 'var(--tn-sans)',
@@ -117,12 +106,12 @@ export default function IndexView({
                 fontFamily: 'var(--tn-serif)',
                 fontSize: 19,
                 color: 'var(--tn-dim)',
-                maxWidth: 600,
+                maxWidth: 640,
                 lineHeight: 1.55,
                 margin: 0,
               }}
             >
-              Operations, AI systems, and what twenty years of walking into broken orgs taught me.
+              Twenty years in the field, operating and building. Now it&rsquo;s AI, and I&rsquo;m talking through all of it.
             </p>
           </div>
         </header>
@@ -221,7 +210,7 @@ export default function IndexView({
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '60px 96px 80px 1fr 60px',
+                  gridTemplateColumns: '60px 96px 80px 1fr 80px 60px',
                   padding: '14px 0',
                   borderBottom: '1px solid var(--tn-line)',
                   fontFamily: 'var(--tn-mono)',
@@ -235,6 +224,7 @@ export default function IndexView({
                 <span>date</span>
                 <span>cat</span>
                 <span>title</span>
+                <span style={{ textAlign: 'right' }}>words</span>
                 <span style={{ textAlign: 'right' }}>min</span>
               </div>
               {filtered.map((p) => {
@@ -249,6 +239,7 @@ export default function IndexView({
                     date={formatDate(p.publishAt)}
                     category={p.category}
                     title={p.title}
+                    wordCount={p.wordCount}
                     readTime={p.readTime}
                   />
                 );
@@ -280,6 +271,7 @@ function PostRow({
   date,
   category,
   title,
+  wordCount,
   readTime,
 }: {
   href: string;
@@ -287,6 +279,7 @@ function PostRow({
   date: string;
   category: BlogCategory | null;
   title: string;
+  wordCount: number;
   readTime: number;
 }) {
   const [hover, setHover] = useState(false);
@@ -302,7 +295,7 @@ function PostRow({
       onMouseLeave={() => setHover(false)}
       style={{
         display: 'grid',
-        gridTemplateColumns: '60px 96px 80px 1fr 60px',
+        gridTemplateColumns: '60px 96px 80px 1fr 80px 60px',
         padding: '16px 0',
         borderBottom: '1px solid var(--tn-line)',
         textDecoration: 'none',
@@ -343,6 +336,9 @@ function PostRow({
         >
           {title}
         </span>
+      </span>
+      <span style={{ ...cellMono, textAlign: 'right' }}>
+        {wordCount.toLocaleString()}
       </span>
       <span style={{ ...cellMono, textAlign: 'right' }}>{readTime}</span>
     </Link>
