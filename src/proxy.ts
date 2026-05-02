@@ -14,9 +14,17 @@ const CSP_DIRECTIVES = [
   // 'unsafe-inline' + 'unsafe-eval' required for Next.js hydration + Framer Motion runtime styles.
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://www.google-analytics.com https://www.googletagmanager.com",
+  // Allow any HTTPS image: blog covers + content images live on Supabase Storage,
+  // and the editor explicitly supports paste-URL for images from anywhere
+  // (Unsplash, embedded thumbnails, etc.). Image content can't execute JS.
+  "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com https://*.supabase.co wss://*.supabase.co",
+  // Native <audio>/<video> tags from pasted URLs.
+  "media-src 'self' https:",
+  // YouTube + Vimeo embeds via the blog's video block. Tight allowlist —
+  // iframes can run JS, so we don't open this to arbitrary HTTPS.
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
