@@ -11,6 +11,34 @@ import './global-conflict.css';
 // UN member states + observers; rough denominator for "% of nations in active conflict".
 const TOTAL_NATIONS = 195;
 
+// Intl.DisplayNames accepts ISO 3166-1 alpha-2 OR UN M.49 numeric codes (which
+// match ISO 3166-1 numeric for individual countries). Routine writes numeric.
+const COUNTRY_DISPLAY = (() => {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' });
+  } catch {
+    return null;
+  }
+})();
+
+function isPlausibleIso(s: string): boolean {
+  if (typeof s !== 'string') return false;
+  const t = s.trim().toUpperCase();
+  return /^\d{3}$/.test(t) || /^[A-Z]{2,3}$/.test(t);
+}
+
+/** Resolve an ISO code to a human-readable country name. Falls back to the raw
+ * code if the API isn't available or the value is unrecognized. */
+function formatCountry(iso: string): string {
+  if (!iso) return '';
+  if (!COUNTRY_DISPLAY) return iso;
+  try {
+    return COUNTRY_DISPLAY.of(iso) ?? iso;
+  } catch {
+    return iso;
+  }
+}
+
 interface GlobalConflictModuleProps {
   initialData: ConflictPayload;
 }
@@ -161,12 +189,15 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
 }
 
 /** Distinct countries from conflict_actors that aren't already in the hotspot's
- * primary territory list — i.e., "other involved countries". */
+ * primary territory list — i.e., "other involved countries". Junk strings (URLs,
+ * names, anything that doesn't shape like an ISO code) are dropped so the count
+ * can't be inflated by malformed Routine output. */
 function otherInvolvedCountries(h: ConflictHotspot, actors: ConflictActor[]): string[] {
   const territory = new Set(h.iso);
   const seen = new Set<string>();
   for (const a of actors) {
     if (a.conflictId !== h.id) continue;
+    if (!isPlausibleIso(a.countryIso)) continue;
     if (territory.has(a.countryIso)) continue;
     if (seen.has(a.countryIso)) continue;
     seen.add(a.countryIso);
@@ -249,7 +280,7 @@ function DetailPanel({
           ['Intensity', `${h.intensity} / 5`],
           [
             'Other involved countries',
-            others.length > 0 ? others.join(' · ') : '—',
+            others.length > 0 ? others.map(formatCountry).join(' · ') : '—',
           ],
           ['Conflict type', h.type],
         ].map(([k, v]) => (
