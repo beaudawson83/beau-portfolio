@@ -20,7 +20,7 @@ import type {
 } from '@/types';
 import { computeReadTime, computeWordCount } from '@/lib/blog-utils';
 import Topbar from '../Topbar';
-import { coverBackground } from './CoverPicker';
+import CoverBand from '../CoverBand';
 import { EditBlockRenderer } from './editableBlocks';
 import { makeBlock } from './blockKinds';
 import SlashMenu from './SlashMenu';
@@ -458,36 +458,50 @@ export default function Editor({
             </div>
           </div>
 
-          {/* Cover band */}
+          {/* Cover band — same component the article view uses, so the
+              editor stays WYSIWYG. CoverBand returns null for 'none', so
+              we render a dashed placeholder with the sidebar hint instead. */}
           <div style={{ padding: '32px 56px 0' }}>
-            <div style={{ maxWidth: 720, margin: '0 auto' }}>
-              <div
-                style={{
-                  width: '100%',
-                  aspectRatio: '4/1',
-                  borderRadius: 6,
-                  background: coverBackground(coverId, coverUrl),
-                  border: '1px solid var(--tn-line)',
-                  position: 'relative',
-                }}
-              >
+            <div style={{ maxWidth: 720, margin: '0 auto', position: 'relative' }}>
+              {coverId === 'none' ? (
                 <div
                   style={{
-                    position: 'absolute',
-                    bottom: 8,
-                    right: 8,
-                    background: 'rgba(0,0,0,.6)',
-                    color: '#fff',
+                    width: '100%',
+                    aspectRatio: '4/1',
+                    borderRadius: 6,
+                    border: '1px dashed var(--tn-line2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--tn-dim)',
                     fontFamily: 'var(--tn-mono)',
-                    fontSize: 10,
-                    padding: '4px 10px',
-                    borderRadius: 99,
+                    fontSize: 11,
                     letterSpacing: '.08em',
                   }}
                 >
-                  cover · edit in sidebar →
+                  no cover · pick one in the sidebar →
                 </div>
-              </div>
+              ) : (
+                <>
+                  <CoverBand coverId={coverId} coverUrl={coverUrl} />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 8,
+                      right: 8,
+                      background: 'rgba(0,0,0,.6)',
+                      color: '#fff',
+                      fontFamily: 'var(--tn-mono)',
+                      fontSize: 10,
+                      padding: '4px 10px',
+                      borderRadius: 99,
+                      letterSpacing: '.08em',
+                    }}
+                  >
+                    cover · edit in sidebar →
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

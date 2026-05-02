@@ -9,7 +9,7 @@ import {
   ReadingProgress,
   TableOfContents,
 } from '../blocks/Blocks';
-import { coverBackground } from '../Builder/CoverPicker';
+import CoverBand from '../CoverBand';
 import Topbar from '../Topbar';
 
 export default function ArticleView({
@@ -49,19 +49,11 @@ export default function ArticleView({
       >
         <ReadingProgress scrollRoot={scrollRoot} />
 
-        {/* Cover band — only renders for posts with a real cover. */}
-        {post.coverId && post.coverId !== 'none' ? (
+        {/* Cover band — CoverBand handles the 'none' case (returns null). */}
+        {post.coverId ? (
           <div style={{ padding: '32px 48px 0' }}>
             <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-              <div
-                style={{
-                  width: '100%',
-                  aspectRatio: '4/1',
-                  borderRadius: 6,
-                  background: coverBackground(post.coverId, post.coverUrl),
-                  border: '1px solid var(--tn-line)',
-                }}
-              />
+              <CoverBand coverId={post.coverId} coverUrl={post.coverUrl} />
             </div>
           </div>
         ) : null}

@@ -5,7 +5,7 @@ import type { BlogCoverId } from '@/types';
 import ImageUploadButton from './ImageUploadButton';
 
 const COVER_SIZE_HINT =
-  'Recommended: 1600 × 400 (4:1 banner) · JPG/PNG/WEBP/GIF, max 10 MB.';
+  'Recommended: 1600px wide. Aspect ratio is preserved up to 640px tall (taller images crop to fit). JPG/PNG/WEBP/GIF, max 10 MB.';
 
 interface CoverOption {
   id: BlogCoverId;
