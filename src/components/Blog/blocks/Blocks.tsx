@@ -936,9 +936,8 @@ export function TableBlock({ headers, rows }: { headers: string[]; rows: string[
                   letterSpacing: '.08em',
                   borderBottom: '1px solid var(--tn-line)',
                 }}
-              >
-                {h}
-              </th>
+                dangerouslySetInnerHTML={{ __html: h }}
+              />
             ))}
           </tr>
         </thead>
@@ -948,18 +947,24 @@ export function TableBlock({ headers, rows }: { headers: string[]; rows: string[
               key={i}
               style={{ borderBottom: i < rows.length - 1 ? '1px solid var(--tn-line)' : 0 }}
             >
-              {r.map((c, j) => (
-                <td
-                  key={j}
-                  style={{
-                    padding: '10px 14px',
-                    color: 'var(--tn-ink)',
-                    fontFamily: /^[\d$%.+-]/.test(c) ? 'var(--tn-mono)' : 'var(--tn-sans)',
-                  }}
-                >
-                  {c}
-                </td>
-              ))}
+              {r.map((c, j) => {
+                // Strip tags for the mono-font heuristic so a numeric cell
+                // wrapped in <b> still renders as mono.
+                const stripped = c.replace(/<[^>]*>/g, '');
+                return (
+                  <td
+                    key={j}
+                    style={{
+                      padding: '10px 14px',
+                      color: 'var(--tn-ink)',
+                      fontFamily: /^[\d$%.+-]/.test(stripped)
+                        ? 'var(--tn-mono)'
+                        : 'var(--tn-sans)',
+                    }}
+                    dangerouslySetInnerHTML={{ __html: c }}
+                  />
+                );
+              })}
             </tr>
           ))}
         </tbody>

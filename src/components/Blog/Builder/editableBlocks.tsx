@@ -11,7 +11,6 @@ import {
   ChartBlock,
   DividerBlock,
   GalleryBlock,
-  TableBlock,
   TweetEmbed,
   TwoColumnBlock,
   VideoBlock,
@@ -559,6 +558,175 @@ export function EditableCode({
 }
 
 // ---------------------------------------------------------------------------
+// EDITABLE TABLE — header row + body cells, with row/col add/remove
+// ---------------------------------------------------------------------------
+
+const cellEditableStyle: CSSProperties = {
+  outline: 'none',
+  display: 'block',
+  minWidth: 24,
+  minHeight: '1em',
+};
+
+export function EditableTable({
+  headers,
+  rows,
+  onChange,
+}: {
+  headers: string[];
+  rows: string[][];
+  onChange: (next: { headers: string[]; rows: string[][] }) => void;
+}) {
+  const cols = headers.length;
+
+  const updateHeader = (i: number, html: string) => {
+    const next = [...headers];
+    next[i] = html;
+    onChange({ headers: next, rows });
+  };
+  const updateCell = (r: number, c: number, html: string) => {
+    const next = rows.map((row) => [...row]);
+    next[r][c] = html;
+    onChange({ headers, rows: next });
+  };
+  const addRow = () => onChange({ headers, rows: [...rows, Array(cols).fill('')] });
+  const addCol = () =>
+    onChange({
+      headers: [...headers, `Col ${headers.length + 1}`],
+      rows: rows.map((r) => [...r, '']),
+    });
+  const delRow = () => {
+    if (rows.length <= 1) return;
+    onChange({ headers, rows: rows.slice(0, -1) });
+  };
+  const delCol = () => {
+    if (cols <= 1) return;
+    onChange({
+      headers: headers.slice(0, -1),
+      rows: rows.map((r) => r.slice(0, -1)),
+    });
+  };
+
+  return (
+    <div style={{ margin: '28px 0' }}>
+      <div
+        style={{
+          overflowX: 'auto',
+          border: '1px solid var(--tn-line)',
+          borderRadius: 6,
+        }}
+      >
+        <table
+          style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            fontFamily: 'var(--tn-sans)',
+            fontSize: 14,
+          }}
+        >
+          <thead>
+            <tr style={{ background: 'var(--tn-bg2)' }}>
+              {headers.map((h, i) => (
+                <th
+                  key={i}
+                  style={{
+                    padding: '10px 14px',
+                    textAlign: 'left',
+                    fontFamily: 'var(--tn-mono)',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: 'var(--tn-dim)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '.08em',
+                    borderBottom: '1px solid var(--tn-line)',
+                  }}
+                >
+                  <span
+                    data-editable
+                    contentEditable
+                    suppressContentEditableWarning
+                    onBlur={(e) =>
+                      updateHeader(i, (e.currentTarget as HTMLSpanElement).innerHTML)
+                    }
+                    style={cellEditableStyle}
+                    dangerouslySetInnerHTML={{ __html: h }}
+                  />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, ri) => (
+              <tr
+                key={ri}
+                style={{
+                  borderBottom: ri < rows.length - 1 ? '1px solid var(--tn-line)' : 0,
+                }}
+              >
+                {row.map((cell, ci) => {
+                  const stripped = cell.replace(/<[^>]*>/g, '');
+                  return (
+                    <td
+                      key={ci}
+                      style={{
+                        padding: '10px 14px',
+                        color: 'var(--tn-ink)',
+                        fontFamily: /^[\d$%.+-]/.test(stripped)
+                          ? 'var(--tn-mono)'
+                          : 'var(--tn-sans)',
+                      }}
+                    >
+                      <span
+                        data-editable
+                        contentEditable
+                        suppressContentEditableWarning
+                        onBlur={(e) =>
+                          updateCell(ri, ci, (e.currentTarget as HTMLSpanElement).innerHTML)
+                        }
+                        style={cellEditableStyle}
+                        dangerouslySetInnerHTML={{ __html: cell }}
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+        <button type="button" className="tn-btn sm" onClick={addRow}>
+          + row
+        </button>
+        <button type="button" className="tn-btn sm" onClick={addCol}>
+          + column
+        </button>
+        <button
+          type="button"
+          className="tn-btn sm"
+          onClick={delRow}
+          disabled={rows.length <= 1}
+          style={{ opacity: rows.length <= 1 ? 0.4 : 1 }}
+          title="Remove last row"
+        >
+          − row
+        </button>
+        <button
+          type="button"
+          className="tn-btn sm"
+          onClick={delCol}
+          disabled={cols <= 1}
+          style={{ opacity: cols <= 1 ? 0.4 : 1 }}
+          title="Remove last column"
+        >
+          − column
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // EDITABLE WORD ART
 // ---------------------------------------------------------------------------
 
@@ -721,7 +889,13 @@ export function EditBlockRenderer({
     case 'audio':
       return <AudioBlock url={block.content.url} title={block.content.title} duration={block.content.duration} />;
     case 'table':
-      return <TableBlock headers={block.content.headers} rows={block.content.rows} />;
+      return (
+        <EditableTable
+          headers={block.content.headers}
+          rows={block.content.rows}
+          onChange={(content) => onUpdate({ content })}
+        />
+      );
     case 'chart':
       return <ChartBlock title={block.content.title} unit={block.content.unit} data={block.content.data} />;
     case 'embed':
