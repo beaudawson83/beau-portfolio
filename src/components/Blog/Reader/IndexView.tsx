@@ -3,16 +3,32 @@
 import Link from 'next/link';
 import { type CSSProperties, useMemo, useState } from 'react';
 import type { BlogCategory, BlogPostSummary } from '@/types';
+import { categoryColorIndex } from '@/lib/blog-utils';
 import Topbar from '../Topbar';
 
-const CATEGORIES: ('all' | BlogCategory)[] = ['all', 'OPS', 'AI', 'CRAFT', 'NOTE'];
-
-const CATEGORY_COLOR: Record<BlogCategory, string> = {
+// Stable colors for the four legacy seeds keep their look across the
+// existing index; everything else falls back to the hash palette below.
+const LEGACY_CATEGORY_COLOR: Record<string, string> = {
   OPS: 'var(--tn-accent)',
   AI: 'var(--tn-ok)',
   CRAFT: 'var(--tn-warn)',
   NOTE: 'var(--tn-dim)',
 };
+
+const HASH_PALETTE = [
+  'var(--tn-accent)',
+  'var(--tn-ok)',
+  'var(--tn-warn)',
+  'var(--tn-err)',
+  'var(--tn-dim)',
+];
+
+function categoryColor(category: string): string {
+  return (
+    LEGACY_CATEGORY_COLOR[category] ??
+    HASH_PALETTE[categoryColorIndex(category, HASH_PALETTE.length)]
+  );
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return '';
@@ -35,6 +51,14 @@ export default function IndexView({
 }) {
   const [filter, setFilter] = useState<'all' | BlogCategory>('all');
   const [query, setQuery] = useState('');
+
+  // Filter chips reflect what categories are actually used by the visible
+  // (published) posts — empty buckets shouldn't appear.
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of posts) if (p.category) set.add(p.category);
+    return ['all' as const, ...Array.from(set).sort()];
+  }, [posts]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
@@ -125,7 +149,7 @@ export default function IndexView({
             }}
           >
             <div style={{ display: 'flex', gap: 4 }}>
-              {CATEGORIES.map((c) => (
+              {categories.map((c) => (
                 <button
                   key={c}
                   type="button"
@@ -299,7 +323,7 @@ function PostRow({
               borderRadius: 3,
               background: 'var(--tn-bg2)',
               border: '1px solid var(--tn-line2)',
-              color: CATEGORY_COLOR[category],
+              color: categoryColor(category),
               letterSpacing: '.08em',
             }}
           >

@@ -166,6 +166,7 @@ src/
 | `/api/blog/posts/[slug]`    | PATCH  | Update post + status     | `Bearer $BLOG_EDITOR_SECRET`   |
 | `/api/blog/posts/[slug]`    | DELETE | Delete post              | `Bearer $BLOG_EDITOR_SECRET`   |
 | `/api/blog/media/sign`      | POST   | One-shot signed upload URL for blog-media bucket | `Bearer $BLOG_EDITOR_SECRET` |
+| `/api/blog/categories`      | GET    | Distinct categories (admin sees drafts) | Optional Bearer            |
 | `/api/pi-challenge/issue`   | POST   | Issue HMAC challenge     | —                              |
 | `/api/pi-challenge/validate`| POST   | Validate response        | —                              |
 
@@ -224,6 +225,10 @@ The editor is gated client-side by `<AuthGate>`: prompts for `BLOG_EDITOR_SECRET
 ### Block model
 
 A post body is a `BlogBlock[]` stored as a single jsonb column. 17 block types: text (h1/h2/h3/p, ul/ol, pullquote, callout, divider), media (image, gallery, video, audio), rich (code, table, chart, wordart, embed/tweet, button, twocol). Inline editing is supported for text/heading/list/pullquote/callout/code/image-caption/wordart-text. Other rich blocks render with sample content; v2 will add edit modals for table/chart/embed data.
+
+### Categories
+
+User-defined free-form text. The four legacy seeds (`OPS`, `AI`, `CRAFT`, `NOTE`) live in `CATEGORY_SUGGESTIONS` so the editor dropdown isn't empty on a fresh install, but any non-empty string is accepted at the API + storage boundary. [`normalizeCategory()`](src/lib/blog-utils.ts) handles the cleanup (trim, uppercase, ≤32 chars, strip control chars) before the value hits Supabase.
 
 Word count + read time are computed server-side on every PATCH via [`computeWordCount()`](src/lib/blog-utils.ts) so the displayed values stay authoritative.
 

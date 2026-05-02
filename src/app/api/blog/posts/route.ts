@@ -7,8 +7,8 @@ import {
   readPublishedPostSummaries,
   type CreatePostInput,
 } from '@/lib/blog-store';
-import { slugify } from '@/lib/blog-utils';
-import type { BlogBlock, BlogCategory, BlogCoverId } from '@/types';
+import { normalizeCategory, slugify } from '@/lib/blog-utils';
+import type { BlogBlock, BlogCoverId } from '@/types';
 
 const COVER_IDS: ReadonlySet<BlogCoverId> = new Set([
   'cover-mesh',
@@ -17,8 +17,6 @@ const COVER_IDS: ReadonlySet<BlogCoverId> = new Set([
   'cover-photo',
   'none',
 ]);
-
-const CATEGORIES: ReadonlySet<BlogCategory> = new Set(['OPS', 'AI', 'CRAFT', 'NOTE']);
 
 // ----------------------------------------------------------------------------
 // GET /api/blog/posts
@@ -95,8 +93,10 @@ function parseCreateInput(raw: unknown): CreatePostInput | null {
   const out: CreatePostInput = { slug };
   if (typeof r.title === 'string') out.title = r.title;
   if (typeof r.dek === 'string') out.dek = r.dek;
-  if (r.category === null || (typeof r.category === 'string' && CATEGORIES.has(r.category as BlogCategory))) {
-    out.category = r.category as BlogCategory | null;
+  if (r.category === null) {
+    out.category = null;
+  } else if (typeof r.category === 'string') {
+    out.category = normalizeCategory(r.category);
   }
   if (Array.isArray(r.tags)) {
     out.tags = r.tags.filter((t): t is string => typeof t === 'string').slice(0, 16);

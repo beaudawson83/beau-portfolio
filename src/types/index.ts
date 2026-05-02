@@ -81,7 +81,11 @@ export interface BootLine {
 // ============================================
 
 export type BlogPostStatus = 'draft' | 'scheduled' | 'published';
-export type BlogCategory = 'OPS' | 'AI' | 'CRAFT' | 'NOTE';
+// Categories are user-defined; the four below are seeded as starter
+// suggestions in the editor dropdown. Any non-empty string is accepted at
+// the API + storage layer (normalized to uppercase, ≤32 chars).
+export type BlogCategory = string;
+export const CATEGORY_SUGGESTIONS: readonly string[] = ['OPS', 'AI', 'CRAFT', 'NOTE'];
 export type BlogCoverId =
   | 'cover-mesh'
   | 'cover-grid'

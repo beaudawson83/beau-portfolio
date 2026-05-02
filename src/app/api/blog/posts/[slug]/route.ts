@@ -8,8 +8,8 @@ import {
   readPublishedPostBySlug,
   type PatchPostInput,
 } from '@/lib/blog-store';
-import { isBlogPostStatus, slugify } from '@/lib/blog-utils';
-import type { BlogBlock, BlogCategory, BlogCoverId } from '@/types';
+import { isBlogPostStatus, normalizeCategory, slugify } from '@/lib/blog-utils';
+import type { BlogBlock, BlogCoverId } from '@/types';
 
 const COVER_IDS: ReadonlySet<BlogCoverId> = new Set([
   'cover-mesh',
@@ -18,8 +18,6 @@ const COVER_IDS: ReadonlySet<BlogCoverId> = new Set([
   'cover-photo',
   'none',
 ]);
-
-const CATEGORIES: ReadonlySet<BlogCategory> = new Set(['OPS', 'AI', 'CRAFT', 'NOTE']);
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -127,8 +125,10 @@ function parsePatchInput(raw: unknown): PatchPostInput | null {
   if (r.category !== undefined) {
     if (r.category === null) {
       out.category = null;
-    } else if (typeof r.category === 'string' && CATEGORIES.has(r.category as BlogCategory)) {
-      out.category = r.category as BlogCategory;
+    } else if (typeof r.category === 'string') {
+      const norm = normalizeCategory(r.category);
+      if (!norm) return null;
+      out.category = norm;
     } else {
       return null;
     }

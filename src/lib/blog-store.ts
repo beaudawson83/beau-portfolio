@@ -177,6 +177,43 @@ export async function readAllPostSummaries(): Promise<BlogPostSummary[]> {
   return ((data ?? []) as Omit<PostRow, 'body'>[]).map(rowToSummary);
 }
 
+export interface CategoryQuery {
+  /** When true, includes categories that exist on drafts/scheduled posts. */
+  includeUnpublished?: boolean;
+}
+
+/**
+ * Distinct category values across the blog, sorted alphabetically.
+ * The default scope returns only categories used on published posts; pass
+ * `includeUnpublished` to surface categories that exist on drafts (used by
+ * the editor dropdown so a freshly-typed category appears immediately).
+ */
+export async function readDistinctCategories(
+  q: CategoryQuery = {},
+): Promise<string[]> {
+  const sb = client();
+  if (!sb) return [];
+  let query = sb
+    .from('blog_posts')
+    .select('category')
+    .not('category', 'is', null);
+  if (!q.includeUnpublished) {
+    query = query
+      .eq('status', 'published')
+      .lte('publish_at', new Date().toISOString());
+  }
+  const { data, error } = await query;
+  if (error) {
+    console.error('readDistinctCategories:', error);
+    return [];
+  }
+  const set = new Set<string>();
+  for (const row of (data ?? []) as { category: string | null }[]) {
+    if (row.category) set.add(row.category);
+  }
+  return Array.from(set).sort();
+}
+
 export async function readMostRecentDraftSlug(): Promise<string | null> {
   const sb = client();
   if (!sb) return null;

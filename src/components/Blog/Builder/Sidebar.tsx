@@ -2,6 +2,7 @@
 
 import { type ReactNode, useState } from 'react';
 import type { BlogCategory, BlogCoverId, BlogPostStatus } from '@/types';
+import CategoryDropdown from './CategoryDropdown';
 import CoverPicker from './CoverPicker';
 
 interface SidebarProps {
@@ -26,7 +27,6 @@ interface SidebarProps {
   onSeoDescriptionChange: (next: string) => void;
 }
 
-const CATEGORIES: BlogCategory[] = ['OPS', 'AI', 'CRAFT', 'NOTE'];
 const STATUSES: BlogPostStatus[] = ['draft', 'scheduled', 'published'];
 
 export default function Sidebar(props: SidebarProps) {
@@ -118,25 +118,7 @@ export default function Sidebar(props: SidebarProps) {
           </div>
         </Field>
         <Field label="category">
-          <div style={{ display: 'flex', gap: 4 }}>
-            <button
-              type="button"
-              onClick={() => props.onCategoryChange(null)}
-              style={catBtnStyle(props.category === null)}
-            >
-              none
-            </button>
-            {CATEGORIES.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => props.onCategoryChange(c)}
-                style={catBtnStyle(props.category === c)}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
+          <CategoryDropdown value={props.category} onChange={props.onCategoryChange} />
         </Field>
         <Field label="tags">
           <div
@@ -271,22 +253,6 @@ export default function Sidebar(props: SidebarProps) {
       </Section>
     </aside>
   );
-}
-
-function catBtnStyle(active: boolean) {
-  return {
-    flex: 1,
-    fontFamily: 'var(--tn-mono)',
-    fontSize: 10,
-    padding: '6px 0',
-    borderRadius: 4,
-    background: active ? 'var(--tn-accent-glow)' : 'var(--tn-bg)',
-    color: active ? 'var(--tn-accent)' : 'var(--tn-dim)',
-    border: `1px solid ${active ? 'var(--tn-accent-dim)' : 'var(--tn-line2)'}`,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '.08em',
-    cursor: 'pointer' as const,
-  };
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
