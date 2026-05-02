@@ -153,7 +153,7 @@ export default function ArticleView({
             ) : null}
           </aside>
 
-          <article style={{ minWidth: 0, maxWidth: 680 }}>
+          <article className="tn-prose" style={{ minWidth: 0, maxWidth: 680 }}>
             {post.body.map((block) => {
               const headingId =
                 block.type === 'h2' || block.type === 'h3'

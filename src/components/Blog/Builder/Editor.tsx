@@ -565,7 +565,7 @@ export default function Editor({
 
           {/* Blocks */}
           <div style={{ padding: '0 56px 200px' }}>
-            <div style={{ maxWidth: 720, margin: '0 auto' }}>
+            <div className="tn-prose" style={{ maxWidth: 720, margin: '0 auto' }}>
               {blocks.map((b) => (
                 <BlockRow
                   key={b.id}

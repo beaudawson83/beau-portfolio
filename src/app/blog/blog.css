@@ -217,6 +217,20 @@
   box-shadow: 0 0 0 3px var(--tn-accent-glow);
 }
 
+/* ============== ARTICLE BODY (.tn-prose) ============== */
+/* Scoped to article + editor body content only — the topbar breadcrumb,
+ * meta sidebar share links, post-list rows etc. all live outside .tn-prose
+ * and keep their own styling. */
+.tn-shell .tn-prose a {
+  color: #60a5fa;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color .15s;
+}
+.tn-shell .tn-prose a:hover {
+  color: #93c5fd;
+}
+
 /* ============== EDITABLE BLOCKS ============== */
 /* Make typing cursor visible against dim text. */
 .tn-shell [data-editable] {
