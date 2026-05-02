@@ -15,13 +15,18 @@ import {
 } from 'react';
 import type { BlogBlock, BlogHeading } from '@/types';
 
+// Text content (paragraphs, headings, list items, pullquote, callout) is
+// stored and rendered as HTML so inline formatting (bold, italic, links) the
+// editor's floating toolbar applies survives saves. Existing plain-text
+// content renders identically.
+
 const SCROLL_MARGIN = 80;
 
 // =============================================================================
 // TYPOGRAPHY
 // =============================================================================
 
-export function ParagraphBlock({ children, id }: { children: ReactNode; id?: string }) {
+export function ParagraphBlock({ html, id }: { html: string; id?: string }) {
   return (
     <p
       id={id}
@@ -33,19 +38,18 @@ export function ParagraphBlock({ children, id }: { children: ReactNode; id?: str
         margin: '0 0 22px',
         textWrap: 'pretty',
       }}
-    >
-      {children}
-    </p>
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }
 
 export function HeadingBlock({
   level,
-  children,
+  html,
   id,
 }: {
   level: 1 | 2 | 3;
-  children: ReactNode;
+  html: string;
   id?: string;
 }) {
   const styles: CSSProperties =
@@ -80,9 +84,10 @@ export function HeadingBlock({
             scrollMarginTop: SCROLL_MARGIN,
           };
 
-  if (level === 1) return <h1 id={id} style={styles}>{children}</h1>;
-  if (level === 2) return <h2 id={id} style={styles}>{children}</h2>;
-  return <h3 id={id} style={styles}>{children}</h3>;
+  const inner = { __html: html };
+  if (level === 1) return <h1 id={id} style={styles} dangerouslySetInnerHTML={inner} />;
+  if (level === 2) return <h2 id={id} style={styles} dangerouslySetInnerHTML={inner} />;
+  return <h3 id={id} style={styles} dangerouslySetInnerHTML={inner} />;
 }
 
 // =============================================================================
@@ -109,9 +114,8 @@ export function ListBlock({
             color: 'var(--tn-ink)',
             marginBottom: 6,
           }}
-        >
-          {item}
-        </li>
+          dangerouslySetInnerHTML={{ __html: item }}
+        />
       ))}
     </Tag>
   );
@@ -142,7 +146,7 @@ export function PullquoteBlock({ text, attr }: { text: string; attr?: string }) 
           color: 'var(--tn-ink)',
         }}
       >
-        &ldquo;{text}&rdquo;
+        &ldquo;<span dangerouslySetInnerHTML={{ __html: text }} />&rdquo;
       </blockquote>
       {attr ? (
         <figcaption
@@ -155,7 +159,7 @@ export function PullquoteBlock({ text, attr }: { text: string; attr?: string }) 
             letterSpacing: '.1em',
           }}
         >
-          — {attr}
+          — <span dangerouslySetInnerHTML={{ __html: attr }} />
         </figcaption>
       ) : null}
     </figure>
@@ -236,9 +240,8 @@ export function CalloutBlock({
             lineHeight: 1.55,
             color: 'var(--tn-ink)',
           }}
-        >
-          {text}
-        </div>
+          dangerouslySetInnerHTML={{ __html: text }}
+        />
       </div>
     </aside>
   );
@@ -1388,13 +1391,13 @@ export function BlockRenderer({
 }) {
   switch (block.type) {
     case 'h1':
-      return <HeadingBlock level={1} id={headingId}>{block.content}</HeadingBlock>;
+      return <HeadingBlock level={1} id={headingId} html={block.content} />;
     case 'h2':
-      return <HeadingBlock level={2} id={headingId}>{block.content}</HeadingBlock>;
+      return <HeadingBlock level={2} id={headingId} html={block.content} />;
     case 'h3':
-      return <HeadingBlock level={3} id={headingId}>{block.content}</HeadingBlock>;
+      return <HeadingBlock level={3} id={headingId} html={block.content} />;
     case 'p':
-      return <ParagraphBlock>{block.content}</ParagraphBlock>;
+      return <ParagraphBlock html={block.content} />;
     case 'ul':
       return <ListBlock ordered={false} items={block.content} />;
     case 'ol':

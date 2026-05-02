@@ -46,8 +46,20 @@ export default function FloatingToolbar({ x, y }: { x: number; y: number }) {
         cmd="createLink"
         val=""
         exec={(c) => {
+          // Capture the current selection range BEFORE the prompt steals
+          // focus — otherwise execCommand has nothing to wrap when we get back.
+          const sel = window.getSelection();
+          if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+          const saved = sel.getRangeAt(0).cloneRange();
+
           const url = window.prompt('Link URL:', 'https://');
-          if (url) document.execCommand(c, false, url);
+          if (!url) return;
+
+          // Restore the selection (the prompt may have collapsed it).
+          sel.removeAllRanges();
+          sel.addRange(saved);
+
+          document.execCommand(c, false, url);
         }}
         title="Link"
       >

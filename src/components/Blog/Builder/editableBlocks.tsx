@@ -87,15 +87,19 @@ export function EditableLine({
   onSlash: (rect: DOMRect, query: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const lastText = useRef(content);
+  // lastText tracks the visible (innerText) string so backspace-at-start +
+  // slash-trigger detection work on what the user actually sees, not on the
+  // raw HTML markup.
+  const lastText = useRef(stripTags(content));
 
   // Sync DOM when the block identity changes (mount or replace), not on every
-  // keystroke — that would clobber the user's caret.
+  // keystroke — that would clobber the user's caret. Content is stored as
+  // HTML so inline formatting (bold / italic / links) round-trips through save.
   useEffect(() => {
     if (!ref.current) return;
-    if (ref.current.innerText !== (content || '')) {
-      ref.current.innerText = content || '';
-      lastText.current = content || '';
+    if (ref.current.innerHTML !== (content || '')) {
+      ref.current.innerHTML = content || '';
+      lastText.current = ref.current.innerText;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only sync on block id swap
   }, [blockId]);
@@ -108,13 +112,15 @@ export function EditableLine({
       suppressContentEditableWarning
       data-placeholder={PLACEHOLDERS[type]}
       onInput={(e) => {
-        const txt = (e.currentTarget as HTMLDivElement).innerText;
+        const target = e.currentTarget as HTMLDivElement;
+        const txt = target.innerText;
+        const html = target.innerHTML;
         lastText.current = txt;
         if (type === 'p' && txt.startsWith('/')) {
-          const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+          const r = target.getBoundingClientRect();
           onSlash(r, txt.slice(1));
         }
-        onChange(txt);
+        onChange(html);
       }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -129,6 +135,13 @@ export function EditableLine({
       style={{ ...LINE_STYLES[type], outline: 'none', minHeight: '1em', whiteSpace: 'pre-wrap' }}
     />
   );
+}
+
+/** Best-effort tag stripper for the lastText init value. We can't use a DOM
+ * node here (this runs during render), so a single regex pass is good enough
+ * for the emptiness check it feeds into. */
+function stripTags(s: string): string {
+  return s.replace(/<[^>]*>/g, '');
 }
 
 // ---------------------------------------------------------------------------
@@ -164,7 +177,7 @@ export function EditableList({
             suppressContentEditableWarning
             onBlur={(e) => {
               const next = [...items];
-              next[i] = (e.currentTarget as HTMLSpanElement).innerText;
+              next[i] = (e.currentTarget as HTMLSpanElement).innerHTML;
               onChange(next);
             }}
             onKeyDown={(e) => {
@@ -176,9 +189,8 @@ export function EditableList({
               }
             }}
             style={{ outline: 'none' }}
-          >
-            {it}
-          </span>
+            dangerouslySetInnerHTML={{ __html: it }}
+          />
         </li>
       ))}
     </Tag>
@@ -212,7 +224,9 @@ export function EditablePullquote({
         data-editable
         contentEditable
         suppressContentEditableWarning
-        onBlur={(e) => onChange({ text: (e.currentTarget as HTMLDivElement).innerText, attr })}
+        onBlur={(e) =>
+          onChange({ text: (e.currentTarget as HTMLDivElement).innerHTML, attr })
+        }
         style={{
           fontFamily: 'var(--tn-serif)',
           fontSize: 22,
@@ -221,14 +235,9 @@ export function EditablePullquote({
           color: 'var(--tn-ink)',
           outline: 'none',
         }}
-      >
-        {text}
-      </div>
+        dangerouslySetInnerHTML={{ __html: text }}
+      />
       <div
-        data-editable
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => onChange({ text, attr: (e.currentTarget as HTMLDivElement).innerText })}
         style={{
           marginTop: 10,
           fontFamily: 'var(--tn-mono)',
@@ -236,10 +245,19 @@ export function EditablePullquote({
           color: 'var(--tn-dim)',
           textTransform: 'uppercase',
           letterSpacing: '.1em',
-          outline: 'none',
         }}
       >
-        — {attr ?? ''}
+        <span style={{ userSelect: 'none' }}>— </span>
+        <span
+          data-editable
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={(e) =>
+            onChange({ text, attr: (e.currentTarget as HTMLSpanElement).innerHTML })
+          }
+          style={{ outline: 'none' }}
+          dangerouslySetInnerHTML={{ __html: attr ?? '' }}
+        />
       </div>
     </figure>
   );
@@ -327,7 +345,9 @@ export function EditableCallout({
         data-editable
         contentEditable
         suppressContentEditableWarning
-        onBlur={(e) => onChange({ kind, title, text: (e.currentTarget as HTMLDivElement).innerText })}
+        onBlur={(e) =>
+          onChange({ kind, title, text: (e.currentTarget as HTMLDivElement).innerHTML })
+        }
         style={{
           fontFamily: 'var(--tn-serif)',
           fontSize: 15.5,
@@ -335,9 +355,8 @@ export function EditableCallout({
           color: 'var(--tn-ink)',
           outline: 'none',
         }}
-      >
-        {text}
-      </div>
+        dangerouslySetInnerHTML={{ __html: text }}
+      />
     </aside>
   );
 }
