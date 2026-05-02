@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 interface DashboardProps {
   onClose: () => void;
@@ -97,11 +98,22 @@ export default function Dashboard({ onClose }: DashboardProps) {
           [OPERATOR DASHBOARD - ACTIVE]
         </div>
 
-        {/* System Links — both Conflict and Notes graduated to /modules
-            on the homepage. Dashboard is empty space, ready for the next
-            staged feature. */}
-        <div className="mt-16 text-green-500/20 font-mono text-xs">
-          [NO ACTIVE STAGING SLOTS]
+        {/* Staging slots — Conflict and Notes graduated to /modules on the
+            homepage. The blog editor lives here as the admin entry point;
+            anything new in development gets added below. */}
+        <div className="mt-16 space-y-3">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <Link
+              href="/blog/edit"
+              className="block text-green-500/60 hover:text-green-500 font-mono text-sm transition-colors"
+            >
+              {'>'} OPEN_BLOG_EDITOR <span className="text-yellow-500/60">[ADMIN]</span>
+            </Link>
+          </motion.div>
         </div>
       </motion.div>
     </motion.div>
