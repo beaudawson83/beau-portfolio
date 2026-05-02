@@ -159,7 +159,16 @@ export function EditableList({
 }) {
   const Tag = ordered ? 'ol' : 'ul';
   return (
-    <Tag style={{ paddingLeft: 24, margin: '0 0 18px' }}>
+    <Tag
+      style={{
+        paddingLeft: 24,
+        margin: '0 0 18px',
+        // Explicit because the global Tailwind preflight resets list-style
+        // to none on every ul/ol.
+        listStyleType: ordered ? 'decimal' : 'disc',
+        listStylePosition: 'outside',
+      }}
+    >
       {items.map((it, i) => (
         <li
           key={i}
