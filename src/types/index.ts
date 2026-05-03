@@ -281,3 +281,41 @@ export interface UpdraftPrivacyPoint {
   body: string;
   citations?: UpdraftCitation[];
 }
+
+// --- Resume parser (Stage 01.2A.ai output) -----------------------------------
+
+export interface ParsedResumeIdentity {
+  name: string;
+  email: string;
+  phone: string | null;
+  location: string | null;
+  linkedin: string | null;
+}
+
+export interface ParsedResumeExperience {
+  company: string;
+  title: string;
+  start_date: string;          // YYYY-MM
+  end_date: string;            // YYYY-MM | "Present"
+  location: string | null;
+  bullets: string[];
+}
+
+export interface ParsedResumeEducation {
+  institution: string;
+  degree: string | null;
+  start_year: number | null;
+  end_year: number | null;
+}
+
+/**
+ * Output shape of SYS_RESUME_PARSER. Mirrors the schema in
+ * skills/updraft/references/lib-system-prompts.md.
+ */
+export interface ParsedResume {
+  identity: ParsedResumeIdentity;
+  summary: string | null;
+  experience: ParsedResumeExperience[];
+  education: ParsedResumeEducation[];
+  skills: string[];
+}

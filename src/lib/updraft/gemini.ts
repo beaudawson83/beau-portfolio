@@ -19,7 +19,7 @@ const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 export type UpdraftModel = 'gemini-2.0-flash' | 'gemini-2.5-flash' | 'gemini-2.5-pro';
 
-export interface CallGeminiArgs<TSchema extends object | undefined = undefined> {
+export interface CallGeminiArgs {
   /** SYS_* identifier from lib-system-prompts.md, or a raw system instruction string. */
   systemPrompt: SysPromptName | { raw: string };
   /**
@@ -35,7 +35,7 @@ export interface CallGeminiArgs<TSchema extends object | undefined = undefined> 
    * response is parsed as JSON and returned in `.json`. When undefined,
    * the response is returned as plain text in `.text`.
    */
-  responseSchema?: TSchema;
+  responseSchema?: object;
   /** Defaults to gemini-2.0-flash. */
   model?: UpdraftModel;
   /** Optional generation config overrides. */

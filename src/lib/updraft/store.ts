@@ -263,6 +263,81 @@ export async function createSessionForUser(userId: string): Promise<UpdraftSessi
   return data ? rowToSession(data) : null;
 }
 
+/**
+ * Merge-patches a single stage's output into stage_outputs.{stage_NN}.
+ * stageKey is one of: 'stage_01' | 'stage_02' | 'stage_03' | 'stage_04'.
+ * Other stage keys are preserved untouched.
+ *
+ * Optional path/tier setters apply at the same time so the API layer can
+ * advance both at once (e.g., Stage 01.4 sets tier when classification runs).
+ */
+export async function patchSessionStage(args: {
+  sessionId: string;
+  userId: string;
+  stageKey: 'stage_01' | 'stage_02' | 'stage_03' | 'stage_04';
+  payload: Record<string, unknown>;
+  path?: 'upload' | 'talk' | null;
+  tier?: 1 | 2 | 3 | 4 | null;
+  status?: 'in_progress' | 'completed' | 'abandoned';
+}): Promise<UpdraftSession | null> {
+  const sb = client();
+  if (!sb) return null;
+
+  // Read-modify-write on stage_outputs (simple OCC; UpDraft sessions are
+  // single-user single-flight in practice, no contention to design around).
+  const existing = await readSessionForUser(args.sessionId, args.userId);
+  if (!existing) return null;
+
+  const nextStageOutputs = {
+    ...existing.stageOutputs,
+    [args.stageKey]: {
+      ...((existing.stageOutputs[args.stageKey] as Record<string, unknown> | undefined) ?? {}),
+      ...args.payload,
+    },
+  };
+
+  const updates: Record<string, unknown> = { stage_outputs: nextStageOutputs };
+  if (args.path !== undefined)   updates.path = args.path;
+  if (args.tier !== undefined)   updates.tier = args.tier;
+  if (args.status !== undefined) {
+    updates.status = args.status;
+    if (args.status === 'completed') updates.completed_at = new Date().toISOString();
+  }
+
+  const { data, error } = await sb
+    .from('updraft_sessions')
+    .update(updates)
+    .eq('id', args.sessionId)
+    .eq('user_id', args.userId)
+    .select('id,user_id,status,tier,path,stage_outputs,started_at,completed_at,last_activity_at,keep_indefinitely')
+    .maybeSingle<SessionRow>();
+
+  if (error) {
+    console.error('updraft.patchSessionStage:', error);
+    return null;
+  }
+  return data ? rowToSession(data) : null;
+}
+
+/** Deletes a session and cascades through events + exports via FK ON DELETE CASCADE. */
+export async function deleteSessionForUser(
+  sessionId: string,
+  userId: string,
+): Promise<boolean> {
+  const sb = client();
+  if (!sb) return false;
+  const { error } = await sb
+    .from('updraft_sessions')
+    .delete()
+    .eq('id', sessionId)
+    .eq('user_id', userId);
+  if (error) {
+    console.error('updraft.deleteSessionForUser:', error);
+    return false;
+  }
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // EVENTS
 // ---------------------------------------------------------------------------
