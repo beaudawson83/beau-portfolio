@@ -63,11 +63,15 @@ export default function Stage01Runner({ session, userEmail }: Props) {
       />
     );
   } else {
+    // Defensive: if tier is set the page-level dispatcher routes elsewhere,
+    // so this branch shouldn't render. Fallback keeps the user un-stuck.
     body = (
-      <Stage02Stub
-        sessionId={session.id}
-        tier={stage01.tier}
-      />
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 text-center">
+        <p className="text-sm text-[#cbd5e1] mb-3">Stage 01 complete.</p>
+        <Link href="/updraft" className="text-xs text-[#7C3AED] hover:text-[#a855f7] underline">
+          Back to dashboard
+        </Link>
+      </div>
     );
   }
 
@@ -573,29 +577,3 @@ function TierView({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Stage 02 stub
-// ---------------------------------------------------------------------------
-
-function Stage02Stub({ sessionId, tier }: { sessionId: string; tier: UpdraftTier }) {
-  return (
-    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-8 text-center">
-      <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono mb-3">
-        Stage 01 complete
-      </p>
-      <h2 className="text-xl font-bold mb-2">Stage 02 — Target</h2>
-      <p className="text-sm text-[#cbd5e1] max-w-md mx-auto leading-relaxed">
-        Locked in as {TIER_LABEL[tier]}. The deliverable picker + JD capture
-        flow ships in the next slice. Your session ID is{' '}
-        <span className="font-mono text-white">{sessionId.slice(0, 8)}</span> —
-        Stage 02 will pick up from there.
-      </p>
-      <Link
-        href="/updraft"
-        className="mt-6 inline-block text-xs text-[#7C3AED] hover:text-[#a855f7] underline"
-      >
-        ← Back to dashboard
-      </Link>
-    </div>
-  );
-}
