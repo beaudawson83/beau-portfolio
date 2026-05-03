@@ -69,7 +69,7 @@ export default function Stage02Runner({ session, userEmail }: Props) {
       />
     );
   } else {
-    body = <Stage03Stub deliverables={deliverables} />;
+    body = <Stage03Stub sessionId={session.id} deliverables={deliverables} />;
   }
 
   return (
@@ -773,7 +773,51 @@ const DELIVERABLE_LABEL: Record<UpdraftDeliverable, string> = {
   cover_letter: 'Cover Letter',
 };
 
-function Stage03Stub({ deliverables }: { deliverables: UpdraftDeliverable[] }) {
+function Stage03Stub({
+  sessionId,
+  deliverables,
+}: {
+  sessionId: string;
+  deliverables: UpdraftDeliverable[];
+}) {
+  const router = useRouter();
+  const [resetting, setResetting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Rewind Stage 02 entirely — clears deliverables, target, analysis, and
+  // the acknowledged flag, sending the user back to the deliverable picker.
+  // Stage 01 (path / resume / identity / tier) is untouched, so they pick
+  // back up at the picker without re-running parsing or tier classification.
+  const handleChangeMix = async () => {
+    setResetting(true);
+    setErrorMessage(null);
+    try {
+      const res = await fetch(`/api/updraft/sessions/${sessionId}/stage/02`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payload: {
+            deliverables: [],
+            lightweight_mod: false,
+            target: null,
+            match_analysis: null,
+            confidence_band: null,
+            acknowledged: false,
+          },
+        }),
+      });
+      if (!res.ok) {
+        setErrorMessage('Could not reset. Try again.');
+        setResetting(false);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setErrorMessage('Network error. Try again.');
+      setResetting(false);
+    }
+  };
+
   return (
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-8 text-center">
       <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono mb-3">
@@ -782,18 +826,34 @@ function Stage03Stub({ deliverables }: { deliverables: UpdraftDeliverable[] }) {
       <h2 className="text-xl font-bold mb-2">Stage 03 — Interview</h2>
       <p className="text-sm text-[#cbd5e1] max-w-md mx-auto leading-relaxed">
         Building{' '}
-        {deliverables
-          .map((d) => DELIVERABLE_LABEL[d])
-          .join(' + ')}
-        . The MOD-build interview ships in the next slice — we&apos;ll dig
+        {deliverables.map((d) => DELIVERABLE_LABEL[d]).join(' + ')}.
+        The MOD-build interview ships in the next slice — we&apos;ll dig
         into your strongest roles and surface the metrics worth keeping.
       </p>
-      <Link
-        href="/updraft"
-        className="mt-6 inline-block text-xs text-[#7C3AED] hover:text-[#a855f7] underline"
-      >
-        ← Back to dashboard
-      </Link>
+
+      <div className="mt-6 flex items-center justify-center gap-4 text-xs">
+        <button
+          type="button"
+          onClick={handleChangeMix}
+          disabled={resetting}
+          className="text-[#7C3AED] hover:text-[#a855f7] underline disabled:opacity-50"
+        >
+          {resetting ? 'Resetting…' : '← Change deliverables'}
+        </button>
+        <span className="text-[#2A2A2A]">·</span>
+        <Link
+          href="/updraft"
+          className="text-[#94A3B8] hover:text-white transition-colors"
+        >
+          Back to dashboard
+        </Link>
+      </div>
+
+      {errorMessage && (
+        <p role="alert" className="mt-3 text-sm text-red-400">
+          {errorMessage}
+        </p>
+      )}
     </div>
   );
 }
