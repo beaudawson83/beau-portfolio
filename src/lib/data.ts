@@ -328,3 +328,60 @@ export const modules: ModuleEntry[] = [
     status: 'LIVE',
   },
 ];
+
+// =============================================================================
+// UpDraft — privacy callout copy.
+//
+// Mirrors skills/updraft/PRIVACY-COPY.md (the Beau-edited canonical master).
+// The <PrivacyCallout> component reads this object and renders it; structural
+// concerns live in the component, copy lives here per the data.ts convention.
+// When the master file changes, update this object to match.
+// =============================================================================
+export const updraftPrivacyCopy: import('@/types').UpdraftPrivacyCopy = {
+  heading: 'Privacy, Trust & Opportunity',
+  lede: [
+    "Building a great resume shouldn't require being an expert—or giving up your privacy.",
+    'Our mission is simple: help people showcase their skills, earn better opportunities, and move forward with confidence—safely and transparently.',
+  ],
+  protections: {
+    intro:
+      'We designed our platform around privacy‑by‑default and data minimization, in line with GDPR principles of lawfulness, fairness, and transparency.',
+    introCitations: [
+      { label: 'gdpr-advisor.com', href: 'http://gdpr-advisor.com' },
+      { label: 'gdprlocal.com', href: 'http://gdprlocal.com' },
+    ],
+    points: [
+      {
+        heading: 'Passwordless, secure access',
+        body: 'We use Magic Link authentication, so there are no passwords to store or leak. We collect only your email address, solely to provide access to your account.',
+      },
+      {
+        heading: 'Purpose‑limited data use',
+        body: 'Your information is used only to help generate, edit, and export your resume—never for advertising, tracking, or unrelated purposes.',
+      },
+      {
+        heading: 'Temporary storage, automatic deletion',
+        body: 'To support edits and downloads, your uploaded information and generated resumes are stored for up to 30 days. After 30 days of inactivity, all data is automatically and permanently deleted, consistent with GDPR storage‑limitation requirements.',
+        citations: [{ label: 'gdprlocal.com', href: 'http://gdprlocal.com' }],
+      },
+      {
+        heading: 'You stay in control',
+        body: 'At any time, you can access, export, or delete your data directly from your dashboard—no emails, no hoops. This reflects your GDPR rights to access and erasure.',
+        citations: [{ label: 'gdpr-advisor.com', href: 'http://gdpr-advisor.com' }],
+      },
+      {
+        heading: 'Ethical AI, full stop',
+        body: 'We never sell personal data and never use your content to train AI models. Your information belongs to you—always.',
+      },
+    ],
+  },
+  whyItMatters: {
+    heading: 'Why this matters',
+    body: [
+      "No one majors in resume writing. It's a learned skill—and one that AI can explain, refine, and elevate for people who didn't grow up fluent in career language. Used responsibly, AI helps level the playing field.",
+      'Our promise is to offer that advantage without compromising your privacy, agency, or trust.',
+    ],
+  },
+  footerMicrocopy:
+    'By logging in, you acknowledge our temporary data‑retention policy, designed to give you flexibility while keeping your information secure, private, and fully under your control.',
+};

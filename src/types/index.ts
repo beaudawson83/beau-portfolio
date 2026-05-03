@@ -206,3 +206,78 @@ export interface ModuleTelemetry {
   conflict: ConflictTelemetry | null;
   blog: BlogTelemetry | null;
 }
+
+// =============================================================================
+// UpDraft (v0.1 — IN PROGRESS)
+// Spec lives in skills/updraft/. Auth-gated resume + cover-letter generator.
+// =============================================================================
+
+export type UpdraftSessionStatus = 'in_progress' | 'completed' | 'abandoned';
+export type UpdraftPath = 'upload' | 'talk';
+export type UpdraftTier = 1 | 2 | 3 | 4;
+
+/** A logged-in UpDraft user. One row per email. */
+export interface UpdraftUser {
+  id: string;
+  email: string;
+  createdAt: string;
+  activeModSessionId: string | null;
+  deletedAt: string | null;
+}
+
+/** Summary view used on the dashboard. */
+export interface UpdraftSessionSummary {
+  id: string;
+  status: UpdraftSessionStatus;
+  tier: UpdraftTier | null;
+  path: UpdraftPath | null;
+  startedAt: string;
+  completedAt: string | null;
+  lastActivityAt: string;
+  keepIndefinitely: boolean;
+}
+
+/** Full session record including stage outputs. */
+export interface UpdraftSession extends UpdraftSessionSummary {
+  userId: string;
+  /**
+   * Keyed by stage name: 'stage_01' | 'stage_02' | 'stage_03' | 'stage_04'.
+   * Shape per stage is defined in skills/updraft/references/stage-*.md +
+   * lib-output-contract.md. Treated as opaque here — orchestrator validates.
+   */
+  stageOutputs: Record<string, unknown>;
+}
+
+/** Append-only event log entry. See lib-output-contract.md § Event Types. */
+export interface UpdraftEvent {
+  id: number;
+  sessionId: string;
+  ts: string;
+  stage: string | null;
+  eventType: string;
+  data: Record<string, unknown>;
+}
+
+/** Privacy-callout copy block — Beau-edited, sourced from PRIVACY-COPY.md. */
+export interface UpdraftPrivacyCopy {
+  heading: string;
+  lede: string[];
+  protections: {
+    intro: string;
+    introCitations: UpdraftCitation[];
+    points: UpdraftPrivacyPoint[];
+  };
+  whyItMatters: { heading: string; body: string[] };
+  footerMicrocopy: string;
+}
+
+export interface UpdraftCitation {
+  label: string;
+  href: string;
+}
+
+export interface UpdraftPrivacyPoint {
+  heading: string;
+  body: string;
+  citations?: UpdraftCitation[];
+}
