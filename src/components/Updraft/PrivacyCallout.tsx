@@ -7,33 +7,24 @@
 //   - Body copy weight, never collapsible.
 //   - Bullet structure on the protection points so the page reads as a
 //     short policy summary, not a wall of text.
+//   - GDPR citations consolidated into a single Sources block at the
+//     bottom — never inline within body copy.
 
 import type { UpdraftCitation, UpdraftPrivacyCopy } from '@/types';
 
-function Citations({ list }: { list: UpdraftCitation[] | undefined }) {
-  if (!list || list.length === 0) return null;
-  return (
-    <span className="ml-1 text-[#94A3B8]">
-      [
-      {list.map((c, i) => (
-        <span key={c.href}>
-          {i > 0 && ', '}
-          <a
-            href={c.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline decoration-dotted underline-offset-2 hover:text-[#7C3AED] transition-colors"
-          >
-            {c.label}
-          </a>
-        </span>
-      ))}
-      ]
-    </span>
-  );
+/** Deduplicates citations by href across the intro + every protection point. */
+function collectUniqueCitations(copy: UpdraftPrivacyCopy): UpdraftCitation[] {
+  const seen = new Map<string, UpdraftCitation>();
+  for (const c of copy.protections.introCitations) seen.set(c.href, c);
+  for (const point of copy.protections.points) {
+    for (const c of point.citations ?? []) seen.set(c.href, c);
+  }
+  return Array.from(seen.values());
 }
 
 export default function PrivacyCallout({ copy }: { copy: UpdraftPrivacyCopy }) {
+  const sources = collectUniqueCitations(copy);
+
   return (
     <section
       aria-label="Privacy, Trust & Opportunity"
@@ -53,10 +44,7 @@ export default function PrivacyCallout({ copy }: { copy: UpdraftPrivacyCopy }) {
         How we protect your data
       </h3>
 
-      <p>
-        {copy.protections.intro}
-        <Citations list={copy.protections.introCitations} />
-      </p>
+      <p>{copy.protections.intro}</p>
 
       <ul className="mt-4 space-y-3">
         {copy.protections.points.map((point) => (
@@ -70,7 +58,6 @@ export default function PrivacyCallout({ copy }: { copy: UpdraftPrivacyCopy }) {
             <p>
               <span className="font-semibold text-white">{point.heading}.</span>{' '}
               {point.body}
-              <Citations list={point.citations} />
             </p>
           </li>
         ))}
@@ -86,7 +73,29 @@ export default function PrivacyCallout({ copy }: { copy: UpdraftPrivacyCopy }) {
         ))}
       </div>
 
-      <p className="mt-8 pt-5 text-xs leading-relaxed text-[#94A3B8] border-t border-[#1F1F1F]">
+      {sources.length > 0 && (
+        <div className="mt-8 pt-5 border-t border-[#1F1F1F]">
+          <h3 className="text-xs tracking-widest text-[#94A3B8] uppercase mb-2">
+            Sources
+          </h3>
+          <ul className="text-xs text-[#94A3B8] flex flex-wrap gap-x-4 gap-y-1">
+            {sources.map((c) => (
+              <li key={c.href}>
+                <a
+                  href={c.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline decoration-dotted underline-offset-2 hover:text-[#7C3AED] transition-colors"
+                >
+                  {c.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <p className="mt-6 text-xs leading-relaxed text-[#94A3B8]">
         {copy.footerMicrocopy}
       </p>
     </section>
