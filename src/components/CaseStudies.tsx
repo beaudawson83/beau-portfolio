@@ -134,15 +134,19 @@ export default function CaseStudies() {
   return (
     <section id="case-studies" className="py-16 sm:py-20 2xl:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16">
       <div className="max-w-5xl 2xl:max-w-6xl mx-auto" ref={ref}>
-        {/* Section header */}
+        {/* Section header — matches TelemetryGrid's eyebrow / H2 / tagline
+            rhythm so the page reads as a consistent what → where progression. */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.4 }}
           className="mb-10 sm:mb-12"
         >
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+          <p className="font-mono text-xs text-[#94A3B8] tracking-[0.12em] uppercase mb-2">
             Where I&apos;ve Done It
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+            Case Studies
           </h2>
           <p className="text-sm sm:text-base text-[#94A3B8]">
             Walk into chaos. Build systems. Leave it running.
