@@ -347,6 +347,34 @@ Phase 2: cross-prompt audit. Phase 3: ACLED/UCDP/SIPRI reconciliation. Phase 4: 
 
 ---
 
+## UpDraft — v0.1 IN PROGRESS
+
+A resume + cover-letter generation tool operated by an AI character named **Audit**. 4-stage flow (intake → target → interview → generate) producing three deliverables in any combination: Master Overview Document (MOD), JD-tailored Resume, Cover Letter. Outputs DOCX + PDF + (MOD only) Markdown. ATS-safe single-column templates.
+
+**Status:** v0.1 is in active build. Until promoted to a MODULES card at v1.0, the feature lives at an unlinked `/updraft` URL Beau shares manually with friends. Pi-egg reveal arrives at v0.5; MODULES card at v1.0.
+
+**Architecture is "skill-as-orchestrator":** the host program (this Next.js app) owns UI, state, file generation, and the regex anti-pattern lint pass. The AI model (Gemini 2.0 Flash) owns parsing, voice, bullet rewriting, scoring, and CL drafting. Backend is the source of truth — conversation history is intentionally not preserved across stages; only structured stage outputs persist.
+
+**Auth + privacy:** magic-link login from day one (Resend), authenticated identity for accountability + 30-day automated session purge by `last_activity_at` for liability cap + user-controlled "Delete my data" button + self-serve data export. Login page reserves a `<PrivacyCallout>` slot **below** the email input rendering the verbiage at [`skills/updraft/PRIVACY-COPY.md`](skills/updraft/PRIVACY-COPY.md).
+
+**Cost guardrails:** all thresholds are env vars (`UPDRAFT_DAILY_*`, `UPDRAFT_PER_IP_*`, `UPDRAFT_SESSION_TOKEN_CAP_*`) dialable from the Vercel dashboard. Owner bypass via `UPDRAFT_OWNER_SECRET` Bearer header (mirrors `BLOG_EDITOR_SECRET`); owner sessions skip caps and tag events `owner: true`. BYOK fallback deferred to v1.0.
+
+**Spec + plan + decisions** live in [`skills/updraft/`](skills/updraft/):
+- [`SKILL.md`](skills/updraft/SKILL.md) — orchestrator (load first)
+- [`README.md`](skills/updraft/README.md) — engineering handoff
+- [`PLAN.md`](skills/updraft/PLAN.md) — durable design + integration record (locked decisions, full route/lib/component inventory, phased roadmap)
+- [`DECISIONS.md`](skills/updraft/DECISIONS.md) — append-only decision log (alternatives, rationale, what would invalidate each call)
+- [`PRIVACY-COPY.md`](skills/updraft/PRIVACY-COPY.md) — Beau-edited canonical privacy verbiage for the login page
+- [`references/`](skills/updraft/references/) — 12 spec files: 4 stage files + 8 lib files
+
+**Migration scripts:**
+- [`scripts/setup-supabase-updraft.sql`](scripts/setup-supabase-updraft.sql) — tables: `updraft_users`, `updraft_magic_tokens`, `updraft_sessions`, `updraft_events`, `updraft_exports`, `updraft_quota_daily`. RLS default-deny on all UpDraft tables; service-role only.
+- [`scripts/setup-supabase-updraft-storage.sql`](scripts/setup-supabase-updraft-storage.sql) — private `updraft-exports` bucket (signed-URL reads only, 5 MB cap, docx/pdf/md MIME allowlist). Output-only — raw uploaded resumes are parsed in-memory and discarded, never persisted.
+
+**Data flow when v0.1 lands:** browser → `/updraft/login` (magic link via Resend) → `/updraft` dashboard → `/updraft/[sessionId]` runs the 4 stages (each stage's structured JSON persists to `updraft_sessions.stage_outputs` on completion) → Stage 04 generates DOCX → Supabase Storage write → signed-URL download. PDF generation arrives in v0.5 via Vercel Sandbox + custom LibreOffice image.
+
+---
+
 ## Commands
 
 ```bash
