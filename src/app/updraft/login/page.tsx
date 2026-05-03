@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { readSessionUserIdFromCookies } from '@/lib/updraft/auth';
-import { updraftPrivacyCopy } from '@/lib/data';
+import { updraftLogoPath, updraftPrivacyCopy } from '@/lib/data';
 import LoginForm from '@/components/Updraft/LoginForm';
 import PrivacyCallout from '@/components/Updraft/PrivacyCallout';
 
@@ -29,15 +30,40 @@ export default async function UpdraftLoginPage({
   return (
     <main className="min-h-screen bg-[#111111] text-white">
       <div className="px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-        {/* Brand mark */}
-        <div className="max-w-md mx-auto mb-10 text-center">
-          <p className="text-xs tracking-widest text-[#7C3AED] uppercase mb-2">
-            UpDraft · by BAD Labs
+        {/* Brand mark — UpDraft is the hero; BAD Labs is the credit */}
+        <div className="max-w-md mx-auto mb-12 text-center">
+          {/* Logo slot — set updraftLogoPath in src/lib/data.ts to swap in */}
+          {updraftLogoPath ? (
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              <Image
+                src={updraftLogoPath}
+                alt="UpDraft"
+                fill
+                sizes="96px"
+                className="object-contain"
+                priority
+              />
+            </div>
+          ) : (
+            <div
+              className="w-24 h-24 mx-auto mb-6 border-2 border-dashed border-[#2A2A2A] rounded-xl flex items-center justify-center"
+              aria-hidden="true"
+            >
+              <span className="text-[10px] text-[#64748b] font-mono uppercase tracking-widest">
+                logo
+              </span>
+            </div>
+          )}
+
+          <h1 className="text-5xl sm:text-6xl font-bold tracking-tight text-white">
+            UpDraft
+          </h1>
+          <p className="mt-2 text-xs tracking-widest text-[#7C3AED] uppercase">
+            by BAD Labs
           </p>
-          <h1 className="text-3xl sm:text-4xl font-bold">Sign in</h1>
-          <p className="text-sm text-[#94A3B8] mt-3">
-            Resume + cover-letter builder. ATS-safe by default.
-          </p>
+          <h2 className="mt-8 text-xl sm:text-2xl font-semibold text-white">
+            Sign in
+          </h2>
         </div>
 
         {/* Login functionality — top of the page */}

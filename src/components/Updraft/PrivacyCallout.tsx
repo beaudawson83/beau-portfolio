@@ -4,8 +4,9 @@
 //
 // Display contract per PLAN.md §7.2:
 //   - Renders BELOW the email-input + magic-link button.
-//   - Body copy weight, full readable size — not fine print, not collapsible.
-//   - Headings as headings, bullets as bullets.
+//   - Body copy weight, never collapsible.
+//   - Bullet structure on the protection points so the page reads as a
+//     short policy summary, not a wall of text.
 
 import type { UpdraftCitation, UpdraftPrivacyCopy } from '@/types';
 
@@ -36,34 +37,38 @@ export default function PrivacyCallout({ copy }: { copy: UpdraftPrivacyCopy }) {
   return (
     <section
       aria-label="Privacy, Trust & Opportunity"
-      className="mt-16 max-w-2xl mx-auto text-[#cbd5e1]"
+      className="mt-16 max-w-2xl mx-auto text-[#cbd5e1] text-sm sm:text-[15px] leading-relaxed"
     >
-      <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6">
+      <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">
         {copy.heading}
       </h2>
 
-      <div className="space-y-4 text-base leading-relaxed">
+      <div className="space-y-3">
         {copy.lede.map((p, i) => (
           <p key={i}>{p}</p>
         ))}
       </div>
 
-      <h3 className="mt-10 mb-4 text-lg font-semibold text-white">
+      <h3 className="mt-8 mb-3 text-base font-semibold text-white">
         How we protect your data
       </h3>
 
-      <p className="text-base leading-relaxed">
+      <p>
         {copy.protections.intro}
         <Citations list={copy.protections.introCitations} />
       </p>
 
-      <ul className="mt-6 space-y-6">
+      <ul className="mt-4 space-y-3">
         {copy.protections.points.map((point) => (
-          <li key={point.heading}>
-            <h4 className="text-base font-semibold text-white mb-1.5">
-              {point.heading}
-            </h4>
-            <p className="text-base leading-relaxed">
+          <li key={point.heading} className="flex gap-3 items-start">
+            <span
+              aria-hidden="true"
+              className="text-[#7C3AED] mt-[3px] flex-shrink-0 select-none"
+            >
+              ▸
+            </span>
+            <p>
+              <span className="font-semibold text-white">{point.heading}.</span>{' '}
               {point.body}
               <Citations list={point.citations} />
             </p>
@@ -71,17 +76,17 @@ export default function PrivacyCallout({ copy }: { copy: UpdraftPrivacyCopy }) {
         ))}
       </ul>
 
-      <h3 className="mt-10 mb-4 text-lg font-semibold text-white">
+      <h3 className="mt-8 mb-3 text-base font-semibold text-white">
         {copy.whyItMatters.heading}
       </h3>
 
-      <div className="space-y-4 text-base leading-relaxed">
+      <div className="space-y-3">
         {copy.whyItMatters.body.map((p, i) => (
           <p key={i}>{p}</p>
         ))}
       </div>
 
-      <p className="mt-10 text-sm leading-relaxed text-[#94A3B8] border-t border-[#1F1F1F] pt-6">
+      <p className="mt-8 pt-5 text-xs leading-relaxed text-[#94A3B8] border-t border-[#1F1F1F]">
         {copy.footerMicrocopy}
       </p>
     </section>
