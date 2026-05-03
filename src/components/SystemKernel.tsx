@@ -48,14 +48,17 @@ export default function SystemKernel() {
 
   return (
     <section className="py-16 sm:py-20 2xl:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16 border-t border-[#1F1F1F]">
-      <div className="max-w-5xl 2xl:max-w-6xl mx-auto" ref={ref}>
-        {/* Section header */}
+      <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto" ref={ref}>
+        {/* Section header — eyebrow / H2 / tagline pattern. */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.4 }}
           className="mb-10 sm:mb-12"
         >
+          <p className="font-mono text-xs text-[#94A3B8] tracking-[0.12em] uppercase mb-2">
+            What I Use
+          </p>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
             Tools & Platforms
           </h2>

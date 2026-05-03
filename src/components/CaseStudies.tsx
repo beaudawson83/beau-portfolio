@@ -133,7 +133,7 @@ export default function CaseStudies() {
 
   return (
     <section id="case-studies" className="py-16 sm:py-20 2xl:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16">
-      <div className="max-w-5xl 2xl:max-w-6xl mx-auto" ref={ref}>
+      <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto" ref={ref}>
         {/* Section header — matches TelemetryGrid's eyebrow / H2 / tagline
             rhythm so the page reads as a consistent what → where progression. */}
         <motion.div

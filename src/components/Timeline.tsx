@@ -2,8 +2,21 @@ import { experiences } from '@/lib/data';
 
 export default function Timeline() {
   return (
-    <section className="py-10 sm:py-14 px-4 sm:px-6 lg:px-8 2xl:px-16">
-      <div className="max-w-5xl 2xl:max-w-6xl mx-auto">
+    <section className="py-16 sm:py-20 2xl:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16 border-t border-[#1F1F1F]">
+      <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto">
+        {/* Section header — eyebrow / H2 / tagline pattern. */}
+        <div className="mb-10 sm:mb-12">
+          <p className="font-mono text-xs text-[#94A3B8] tracking-[0.12em] uppercase mb-2">
+            Receipts
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+            Career Timeline
+          </h2>
+          <p className="text-sm sm:text-base text-[#94A3B8]">
+            Every role, every year, in order.
+          </p>
+        </div>
+
         {/* Pure CSS accordion — hidden checkbox + peer selectors, zero JS */}
         <input type="checkbox" id="timeline-toggle" className="peer sr-only" />
 

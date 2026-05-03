@@ -16,8 +16,9 @@ export default function Modules({ telemetry }: { telemetry: ModuleTelemetry }) {
 
   return (
     <section className="py-16 sm:py-20 2xl:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16">
-      <div className="max-w-5xl 2xl:max-w-6xl mx-auto" ref={ref}>
-        {/* Section header */}
+      <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto" ref={ref}>
+        {/* Section header — eyebrow / H2 / tagline matches TelemetryGrid +
+            CaseStudies + BadLabsShowcase pattern. */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -25,11 +26,14 @@ export default function Modules({ telemetry }: { telemetry: ModuleTelemetry }) {
           className="mb-8"
         >
           <p className="font-mono text-xs text-[#94A3B8] tracking-[0.12em] uppercase mb-2">
-            Owned systems
+            Active projects
           </p>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
             Modules
           </h2>
+          <p className="text-sm sm:text-base text-[#94A3B8]">
+            Check out what I&apos;m building.
+          </p>
         </motion.div>
 
         {/* Cards */}

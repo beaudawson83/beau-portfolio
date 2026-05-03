@@ -13,21 +13,22 @@ export default function BadLabsShowcase() {
 
   return (
     <section className="py-16 sm:py-20 2xl:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16">
-      <div className="max-w-5xl 2xl:max-w-6xl mx-auto" ref={ref}>
-        {/* Headline */}
+      <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto" ref={ref}>
+        {/* Section header — matches TelemetryGrid / CaseStudies rhythm:
+            eyebrow (role + date metadata) → H2 (venture name) → tagline. */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.4 }}
           className="mb-8"
         >
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">
-            {badLabsContent.headline}
-          </h2>
-          <p className="font-mono text-xs sm:text-sm text-[#94A3B8]">
+          <p className="font-mono text-xs text-[#94A3B8] tracking-[0.12em] uppercase mb-2">
             {badLabsContent.subheadline}
           </p>
-          <p className="text-[#94A3B8] mt-4 max-w-3xl leading-relaxed">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+            {badLabsContent.headline}
+          </h2>
+          <p className="text-sm sm:text-base text-[#94A3B8] max-w-3xl leading-relaxed">
             {badLabsContent.description}
           </p>
         </motion.div>
