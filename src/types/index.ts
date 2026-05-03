@@ -359,6 +359,15 @@ export interface UpdraftGap {
   severity: UpdraftGapSeverity;
 }
 
+export interface UpdraftExtractedTarget {
+  role_title: string | null;
+  company: string | null;
+  industry: string | null;
+  seniority: string | null;
+  location: string | null;
+  compensation_range: string | null;
+}
+
 /** Output shape of SYS_MATCH_ANALYZER. */
 export interface UpdraftMatchAnalysis {
   overall_match_pct: number | null;
@@ -370,4 +379,11 @@ export interface UpdraftMatchAnalysis {
   gaps: UpdraftGap[];
   strengths_to_emphasize: string[];
   confidence_band: UpdraftConfidenceBand | null;
+  /**
+   * Target role metadata extracted from the JD by the analyzer in the same
+   * call. Lets the user paste a JD (or fuzzy description) without having to
+   * also retype the role title, company, industry, etc. by hand. Optional for
+   * read-back compatibility with sessions persisted before this field landed.
+   */
+  extracted_target?: UpdraftExtractedTarget | null;
 }

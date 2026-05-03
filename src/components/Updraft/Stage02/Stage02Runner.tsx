@@ -320,6 +320,7 @@ function TargetForm({
     compensation_range: '',
     jd_text: '',
   });
+  const [showOverrides, setShowOverrides] = useState(false);
   const [phase, setPhase] = useState<'idle' | 'analyzing' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -329,14 +330,11 @@ function TargetForm({
     setTarget((prev) => ({ ...prev, [k]: e.target.value }));
   };
 
-  const requiredFilled =
-    target.role_title.trim() !== '' &&
-    target.company.trim() !== '' &&
-    target.jd_text.trim() !== '';
+  const jdFilled = target.jd_text.trim() !== '';
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!requiredFilled) return;
+    if (!jdFilled) return;
     setPhase('analyzing');
     setErrorMessage(null);
     try {
@@ -367,68 +365,30 @@ function TargetForm({
     <div>
       <h1 className="text-2xl sm:text-3xl font-bold mb-3">Target role</h1>
       <p className="text-sm text-[#cbd5e1] mb-6">
-        Be specific. The resume changes shape based on the answer.
+        Paste the full JD, or describe what you&apos;re aiming for. I&apos;ll
+        extract the role title, company, and other details from there.
+        Specific is better — &ldquo;Director of Trust at a marketplace doing
+        $1B+ GMV&rdquo; beats &ldquo;Senior Manager somewhere.&rdquo;
         {!wantsMod && (
           <>
             {' '}
-            (Building an MOD as part of this since you skipped it.)
+            <span className="text-[#94A3B8]">
+              (Building a lightweight MOD as part of this since you skipped it.)
+            </span>
           </>
         )}
       </p>
 
       <form onSubmit={submit} className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 space-y-4">
-        <Field
-          label="Role title *"
-          value={target.role_title}
-          onChange={updateField('role_title')}
-          placeholder="Director of Customer Experience"
-        />
-        <Field
-          label="Company *"
-          value={target.company}
-          onChange={updateField('company')}
-          placeholder="Acme Inc."
-        />
-
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Field
-            label="Industry"
-            value={target.industry}
-            onChange={updateField('industry')}
-            placeholder="B2B SaaS"
-          />
-          <Field
-            label="Seniority"
-            value={target.seniority}
-            onChange={updateField('seniority')}
-            placeholder="Director / VP"
-          />
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Field
-            label="Location"
-            value={target.location}
-            onChange={updateField('location')}
-            placeholder="Remote · US"
-          />
-          <Field
-            label="Comp range"
-            value={target.compensation_range}
-            onChange={updateField('compensation_range')}
-            placeholder="$180-220k"
-          />
-        </div>
-
         <div>
           <label className="block text-xs text-[#94A3B8] mb-1.5 uppercase tracking-wider">
-            Job description *
+            Job description or target blurb *
           </label>
           <textarea
             value={target.jd_text}
             onChange={updateField('jd_text')}
-            placeholder="Paste the full JD here…"
-            rows={10}
+            placeholder={'Paste the full JD here…\n\nOr something like:\n"Senior backend engineer at a healthtech company,\n6+ years, comfortable with Postgres + Go."'}
+            rows={12}
             className="w-full bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg resize-y font-mono"
           />
           <p className="mt-1 text-[10px] text-[#64748b]">
@@ -436,10 +396,72 @@ function TargetForm({
           </p>
         </div>
 
+        <div className="border-t border-[#1F1F1F] pt-4">
+          <button
+            type="button"
+            onClick={() => setShowOverrides((v) => !v)}
+            className="text-xs text-[#94A3B8] hover:text-white transition-colors flex items-center gap-1.5"
+          >
+            <span className="font-mono">{showOverrides ? '▾' : '▸'}</span>
+            Override extracted fields (optional)
+          </button>
+
+          {showOverrides && (
+            <div className="mt-4 space-y-4">
+              <p className="text-[11px] text-[#64748b] leading-relaxed">
+                Any field you fill here wins over what the AI extracts from the
+                JD. Leave blank and the AI will fill it in.
+              </p>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Field
+                  label="Role title"
+                  value={target.role_title}
+                  onChange={updateField('role_title')}
+                  placeholder="Director of Customer Experience"
+                />
+                <Field
+                  label="Company"
+                  value={target.company}
+                  onChange={updateField('company')}
+                  placeholder="Acme Inc."
+                />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Field
+                  label="Industry"
+                  value={target.industry}
+                  onChange={updateField('industry')}
+                  placeholder="B2B SaaS"
+                />
+                <Field
+                  label="Seniority"
+                  value={target.seniority}
+                  onChange={updateField('seniority')}
+                  placeholder="Director / VP"
+                />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Field
+                  label="Location"
+                  value={target.location}
+                  onChange={updateField('location')}
+                  placeholder="Remote · US"
+                />
+                <Field
+                  label="Comp range"
+                  value={target.compensation_range}
+                  onChange={updateField('compensation_range')}
+                  placeholder="$180-220k"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flex items-center justify-end pt-2 border-t border-[#1F1F1F]">
           <button
             type="submit"
-            disabled={!requiredFilled || phase === 'analyzing'}
+            disabled={!jdFilled || phase === 'analyzing'}
             className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {phase === 'analyzing' ? 'Analyzing the JD…' : 'Analyze →'}
@@ -622,10 +644,15 @@ function MatchBriefing({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">Match briefing</h1>
-        {target && (
+        {target && (target.role_title || target.company) && (
           <p className="text-sm text-[#94A3B8]">
-            <span className="text-white">{target.role_title}</span> @{' '}
-            <span className="text-white">{target.company}</span>
+            {target.role_title && (
+              <span className="text-white">{target.role_title}</span>
+            )}
+            {target.role_title && target.company && ' @ '}
+            {target.company && (
+              <span className="text-white">{target.company}</span>
+            )}
           </p>
         )}
       </div>

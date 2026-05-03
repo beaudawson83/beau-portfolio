@@ -47,7 +47,9 @@ export async function POST(
     return NextResponse.json({ error: 'stage-01-incomplete' }, { status: 409 });
   }
 
-  // Body validation
+  // Body validation — only jd_text is required. role_title and company
+  // are optional user overrides; if not supplied, the analyzer extracts
+  // them from the JD itself.
   let body: RequestBody;
   try {
     body = (await request.json()) as RequestBody;
@@ -55,8 +57,8 @@ export async function POST(
     return NextResponse.json({ error: 'invalid-json' }, { status: 400 });
   }
   const t = body.target;
-  if (!t || !t.role_title?.trim() || !t.company?.trim() || !t.jd_text?.trim()) {
-    return NextResponse.json({ error: 'missing-required-target-fields' }, { status: 400 });
+  if (!t || !t.jd_text?.trim()) {
+    return NextResponse.json({ error: 'missing-jd-text' }, { status: 400 });
   }
   if (t.jd_text.length > MAX_JD_CHARS) {
     return NextResponse.json(
@@ -74,20 +76,19 @@ export async function POST(
     );
   }
 
-  // Build the persisted target (normalize empty optional fields to null).
-  const target: UpdraftTargetRole = {
-    role_title:         t.role_title.trim(),
-    company:            t.company.trim(),
-    industry:           normalize(t.industry),
-    seniority:          normalize(t.seniority),
-    location:           normalize(t.location),
-    compensation_range: normalize(t.compensation_range),
-    jd_text:            t.jd_text.trim(),
+  // Run the analyzer — analyzer extracts target metadata from the JD as part
+  // of its single Gemini call (see TARGET_EXTRACTION_INSTRUCTION).
+  const userSupplied: Partial<UpdraftTargetRole> = {
+    role_title:         normalize(t.role_title) ?? undefined,
+    company:            normalize(t.company) ?? undefined,
+    industry:           normalize(t.industry) ?? undefined,
+    seniority:          normalize(t.seniority) ?? undefined,
+    location:           normalize(t.location) ?? undefined,
+    compensation_range: normalize(t.compensation_range) ?? undefined,
   };
 
-  // Run the analyzer
   const result = await analyzeMatch({
-    jdText: target.jd_text,
+    jdText: t.jd_text.trim(),
     resumeParsed: stage01.resume_parsed ?? null,
     tier,
   });
@@ -98,12 +99,23 @@ export async function POST(
   });
 
   if (!result.ok) {
-    // Persist the target so the user can retry without re-entering the form.
+    // No AI extraction available on failure. Persist whatever the user
+    // supplied (plus the JD) so they can retry without re-entering the
+    // form. Empty strings are fine — the user can override on retry.
+    const failureTarget: UpdraftTargetRole = {
+      role_title:         userSupplied.role_title ?? '',
+      company:            userSupplied.company ?? '',
+      industry:           userSupplied.industry ?? null,
+      seniority:          userSupplied.seniority ?? null,
+      location:           userSupplied.location ?? null,
+      compensation_range: userSupplied.compensation_range ?? null,
+      jd_text:            t.jd_text.trim(),
+    };
     await patchSessionStage({
       sessionId,
       userId,
       stageKey: 'stage_02',
-      payload: { target, match_analysis: null, confidence_band: null },
+      payload: { target: failureTarget, match_analysis: null, confidence_band: null },
     });
     await logEvent({
       sessionId,
@@ -122,7 +134,20 @@ export async function POST(
     );
   }
 
-  // Persist target + analysis + confidence band
+  // Merge user-supplied fields with AI-extracted fields. User-supplied
+  // values win when present (the user told us explicitly). AI extraction
+  // fills in anything the user left blank.
+  const ai = result.analysis.extracted_target ?? null;
+  const target: UpdraftTargetRole = {
+    role_title:         userSupplied.role_title         ?? ai?.role_title         ?? '',
+    company:            userSupplied.company            ?? ai?.company            ?? '',
+    industry:           userSupplied.industry           ?? ai?.industry           ?? null,
+    seniority:          userSupplied.seniority          ?? ai?.seniority          ?? null,
+    location:           userSupplied.location           ?? ai?.location           ?? null,
+    compensation_range: userSupplied.compensation_range ?? ai?.compensation_range ?? null,
+    jd_text:            t.jd_text.trim(),
+  };
+
   await patchSessionStage({
     sessionId,
     userId,
@@ -145,6 +170,8 @@ export async function POST(
       tokensOut: result.tokensOut,
       retried: result.retried,
       owner: isUpdraftOwner(request),
+      ai_extracted_role: !userSupplied.role_title && Boolean(ai?.role_title),
+      ai_extracted_company: !userSupplied.company && Boolean(ai?.company),
     },
   });
 

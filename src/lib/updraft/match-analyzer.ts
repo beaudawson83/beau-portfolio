@@ -19,8 +19,35 @@ import type {
   UpdraftTier,
 } from '@/types';
 
+// Additional instruction layered on top of SYS_MATCH_ANALYZER. The
+// canonical prompt at lib-system-prompts.md handles scoring; we tack on
+// target-metadata extraction here so a single Gemini call produces both
+// the match analysis AND the parsed target fields. That collapses the
+// Stage 02 form to "paste your JD" — no need to retype role/company.
+const TARGET_EXTRACTION_INSTRUCTION = `--- ADDITIONAL TASK: TARGET METADATA EXTRACTION ---
+
+Beyond the match analysis, also extract target role metadata into an
+"extracted_target" object. Pull these fields from the JD text:
+
+- role_title: the job title from the JD header (e.g., "Senior Backend
+  Engineer"). If the input is a fuzzy description ("any junior data role
+  at a startup"), extract the role-shape that's described.
+- company: the hiring company's name. Use null if the input is generic
+  or no company is named.
+- industry: the industry/sector inferred from the JD. Use null if unclear.
+- seniority: the seniority level (e.g., "Junior", "Mid", "Senior",
+  "Staff", "Director", "VP"). Use null if unclear.
+- location: the location/remote policy from the JD (e.g., "Remote · US",
+  "New York, NY"). Use null if not stated.
+- compensation_range: the comp range from the JD (e.g., "$180-220k",
+  "$140k base + equity"). Use null if not stated.
+
+Return null for any field that isn't present or can't be inferred with
+high confidence. Do not guess or fabricate.`;
+
 // Gemini-flavored JSON schema for the SYS_MATCH_ANALYZER output. Mirrors
-// the Stage 02 output contract in stage-02-target.md.
+// the Stage 02 output contract in stage-02-target.md, extended with
+// extracted_target for the target metadata extraction task above.
 const MATCH_ANALYSIS_SCHEMA = {
   type: 'object',
   properties: {
@@ -79,6 +106,18 @@ const MATCH_ANALYSIS_SCHEMA = {
       enum: ['DIRECT', 'TRANSFERABLE', 'ADJACENT', 'WEAK', 'GAP'],
       nullable: true,
     },
+    extracted_target: {
+      type: 'object',
+      properties: {
+        role_title:         { type: 'string', nullable: true },
+        company:            { type: 'string', nullable: true },
+        industry:           { type: 'string', nullable: true },
+        seniority:          { type: 'string', nullable: true },
+        location:           { type: 'string', nullable: true },
+        compensation_range: { type: 'string', nullable: true },
+      },
+      required: ['role_title', 'company', 'industry', 'seniority', 'location', 'compensation_range'],
+    },
   },
   required: [
     'overall_match_pct',
@@ -90,6 +129,7 @@ const MATCH_ANALYSIS_SCHEMA = {
     'gaps',
     'strengths_to_emphasize',
     'confidence_band',
+    'extracted_target',
   ],
 } as const;
 
@@ -126,7 +166,7 @@ export async function analyzeMatch(
     loadSystemPrompt('SYS_MATCH_ANALYZER'),
     loadConfidenceRubric(),
   ]);
-  const combinedSystem = `${sysPrompt}\n\n--- CONFIDENCE RUBRIC ---\n${rubric}`;
+  const combinedSystem = `${sysPrompt}\n\n--- CONFIDENCE RUBRIC ---\n${rubric}\n\n${TARGET_EXTRACTION_INSTRUCTION}`;
 
   // Encode inputs as a single JSON payload — clearer than multi-line prose
   // for a structured-output extraction call.
