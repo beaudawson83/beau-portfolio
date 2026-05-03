@@ -1,10 +1,20 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import { Orbitron } from 'next/font/google';
 import { redirect } from 'next/navigation';
 import { readSessionUserIdFromCookies } from '@/lib/updraft/auth';
 import { updraftLogoPath, updraftPrivacyCopy } from '@/lib/data';
 import LoginForm from '@/components/Updraft/LoginForm';
 import PrivacyCallout from '@/components/Updraft/PrivacyCallout';
+
+// Sci-fi display font for the UpDraft wordmark. Scoped to this page —
+// not loaded on the rest of the site. Bold/black weights are the ones
+// that read as a logo type; lighter weights look thin at large sizes.
+const orbitron = Orbitron({
+  subsets: ['latin'],
+  weight: ['700', '900'],
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Sign in — UpDraft',
@@ -30,38 +40,45 @@ export default async function UpdraftLoginPage({
   return (
     <main className="min-h-screen bg-[#111111] text-white">
       <div className="px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-        {/* Brand mark — UpDraft is the hero; BAD Labs is the credit */}
-        <div className="max-w-md mx-auto mb-12 text-center">
-          {/* Logo slot — set updraftLogoPath in src/lib/data.ts to swap in */}
-          {updraftLogoPath ? (
-            <div className="relative w-24 h-24 mx-auto mb-6">
-              <Image
-                src={updraftLogoPath}
-                alt="UpDraft"
-                fill
-                sizes="96px"
-                className="object-contain"
-                priority
-              />
-            </div>
-          ) : (
-            <div
-              className="w-24 h-24 mx-auto mb-6 border-2 border-dashed border-[#2A2A2A] rounded-xl flex items-center justify-center"
-              aria-hidden="true"
+        {/* Brand mark — horizontal lockup: wordmark left, logo right.
+            "by BAD Labs" centered below the whole pair. */}
+        <div className="max-w-lg mx-auto mb-12">
+          <div className="flex items-center justify-center gap-4 sm:gap-5">
+            <h1
+              className={`${orbitron.className} text-5xl sm:text-6xl font-black tracking-tight text-white leading-none`}
             >
-              <span className="text-[10px] text-[#64748b] font-mono uppercase tracking-widest">
-                logo
-              </span>
-            </div>
-          )}
+              UpDraft
+            </h1>
 
-          <h1 className="text-5xl sm:text-6xl font-bold tracking-tight text-white">
-            UpDraft
-          </h1>
-          <p className="mt-2 text-xs tracking-widest text-[#7C3AED] uppercase">
+            {/* Logo — set updraftLogoPath in src/lib/data.ts to swap in */}
+            {updraftLogoPath ? (
+              <div className="relative w-28 h-28 sm:w-32 sm:h-32 flex-shrink-0">
+                <Image
+                  src={updraftLogoPath}
+                  alt="UpDraft"
+                  fill
+                  sizes="128px"
+                  className="object-contain"
+                  priority
+                />
+              </div>
+            ) : (
+              <div
+                className="w-28 h-28 sm:w-32 sm:h-32 flex-shrink-0 border-2 border-dashed border-[#2A2A2A] rounded-xl flex items-center justify-center"
+                aria-hidden="true"
+              >
+                <span className="text-[10px] text-[#64748b] font-mono uppercase tracking-widest">
+                  logo
+                </span>
+              </div>
+            )}
+          </div>
+
+          <p className="mt-3 text-center text-xs tracking-widest text-[#7C3AED] uppercase">
             by BAD Labs
           </p>
-          <h2 className="mt-8 text-xl sm:text-2xl font-semibold text-white">
+
+          <h2 className="mt-10 text-xl sm:text-2xl font-semibold text-white text-center">
             Sign in
           </h2>
         </div>
