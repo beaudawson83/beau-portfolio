@@ -332,12 +332,10 @@ export const modules: ModuleEntry[] = [
 // =============================================================================
 // UpDraft — login page brand assets.
 //
-// Optional logo asset for the /updraft/login brand mark. Drop a file in
-// public/ (e.g. public/updraft-logo.svg or .png) and set this to its path
-// (e.g. '/updraft-logo.svg'). Leave null to render a placeholder slot above
-// the wordmark so the layout stays stable while a real asset is sourced.
+// Logo asset for the /updraft/login brand mark. Lives at public/updraft-logo.png.
+// The PrivacyCallout placeholder slot renders only when this is null.
 // =============================================================================
-export const updraftLogoPath: string | null = null;
+export const updraftLogoPath: string | null = '/updraft-logo.png';
 
 // =============================================================================
 // UpDraft — privacy callout copy.
