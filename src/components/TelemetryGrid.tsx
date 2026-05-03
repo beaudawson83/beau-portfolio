@@ -89,11 +89,27 @@ export default function TelemetryGrid() {
 
   return (
     <section className="relative py-10 sm:py-14 md:py-16 2xl:py-20 px-4 sm:px-6 lg:px-8 2xl:px-16 border-y border-[#1F1F1F]">
-      <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto">
+      <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto" ref={ref}>
+        {/* Section header — sets up the "Where I've Done It" section below
+            so the page reads as a what → where progression. */}
         <motion.div
-          ref={ref}
-          className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8"
+          initial={{ opacity: 0, y: 10 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.4 }}
+          className="mb-8 sm:mb-10"
         >
+          <p className="font-mono text-xs text-[#94A3B8] tracking-[0.12em] uppercase mb-2">
+            What I&apos;ve Done
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+            By the Numbers
+          </h2>
+          <p className="text-sm sm:text-base text-[#94A3B8]">
+            Twenty years of operating, building, and removing zeros from problems.
+          </p>
+        </motion.div>
+
+        <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
           {metrics.map((metric, index) => (
             <MetricCard
               key={metric.label}
