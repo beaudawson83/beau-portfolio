@@ -19,6 +19,7 @@ import path from 'node:path';
 const SPEC_ROOT = path.join(process.cwd(), 'skills', 'updraft', 'references');
 
 let auditVoiceCache: string | null = null;
+let confidenceRubricCache: string | null = null;
 let systemPromptsCache: string | null = null;
 const sysPromptCache = new Map<string, string>();
 
@@ -27,6 +28,20 @@ export async function loadAuditVoice(): Promise<string> {
   if (auditVoiceCache) return auditVoiceCache;
   auditVoiceCache = await readFile(path.join(SPEC_ROOT, 'lib-audit-voice.md'), 'utf8');
   return auditVoiceCache;
+}
+
+/**
+ * Loads lib-confidence-rubric.md, the scoring methodology referenced by
+ * SYS_MATCH_ANALYZER. Per spec: SYS_MATCH_ANALYZER's prompt explicitly
+ * names the rubric and requires it loaded into context for correct scoring.
+ */
+export async function loadConfidenceRubric(): Promise<string> {
+  if (confidenceRubricCache) return confidenceRubricCache;
+  confidenceRubricCache = await readFile(
+    path.join(SPEC_ROOT, 'lib-confidence-rubric.md'),
+    'utf8',
+  );
+  return confidenceRubricCache;
 }
 
 export type SysPromptName =

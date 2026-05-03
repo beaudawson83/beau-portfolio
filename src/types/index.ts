@@ -319,3 +319,55 @@ export interface ParsedResume {
   education: ParsedResumeEducation[];
   skills: string[];
 }
+
+// --- Stage 02: target + match analysis -----------------------------------
+
+export type UpdraftDeliverable = 'mod' | 'jd_build' | 'cover_letter';
+
+export type UpdraftConfidenceBand =
+  | 'DIRECT'
+  | 'TRANSFERABLE'
+  | 'ADJACENT'
+  | 'WEAK'
+  | 'GAP';
+
+export type UpdraftGapSeverity = 'critical' | 'major' | 'minor';
+
+export interface UpdraftTargetRole {
+  role_title: string;
+  company: string;
+  industry: string | null;
+  seniority: string | null;
+  location: string | null;
+  compensation_range: string | null;
+  jd_text: string;
+}
+
+export interface UpdraftSkillMatch {
+  skill: string;
+  match: boolean;
+  evidence: string | null;
+}
+
+export interface UpdraftRedFlag {
+  type: string;
+  description: string;
+}
+
+export interface UpdraftGap {
+  requirement: string;
+  severity: UpdraftGapSeverity;
+}
+
+/** Output shape of SYS_MATCH_ANALYZER. */
+export interface UpdraftMatchAnalysis {
+  overall_match_pct: number | null;
+  required_skills: UpdraftSkillMatch[];
+  preferred_skills: UpdraftSkillMatch[];
+  soft_skills: string[];
+  industry_terms: string[];
+  red_flags: UpdraftRedFlag[];
+  gaps: UpdraftGap[];
+  strengths_to_emphasize: string[];
+  confidence_band: UpdraftConfidenceBand | null;
+}
