@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { UpdraftSessionSummary } from '@/types';
@@ -34,6 +35,8 @@ function statusClass(status: UpdraftSessionSummary['status']): string {
 export default function Dashboard({ email, sessions }: DashboardProps) {
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
+  const [creatingSession, setCreatingSession] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -44,6 +47,24 @@ export default function Dashboard({ email, sessions }: DashboardProps) {
     }
     router.push('/updraft/login');
     router.refresh();
+  };
+
+  const handleNewSession = async () => {
+    setCreatingSession(true);
+    setCreateError(null);
+    try {
+      const res = await fetch('/api/updraft/sessions', { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCreateError(body.error || 'Could not start a session.');
+        setCreatingSession(false);
+        return;
+      }
+      router.push(body.redirectTo || `/updraft/${body.sessionId}`);
+    } catch {
+      setCreateError('Network error. Try again.');
+      setCreatingSession(false);
+    }
   };
 
   return (
@@ -80,13 +101,18 @@ export default function Dashboard({ email, sessions }: DashboardProps) {
           </div>
           <button
             type="button"
-            disabled
-            title="Stage 01 ships in the next slice."
-            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-medium"
+            onClick={handleNewSession}
+            disabled={creatingSession}
+            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            + New session
+            {creatingSession ? 'Starting…' : '+ New session'}
           </button>
         </div>
+        {createError && (
+          <p role="alert" className="mb-4 text-sm text-red-400">
+            {createError}
+          </p>
+        )}
 
         {sessions.length === 0 ? (
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-12 text-center">
@@ -101,24 +127,26 @@ export default function Dashboard({ email, sessions }: DashboardProps) {
         ) : (
           <ul className="divide-y divide-[#1F1F1F] border border-[#2A2A2A] rounded-lg overflow-hidden">
             {sessions.map((s) => (
-              <li
-                key={s.id}
-                className="px-5 py-4 flex items-center justify-between bg-[#1A1A1A] hover:bg-[#1F1F1F] transition-colors"
-              >
-                <div>
-                  <p className="text-sm text-white">
-                    Session started {formatDate(s.startedAt)}
-                  </p>
-                  <p className={`text-xs mt-1 ${statusClass(s.status)}`}>
-                    {statusLabel(s.status)}
-                    {s.tier ? ` · TIER ${s.tier}` : ''}
-                    {s.path ? ` · ${s.path.toUpperCase()}` : ''}
-                    {s.keepIndefinitely ? ' · KEPT' : ''}
-                  </p>
-                </div>
-                <span className="text-xs text-[#64748b]">
-                  Last activity: {formatDate(s.lastActivityAt)}
-                </span>
+              <li key={s.id}>
+                <Link
+                  href={`/updraft/${s.id}`}
+                  className="px-5 py-4 flex items-center justify-between bg-[#1A1A1A] hover:bg-[#1F1F1F] transition-colors"
+                >
+                  <div>
+                    <p className="text-sm text-white">
+                      Session started {formatDate(s.startedAt)}
+                    </p>
+                    <p className={`text-xs mt-1 ${statusClass(s.status)}`}>
+                      {statusLabel(s.status)}
+                      {s.tier ? ` · TIER ${s.tier}` : ''}
+                      {s.path ? ` · ${s.path.toUpperCase()}` : ''}
+                      {s.keepIndefinitely ? ' · KEPT' : ''}
+                    </p>
+                  </div>
+                  <span className="text-xs text-[#64748b]">
+                    Last activity: {formatDate(s.lastActivityAt)}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
