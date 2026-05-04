@@ -898,12 +898,13 @@ function Stage03Stub({
       <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono mb-3">
         Stage 02 complete
       </p>
-      <h2 className="text-xl font-bold mb-2">Stage 03 — Interview</h2>
+      <h2 className="text-xl font-bold mb-2">Stage 03 — Build your story</h2>
       <p className="text-sm text-[#cbd5e1] max-w-md mx-auto leading-relaxed">
         Building{' '}
         {deliverables.map((d) => DELIVERABLE_LABEL[d]).join(' + ')}.
-        The MOD-build interview ships in the next slice — we&apos;ll dig
-        into your strongest roles and surface the metrics worth keeping.
+        Next, Audit walks you through your strongest roles and pulls
+        out the metrics worth keeping — your career, properly structured.
+        Ships in the next slice.
       </p>
 
       <div className="mt-6 flex items-center justify-center gap-4 text-xs">
