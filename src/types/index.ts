@@ -436,6 +436,47 @@ export interface UpdraftMod {
 
 export type UpdraftModMode = 'full' | 'lightweight';
 
+// --- Stage 04: generation ----------------------------------------------------
+
+export type UpdraftExportKind =
+  | 'mod_docx'
+  | 'mod_pdf'
+  | 'mod_md'
+  | 'resume_docx'
+  | 'resume_pdf'
+  | 'cl_docx'
+  | 'cl_pdf';
+
+export interface UpdraftExportFile {
+  id: string;
+  kind: UpdraftExportKind;
+  filename: string;
+  storagePath: string;
+  mime: string;
+  bytes: number;
+  generatedAt: string;
+}
+
+export type UpdraftLintCategory =
+  | 'generic_opener'
+  | 'weak_verb'
+  | 'keyword_stuffing'
+  | 'ai_tell'
+  | 'over_condensation'
+  | 'filler_adjective'
+  | 'vague_quantifier'
+  | 'unsupported_superlative';
+
+export interface UpdraftLintFlag {
+  category: UpdraftLintCategory;
+  location: string;        // e.g. "experience[0].bullets[2]" or "summary"
+  excerpt: string;         // the matched snippet (capped at ~80 chars)
+  pattern: string;         // human-readable description of what tripped
+}
+
+export type UpdraftTemplate = 'classic' | 'modern' | 'structured' | 'creative';
+export type UpdraftDensity = 'compact' | 'regular' | 'comfy';
+
 /** Output shape of SYS_MATCH_ANALYZER. */
 export interface UpdraftMatchAnalysis {
   overall_match_pct: number | null;

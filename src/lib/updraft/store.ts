@@ -359,6 +359,90 @@ export async function logEvent(args: {
   if (error) console.error('updraft.logEvent:', error);
 }
 
+// ---------------------------------------------------------------------------
+// EXPORTS — file index entries pointing into the updraft-exports bucket
+// ---------------------------------------------------------------------------
+
+interface ExportRow {
+  id: string;
+  session_id: string;
+  kind: string;
+  filename: string;
+  storage_path: string;
+  mime: string;
+  bytes: number;
+  generated_at: string;
+}
+
+export async function recordExport(args: {
+  sessionId: string;
+  kind: string;                         // UpdraftExportKind
+  filename: string;
+  storagePath: string;
+  mime: string;
+  bytes: number;
+}): Promise<boolean> {
+  const sb = client();
+  if (!sb) return false;
+  const { error } = await sb.from('updraft_exports').insert({
+    session_id:   args.sessionId,
+    kind:         args.kind,
+    filename:     args.filename,
+    storage_path: args.storagePath,
+    mime:         args.mime,
+    bytes:        args.bytes,
+  });
+  if (error) {
+    console.error('updraft.recordExport:', error);
+    return false;
+  }
+  return true;
+}
+
+export async function listExportsForSession(
+  sessionId: string,
+  userId: string,
+): Promise<ExportRow[]> {
+  const sb = client();
+  if (!sb) return [];
+  // Ownership check via the session FK — first verify the session belongs
+  // to this user, then list the exports.
+  const session = await readSessionForUser(sessionId, userId);
+  if (!session) return [];
+  const { data, error } = await sb
+    .from('updraft_exports')
+    .select('id,session_id,kind,filename,storage_path,mime,bytes,generated_at')
+    .eq('session_id', sessionId)
+    .order('generated_at', { ascending: false });
+  if (error) {
+    console.error('updraft.listExportsForSession:', error);
+    return [];
+  }
+  return (data ?? []) as ExportRow[];
+}
+
+export async function readExportForSession(
+  exportId: string,
+  sessionId: string,
+  userId: string,
+): Promise<ExportRow | null> {
+  const sb = client();
+  if (!sb) return null;
+  const session = await readSessionForUser(sessionId, userId);
+  if (!session) return null;
+  const { data, error } = await sb
+    .from('updraft_exports')
+    .select('id,session_id,kind,filename,storage_path,mime,bytes,generated_at')
+    .eq('id', exportId)
+    .eq('session_id', sessionId)
+    .maybeSingle<ExportRow>();
+  if (error) {
+    console.error('updraft.readExportForSession:', error);
+    return null;
+  }
+  return data ?? null;
+}
+
 export async function readEventsForSession(
   sessionId: string,
   limit = 200,
