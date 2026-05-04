@@ -323,6 +323,8 @@ function TargetForm({
   const [showOverrides, setShowOverrides] = useState(false);
   const [phase, setPhase] = useState<'idle' | 'analyzing' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const [goingBack, setGoingBack] = useState(false);
 
   const updateField = (k: keyof typeof target) => (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -337,6 +339,7 @@ function TargetForm({
     if (!jdFilled) return;
     setPhase('analyzing');
     setErrorMessage(null);
+    setErrorDetail(null);
     try {
       const res = await fetch(
         `/api/updraft/sessions/${sessionId}/match-analyze`,
@@ -349,6 +352,7 @@ function TargetForm({
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         setErrorMessage(body.error || 'Could not run match analysis.');
+        setErrorDetail(typeof body.detail === 'string' ? body.detail : null);
         setPhase('error');
         return;
       }
@@ -357,6 +361,32 @@ function TargetForm({
       setErrorMessage('Network error. Try again.');
       setPhase('error');
     }
+  };
+
+  // Back button — clears stage_02 entirely so the dispatcher routes back
+  // to the deliverable picker. Same idiom as the "Change deliverables"
+  // link on the Stage 03 stub. Stage 01 outputs are untouched.
+  const goBack = async () => {
+    setGoingBack(true);
+    try {
+      await fetch(`/api/updraft/sessions/${sessionId}/stage/02`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payload: {
+            deliverables: [],
+            lightweight_mod: false,
+            target: null,
+            match_analysis: null,
+            confidence_band: null,
+            acknowledged: false,
+          },
+        }),
+      });
+    } catch {
+      /* swallow — we'll refresh either way and let the user retry */
+    }
+    router.refresh();
   };
 
   const wantsMod = deliverables.includes('mod');
@@ -458,7 +488,15 @@ function TargetForm({
           )}
         </div>
 
-        <div className="flex items-center justify-end pt-2 border-t border-[#1F1F1F]">
+        <div className="flex items-center justify-between pt-2 border-t border-[#1F1F1F]">
+          <button
+            type="button"
+            onClick={goBack}
+            disabled={goingBack || phase === 'analyzing'}
+            className="text-xs text-[#94A3B8] hover:text-white transition-colors disabled:opacity-50"
+          >
+            {goingBack ? 'Going back…' : '← Back'}
+          </button>
           <button
             type="submit"
             disabled={!jdFilled || phase === 'analyzing'}
@@ -469,9 +507,19 @@ function TargetForm({
         </div>
 
         {errorMessage && (
-          <p role="alert" className="text-sm text-red-400">
-            {errorMessage}
-          </p>
+          <div role="alert" className="space-y-1.5">
+            <p className="text-sm text-red-400">{errorMessage}</p>
+            {errorDetail && (
+              <details className="text-[11px] text-[#64748b]">
+                <summary className="cursor-pointer hover:text-[#94A3B8] transition-colors">
+                  Show technical details
+                </summary>
+                <pre className="mt-1.5 font-mono text-[11px] text-[#94A3B8] bg-[#111111] border border-[#2A2A2A] rounded p-2 whitespace-pre-wrap break-words">
+                  {errorDetail}
+                </pre>
+              </details>
+            )}
+          </div>
         )}
       </form>
     </div>

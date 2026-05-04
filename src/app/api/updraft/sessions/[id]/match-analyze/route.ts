@@ -129,7 +129,13 @@ export async function POST(
       },
     });
     return NextResponse.json(
-      { error: 'AI analysis failed. Try again, or revise the JD.' },
+      {
+        error: 'AI analysis failed. Try again, or revise the JD.',
+        // Sanitize: keep code + first 240 chars of upstream message. Enough
+        // to debug Gemini error codes (e.g. "Gemini 400: ...") without
+        // leaking the full prompt/payload back to the client.
+        detail: result.error.slice(0, 240),
+      },
       { status: 502 },
     );
   }
