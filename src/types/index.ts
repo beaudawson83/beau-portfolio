@@ -368,6 +368,74 @@ export interface UpdraftExtractedTarget {
   compensation_range: string | null;
 }
 
+// --- Stage 03: Master Overview Document ----------------------------------
+
+export type UpdraftBulletSource = 'extracted' | 'rewritten' | 'new';
+
+export interface UpdraftBullet {
+  text: string;
+  metric_present: boolean;
+  source: UpdraftBulletSource;
+  tags: string[];
+}
+
+export interface UpdraftStarStory {
+  title: string;
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+}
+
+export interface UpdraftRoleInMod {
+  company: string;
+  title: string;
+  start_date: string;          // YYYY-MM
+  end_date: string;            // YYYY-MM | "Present"
+  location: string | null;
+  context: string;
+  bullets: UpdraftBullet[];
+  star_stories?: UpdraftStarStory[];   // Tier 3+ deepening, deferred in v0.1
+}
+
+export interface UpdraftEarlierCareerEntry {
+  company: string;
+  title: string;
+  dates: string;
+}
+
+export interface UpdraftSurfacedSkill {
+  skill: string;
+  evidence: string;
+  confirmed: boolean;
+}
+
+export interface UpdraftValueAlignment {
+  cause: string;
+  narrative: string;
+}
+
+export interface UpdraftMod {
+  identity: ParsedResumeIdentity;
+  summary?: string;
+  summary_seed?: string;
+  experience: UpdraftRoleInMod[];
+  earlier_career: UpdraftEarlierCareerEntry[];
+  education: ParsedResumeEducation[];
+  skills: string[];
+  surfaced_skills?: UpdraftSurfacedSkill[];
+  values_alignment?: UpdraftValueAlignment[];
+  leadership_brand?: string;
+  transformation_arc?: string;
+  interview_objections?: string[];
+  /** Tier 2 cross-role pattern statement (single sentence). */
+  through_line?: string;
+  /** Tier 2 tools / stack — free-form text, comma-separated tools. */
+  tools_stack?: string;
+}
+
+export type UpdraftModMode = 'full' | 'lightweight';
+
 /** Output shape of SYS_MATCH_ANALYZER. */
 export interface UpdraftMatchAnalysis {
   overall_match_pct: number | null;
