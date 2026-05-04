@@ -389,7 +389,18 @@ export default function Stage03Runner({ session, userEmail }: Props) {
       <SessionHeader sessionId={session.id} userEmail={userEmail} stage="03" />
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {stage03.ready_for_generation ? (
-          <Stage04Stub modMode={initialModMode} mod={mod} />
+          // Defensive fallback — when ready_for_generation=true the page-
+          // level dispatcher routes to Stage04Runner, so this branch
+          // shouldn't render. Keeps the user un-stuck if it does.
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 text-center">
+            <p className="text-sm text-[#cbd5e1] mb-3">Stage 03 complete.</p>
+            <Link
+              href="/updraft"
+              className="text-xs text-[#7C3AED] hover:text-[#a855f7] underline"
+            >
+              Back to dashboard
+            </Link>
+          </div>
         ) : (
           <Stage03Form
             mod={mod}
@@ -1013,42 +1024,9 @@ function SummarySection({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Stage 04 stub
-// ---------------------------------------------------------------------------
-
-function Stage04Stub({ modMode, mod }: { modMode: UpdraftModMode; mod: UpdraftMod }) {
-  return (
-    <div className="space-y-6">
-      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-8 text-center">
-        <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono mb-3">
-          Stage 03 complete
-        </p>
-        <h2 className="text-xl font-bold mb-2">Stage 04 — Generate</h2>
-        <p className="text-sm text-[#cbd5e1] max-w-md mx-auto leading-relaxed">
-          MOD locked in ({modMode === 'full' ? 'full mode' : 'lightweight mode'}).
-          Stage 04 ships next — that&apos;s where the DOCX export pipeline,
-          template renderer, and anti-pattern lint pass live.
-        </p>
-        <Link
-          href="/updraft"
-          className="mt-6 inline-block text-xs text-[#7C3AED] hover:text-[#a855f7] underline"
-        >
-          ← Back to dashboard
-        </Link>
-      </div>
-
-      {mod.summary && (
-        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-5">
-          <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono mb-2">
-            Your summary
-          </p>
-          <p className="text-sm text-[#cbd5e1] leading-relaxed">{mod.summary}</p>
-        </div>
-      )}
-    </div>
-  );
-}
+// (Stage 04 stub used to live here. With Stage 04 shipping, the page-
+// level dispatcher routes ready_for_generation sessions to Stage04Runner
+// directly, so this component is no longer reachable. Removed.)
 
 // ---------------------------------------------------------------------------
 // Reusable form atoms

@@ -1,10 +1,15 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { readSessionUserIdFromCookies } from '@/lib/updraft/auth';
-import { findUserById, readSessionForUser } from '@/lib/updraft/store';
+import {
+  findUserById,
+  listExportsForSession,
+  readSessionForUser,
+} from '@/lib/updraft/store';
 import Stage01Runner from '@/components/Updraft/Stage01/Stage01Runner';
 import Stage02Runner from '@/components/Updraft/Stage02/Stage02Runner';
 import Stage03Runner from '@/components/Updraft/Stage03/Stage03Runner';
+import Stage04Runner from '@/components/Updraft/Stage04/Stage04Runner';
 
 export const metadata: Metadata = {
   title: 'UpDraft session',
@@ -41,6 +46,7 @@ export default async function UpdraftSessionPage({
 
   const s01 = (session.stageOutputs.stage_01 ?? {}) as { tier?: number };
   const s02 = (session.stageOutputs.stage_02 ?? {}) as { acknowledged?: boolean };
+  const s03 = (session.stageOutputs.stage_03 ?? {}) as { ready_for_generation?: boolean };
 
   if (!s01.tier) {
     return <Stage01Runner session={session} userEmail={user.email} />;
@@ -48,9 +54,23 @@ export default async function UpdraftSessionPage({
   if (!s02.acknowledged) {
     return <Stage02Runner session={session} userEmail={user.email} />;
   }
-  // Stage 02 is acknowledged; Stage 03 takes it from here. Its internal
-  // ready_for_generation flag controls whether the page renders the
-  // editing surface or the Stage 04 stub. When Stage 04 ships, this
-  // dispatcher gets a fourth branch keyed off stage_03.ready_for_generation.
-  return <Stage03Runner session={session} userEmail={user.email} />;
+  if (!s03.ready_for_generation) {
+    return <Stage03Runner session={session} userEmail={user.email} />;
+  }
+  // Stage 03 is locked in; Stage 04 generates the DOCX exports.
+  const exports = await listExportsForSession(session.id, user.id);
+  const exportSummaries = exports.map((e) => ({
+    id:           e.id,
+    kind:         e.kind,
+    filename:     e.filename,
+    bytes:        e.bytes,
+    generated_at: e.generated_at,
+  }));
+  return (
+    <Stage04Runner
+      session={session}
+      userEmail={user.email}
+      exports={exportSummaries}
+    />
+  );
 }
