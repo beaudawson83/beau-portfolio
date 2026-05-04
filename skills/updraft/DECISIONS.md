@@ -143,3 +143,25 @@ When a decision is reversed, append a new entry referencing the old one — neve
 **Rationale:** Smallest blast radius first. Beau controls v0.1 access entirely by who he shares the URL with. Pi-egg gating earns the next traffic tier. MODULES card is the GA milestone.
 
 **Invalidated by:** Decision to launch publicly earlier (would skip Pi-egg phase).
+
+---
+
+## 2026-05-04 — Match-analyzer prompt tuning parked to v0.5
+
+**Decision:** Ship v0.1's `SYS_MATCH_ANALYZER` with the canonical prompt as-is plus the runtime `TARGET_EXTRACTION_INSTRUCTION` addendum. Park prompt-quality tuning to v0.5. Track all known issues, observed failure cases, and the test-harness wishlist in `skills/updraft/CALIBRATION.md`.
+
+**Alternatives considered:**
+- Tune the prompt now during v0.1. Tempting, but premature — prompt tuning is iterative empirical work that needs a calibration corpus to score against. Without ground-truth examples, edits are guesses.
+- Ship without flagging the issue. Worse — Beau's first live test (a Customer Experience exec resume vs. a physical multi-unit travel-center Director of Operations role) returned 62.5% / `ADJACENT` when the realistic match is `GAP`. Surface keyword matching beat contextual scale-and-category checks. UpDraft's whole brand is "blunt, honest, no sugarcoating" — leaving a generosity bias unflagged would actively work against the product mission.
+
+**Rationale:** v0.1's job is "the pipeline works end-to-end." It does — schema validates, persistence works, retry path works, briefing renders, token usage records. Quality tuning is its own phase with its own deliverables: a CLI test harness, a benchmark fixture corpus (Beau is collecting examples now, both good matches and bad), and a documented tuning workflow that catches regressions on good cases when fixing bad ones. Shipping that all together as a single coherent v0.5 deliverable will be cleaner than blending it into v0.1.
+
+**Known issues captured in `CALIBRATION.md`:**
+1. Surface-level keyword matching over-matches required skills (industry-name overlap ≠ industry experience).
+2. Missing category-mismatch detector — digital CX leader → physical retail ops should auto-cap at `WEAK`.
+3. `strengths_to_emphasize` echoes matched required skills instead of distinct selling points.
+4. Confidence band over-generosity — `ADJACENT` band absorbs scores that should land in `GAP`.
+
+**Benchmark #1 (Vaughan / Beau resume):** documented in `CALIBRATION.md` with both the result returned (62.5% `ADJACENT`, 4/5 ✓, 2 `major` gaps) and the expected result after tuning (< 45% `GAP`, ≤ 1/5 ✓, ≥ 1 `critical` category-mismatch gap). Beau is collecting more cases.
+
+**Invalidated by:** Discovery that v0.1's analyzer quality is *worse* than expected and damaging trust in early test traffic — would force tuning earlier, possibly as a v0.1.1 patch rather than waiting for v0.5.

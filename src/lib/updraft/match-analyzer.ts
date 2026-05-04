@@ -24,6 +24,13 @@ import type {
 // target-metadata extraction here so a single Gemini call produces both
 // the match analysis AND the parsed target fields. That collapses the
 // Stage 02 form to "paste your JD" — no need to retype role/company.
+//
+// Quality-tuning notes for this prompt (v0.5+ work) live in
+// skills/updraft/CALIBRATION.md. v0.1 ships with known generosity in
+// keyword-level matching — that file documents the failure modes,
+// benchmark cases, expected post-tune results, and the test-harness
+// shape we'll build before iterating. Read it before editing this
+// prompt or the canonical SYS_MATCH_ANALYZER.
 const TARGET_EXTRACTION_INSTRUCTION = `--- ADDITIONAL TASK: TARGET METADATA EXTRACTION ---
 
 Beyond the match analysis, also extract target role metadata into an

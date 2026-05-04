@@ -325,7 +325,7 @@ Purge driver: `last_activity_at` column. Cron runs daily via `/api/updraft/cron/
 | Version | Scope | Entry surface |
 |---|---|---|
 | **v0.1** "Vertical slice" | Magic-link auth · Path A only · Tier 2 only · MOD + Resume (no CL) · 1 template × 1 density (Classic) · DOCX-only export · Lint Phase 1 (regex) · per-IP + global kill switch · 30-day purge cron · delete-my-data · data-export | Unlinked URL — share manually |
-| **v0.5** "Make it good" | Path B added · all 4 tiers · Cover Letter · Lint Phase 2 (AI) · Vercel Sandbox PDF live with custom LibreOffice image · daily caps tuned to real traffic · keep-this-session flag | Pi-egg reveal |
+| **v0.5** "Make it good" | Path B added · all 4 tiers · Cover Letter · Lint Phase 2 (AI) · Vercel Sandbox PDF live with custom LibreOffice image · daily caps tuned to real traffic · keep-this-session flag · **`SYS_MATCH_ANALYZER` prompt tuning** (see [`CALIBRATION.md`](CALIBRATION.md)) | Pi-egg reveal |
 | **v1.0** "Complete" | All 4 templates × 3 densities (12) · ATS quarterly parsing tests · BYOK with safety harness · session resumption flow · active-MOD pointer + session history UI | Promote to MODULES card as `LIVE` |
 | **v1.5** "Reusable" | Re-tailoring flow (existing MOD + new JD → new resume, skip Stages 1–3) · refined account UX | MODULES card |
 | **v2.0+** | Portfolio-site generator (Tier 4) · multi-language (Spanish first) · recruiter-perspective scoring | MODULES card |
