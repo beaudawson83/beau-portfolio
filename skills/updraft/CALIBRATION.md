@@ -236,6 +236,62 @@ should land in the same commit.
    tuning as a single `feat(updraft): tune SYS_MATCH_ANALYZER` commit
    and add a DECISIONS.md entry pointing here.
 
+## Stage 03 deferred features (v0.1 → v0.5)
+
+Stage 03 v0.1 ships a "review + augment + summarize" form: editable
+parsed roles + bullets + earlier-career + Tier 2 deepening + AI summary
+draft via `SYS_SUMMARY_GENERATOR`. The full conversational interview
+from the spec is parked. Specifically, these features are deferred to
+v0.5 alongside the match-analyzer tuning pass:
+
+### 1. AI bullet rewriter (`SYS_BULLET_REWRITER`)
+
+Spec describes Audit interactively pulling metric / scope / comparison
+out of the user via conversation in Phase B, then rewriting weak bullets
+in real time. Without that conversational extraction, the rewriter just
+rephrases — adds no real value, only false fluency. Defer to v0.5 when
+the conversational pattern lands.
+
+**Fix shape (v0.5):** Per-bullet "✨ Rewrite with Audit" button opens a
+small modal with extraction inputs (metric, scope, comparison, outcome)
++ one-click rewrite. Or — better — full Phase B chat per role.
+
+### 2. Phase C "surface the undocumented" prompts
+
+Spec: Audit listens for buried experience (cross-functional work,
+hiring scope, crisis-response moments) and reflects it back as positive
+findings. Hard to do in a form; needs the chat surface.
+
+### 3. Phase D skill surfacing card
+
+Spec: per-role AI-generated skill list with evidence + confirm/reject UI.
+Useful but only worth building once the chat exists to gather the
+material.
+
+### 4. STAR story extraction (Tier 3+)
+
+Spec asks "what's the single thing from this role you'd lead with in an
+interview" and walks through Situation → Task → Action → Result. Pure
+Tier 3+ deepening — out of scope for v0.1's Tier 2-only scope and out of
+shape for the form-only v0.1 UI.
+
+### 5. Tier 1 / Tier 3 / Tier 4 deepening branches
+
+v0.1 only handles Tier 2 deepening (cross-role through-line, tools,
+interview objections). The other tier branches (projects/coursework
+for Tier 1; leadership brand + cross-functional scope for Tier 3;
+transformation arc + board/advisory for Tier 4) all defer to v0.5.
+
+### 6. Tier-bump mid-interview
+
+Spec edge case: if a Tier 2 user demonstrates Tier 3 thinking, Audit can
+offer a tier bump. Requires conversational signal-reading — defer with
+the conversational interview.
+
+When the v0.5 tuning pass starts, these all become candidates for the
+same iteration cycle as the match-analyzer prompt-tuning. Re-read this
+section before scoping that work.
+
 ## Where the prompt actually lives
 
 - **Canonical** `SYS_MATCH_ANALYZER` prompt:

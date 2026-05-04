@@ -69,7 +69,20 @@ export default function Stage02Runner({ session, userEmail }: Props) {
       />
     );
   } else {
-    body = <Stage03Stub sessionId={session.id} deliverables={deliverables} />;
+    // Defensive fallback: if stage_02.acknowledged is true the page-level
+    // dispatcher routes elsewhere, so this branch shouldn't render. Keeps
+    // the user un-stuck if dispatcher logic ever drifts.
+    body = (
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 text-center">
+        <p className="text-sm text-[#cbd5e1] mb-3">Stage 02 complete.</p>
+        <Link
+          href="/updraft"
+          className="text-xs text-[#7C3AED] hover:text-[#a855f7] underline"
+        >
+          Back to dashboard
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -839,97 +852,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 // ---------------------------------------------------------------------------
-// Stage 03 stub
-// ---------------------------------------------------------------------------
-
-const DELIVERABLE_LABEL: Record<UpdraftDeliverable, string> = {
-  mod: 'Master Overview Document',
-  jd_build: 'JD-Specific Resume Build',
-  cover_letter: 'Cover Letter',
-};
-
-function Stage03Stub({
-  sessionId,
-  deliverables,
-}: {
-  sessionId: string;
-  deliverables: UpdraftDeliverable[];
-}) {
-  const router = useRouter();
-  const [resetting, setResetting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // Rewind Stage 02 entirely — clears deliverables, target, analysis, and
-  // the acknowledged flag, sending the user back to the deliverable picker.
-  // Stage 01 (path / resume / identity / tier) is untouched, so they pick
-  // back up at the picker without re-running parsing or tier classification.
-  const handleChangeMix = async () => {
-    setResetting(true);
-    setErrorMessage(null);
-    try {
-      const res = await fetch(`/api/updraft/sessions/${sessionId}/stage/02`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          payload: {
-            deliverables: [],
-            lightweight_mod: false,
-            target: null,
-            match_analysis: null,
-            confidence_band: null,
-            acknowledged: false,
-          },
-        }),
-      });
-      if (!res.ok) {
-        setErrorMessage('Could not reset. Try again.');
-        setResetting(false);
-        return;
-      }
-      router.refresh();
-    } catch {
-      setErrorMessage('Network error. Try again.');
-      setResetting(false);
-    }
-  };
-
-  return (
-    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-8 text-center">
-      <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono mb-3">
-        Stage 02 complete
-      </p>
-      <h2 className="text-xl font-bold mb-2">Stage 03 — Build your story</h2>
-      <p className="text-sm text-[#cbd5e1] max-w-md mx-auto leading-relaxed">
-        Building{' '}
-        {deliverables.map((d) => DELIVERABLE_LABEL[d]).join(' + ')}.
-        Next, Audit walks you through your strongest roles and pulls
-        out the metrics worth keeping — your career, properly structured.
-        Ships in the next slice.
-      </p>
-
-      <div className="mt-6 flex items-center justify-center gap-4 text-xs">
-        <button
-          type="button"
-          onClick={handleChangeMix}
-          disabled={resetting}
-          className="text-[#7C3AED] hover:text-[#a855f7] underline disabled:opacity-50"
-        >
-          {resetting ? 'Resetting…' : '← Change deliverables'}
-        </button>
-        <span className="text-[#2A2A2A]">·</span>
-        <Link
-          href="/updraft"
-          className="text-[#94A3B8] hover:text-white transition-colors"
-        >
-          Back to dashboard
-        </Link>
-      </div>
-
-      {errorMessage && (
-        <p role="alert" className="mt-3 text-sm text-red-400">
-          {errorMessage}
-        </p>
-      )}
-    </div>
-  );
-}
+// (Stage 03 stub used to live here. With Stage 03 shipping, the page-
+// level dispatcher routes acknowledged Stage 02 sessions to Stage03Runner
+// directly, so this component is no longer reachable. Removed.)
