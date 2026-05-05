@@ -79,14 +79,23 @@ export default function Dashboard({ email, sessions }: DashboardProps) {
               Signed in as <span className="text-white">{email}</span>
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            disabled={signingOut}
-            className="text-xs text-[#94A3B8] hover:text-white transition-colors disabled:opacity-50"
-          >
-            {signingOut ? 'Signing out…' : 'Sign out'}
-          </button>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/updraft/account"
+              className="text-xs text-[#94A3B8] hover:text-white transition-colors"
+            >
+              Account
+            </Link>
+            <span className="text-[#2A2A2A]">·</span>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className="text-xs text-[#94A3B8] hover:text-white transition-colors disabled:opacity-50"
+            >
+              {signingOut ? 'Signing out…' : 'Sign out'}
+            </button>
+          </div>
         </div>
       </header>
 
