@@ -338,6 +338,148 @@ export async function deleteSessionForUser(
   return true;
 }
 
+/** Toggle the per-session keep_indefinitely flag (purge opt-out). */
+export async function setSessionKeepFlag(args: {
+  sessionId: string;
+  userId: string;
+  keep: boolean;
+}): Promise<boolean> {
+  const sb = client();
+  if (!sb) return false;
+  const { error } = await sb
+    .from('updraft_sessions')
+    .update({ keep_indefinitely: args.keep })
+    .eq('id', args.sessionId)
+    .eq('user_id', args.userId);
+  if (error) {
+    console.error('updraft.setSessionKeepFlag:', error);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Hard-delete a user and everything they own. Sessions cascade via FK
+ * (sessions → events + exports rows); magic tokens are scoped by email,
+ * not user_id, so they're cleared explicitly. Storage bytes are NOT
+ * cleaned up here — caller is responsible for calling
+ * deleteSessionStorage() per session BEFORE this function runs.
+ */
+export async function deleteUserCascade(args: {
+  userId: string;
+  email: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const sb = client();
+  if (!sb) return { ok: false, error: 'supabase-not-configured' };
+
+  // Magic tokens are keyed by email, no FK to users — clear explicitly.
+  const { error: tokenErr } = await sb
+    .from('updraft_magic_tokens')
+    .delete()
+    .eq('email', args.email.trim().toLowerCase());
+  if (tokenErr) {
+    console.error('updraft.deleteUserCascade tokens:', tokenErr);
+    // Not fatal — proceed; orphaned tokens TTL away on their own.
+  }
+
+  // Hard-delete the user row. FK cascade handles sessions → events + exports.
+  const { error: userErr } = await sb
+    .from('updraft_users')
+    .delete()
+    .eq('id', args.userId);
+  if (userErr) {
+    console.error('updraft.deleteUserCascade user:', userErr);
+    return { ok: false, error: userErr.message };
+  }
+  return { ok: true };
+}
+
+/** List every session for a user — used by data export + cascade delete prep. */
+export async function listSessionsFullForUser(userId: string): Promise<UpdraftSession[]> {
+  const sb = client();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from('updraft_sessions')
+    .select('id,user_id,status,tier,path,stage_outputs,started_at,completed_at,last_activity_at,keep_indefinitely')
+    .eq('user_id', userId)
+    .order('started_at', { ascending: false });
+  if (error) {
+    console.error('updraft.listSessionsFullForUser:', error);
+    return [];
+  }
+  return ((data ?? []) as SessionRow[]).map(rowToSession);
+}
+
+/** List all exports for a user (across all their sessions) for data export. */
+export async function listAllExportsForUser(userId: string): Promise<ExportRow[]> {
+  const sb = client();
+  if (!sb) return [];
+  // Two-step because Supabase JS doesn't support cross-table joins on FK
+  // unless declared as relationships. List sessions first, then exports.
+  const sessions = await listSessionsFullForUser(userId);
+  if (sessions.length === 0) return [];
+  const sessionIds = sessions.map((s) => s.id);
+  const { data, error } = await sb
+    .from('updraft_exports')
+    .select('id,session_id,kind,filename,storage_path,mime,bytes,generated_at')
+    .in('session_id', sessionIds)
+    .order('generated_at', { ascending: false });
+  if (error) {
+    console.error('updraft.listAllExportsForUser:', error);
+    return [];
+  }
+  return (data ?? []) as ExportRow[];
+}
+
+// ---------------------------------------------------------------------------
+// PURGE — 30-day inactivity cleanup
+// ---------------------------------------------------------------------------
+
+export interface PurgeCandidate {
+  sessionId: string;
+  userId: string;
+  lastActivityAt: string;
+}
+
+/**
+ * Find sessions eligible for the 30-day purge: last_activity_at older
+ * than the cutoff AND keep_indefinitely=false. Returns just enough to
+ * cascade-delete (storage prefix needs userId + sessionId).
+ */
+export async function findPurgeCandidates(args: {
+  cutoffIso: string;
+  limit?: number;
+}): Promise<PurgeCandidate[]> {
+  const sb = client();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from('updraft_sessions')
+    .select('id,user_id,last_activity_at')
+    .lt('last_activity_at', args.cutoffIso)
+    .eq('keep_indefinitely', false)
+    .order('last_activity_at', { ascending: true })
+    .limit(args.limit ?? 200);
+  if (error) {
+    console.error('updraft.findPurgeCandidates:', error);
+    return [];
+  }
+  return ((data ?? []) as { id: string; user_id: string; last_activity_at: string }[]).map(
+    (r) => ({ sessionId: r.id, userId: r.user_id, lastActivityAt: r.last_activity_at }),
+  );
+}
+
+/** Hard-delete a single session by id (no ownership check — purge is privileged). */
+export async function deleteSessionByIdPrivileged(sessionId: string): Promise<boolean> {
+  const sb = client();
+  if (!sb) return false;
+  const { error } = await sb.from('updraft_sessions').delete().eq('id', sessionId);
+  if (error) {
+    console.error('updraft.deleteSessionByIdPrivileged:', error);
+    return false;
+  }
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // EVENTS
 // ---------------------------------------------------------------------------
