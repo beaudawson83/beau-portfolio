@@ -73,11 +73,22 @@ export async function extractResumeText(buffer: Buffer): Promise<ExtractResult> 
 
   if (type === 'pdf') {
     try {
-      const mod = await import('pdf-parse');
-      // pdf-parse v2 exposes the function as default; v1 had a CommonJS shape.
-      // Accommodate both — `.default` first, fall back to the module itself.
-      const pdfParse = (mod as { default?: unknown }).default ?? mod;
-      const result = await (pdfParse as (b: Buffer) => Promise<{ text?: string }>)(buffer);
+      // pdf-parse v2 exposes a PDFParse class — completely different from
+      // v1's default-export-function shape. The v0.1 ship called the v1
+      // signature against the v2 install, so every PDF upload threw and
+      // surfaced as "Couldn't read that PDF." Bug found 2026-05-04 when
+      // Beau's testing showed every PDF failing the same way.
+      //
+      // v2 usage: `new PDFParse({ data: buffer }).getText()` returns
+      // { text, totalPages, pages }. Single class instantiation per
+      // call is fine — the parser is stateless across instances.
+      const { PDFParse } = (await import('pdf-parse')) as {
+        PDFParse: new (opts: { data: Buffer }) => {
+          getText: () => Promise<{ text?: string; totalPages?: number }>;
+        };
+      };
+      const parser = new PDFParse({ data: buffer });
+      const result = await parser.getText();
       const text = (result?.text ?? '').trim();
       if (text.length < MIN_TEXT_CHARS) {
         return {
