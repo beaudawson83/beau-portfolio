@@ -165,3 +165,38 @@ When a decision is reversed, append a new entry referencing the old one — neve
 **Benchmark #1 (Vaughan / Beau resume):** documented in `CALIBRATION.md` with both the result returned (62.5% `ADJACENT`, 4/5 ✓, 2 `major` gaps) and the expected result after tuning (< 45% `GAP`, ≤ 1/5 ✓, ≥ 1 `critical` category-mismatch gap). Beau is collecting more cases.
 
 **Invalidated by:** Discovery that v0.1's analyzer quality is *worse* than expected and damaging trust in early test traffic — would force tuning earlier, possibly as a v0.1.1 patch rather than waiting for v0.5.
+
+---
+
+## 2026-05-04 — Email provider: Brevo, not Resend
+
+**Decision:** Replace Resend with Brevo as the transactional email provider for both the contact form and UpDraft magic-link auth. Consolidate sending behind a single `src/lib/email.ts` so future provider swaps are one-file changes.
+
+**Reverses:** the implicit "Resend is fine" assumption baked into the original auth decision (2026-05-03 — *Auth: magic-link from day one*), which justified Resend by saying it was "already wired for the contact form, so email infrastructure cost is zero."
+
+**Alternatives considered:**
+- **Pay Resend Pro ($20/mo).** Lowest engineering effort. Rejected because the cost is real now and only justified once UpDraft proves out — premature.
+- **SendGrid free tier (100/day, domain verification on free).** Equivalent capability to Brevo, slightly more API surface. Reasonable runner-up.
+- **AWS SES.** Cheapest at scale ($0.10 per 1,000) but requires IAM + sandbox-then-production lift; mismatch for v0.1 stage.
+- **Use Beau's existing Google Workspace or M365 SMTP.** Considered — both pre-paid, no extra cost. Rejected: both Google and Microsoft explicitly say SMTP AUTH is for human-to-human correspondence, not transactional. Magic-link patterns trigger both providers' abuse detection (account suspension risk), throttle rapidly, and deliver poorly to non-Google/non-MS inboxes for transactional patterns. Coexistence is the right shape — Workspace keeps handling Beau's day-to-day inbound; Brevo handles outbound transactional under a verified subdomain.
+
+**Why Resend failed for our use case:** The Resend free tier sandboxes the from-address to `onboarding@resend.dev`, which only delivers to the email of the Resend account owner. The contact form was working because it sent TO Beau's own inbox. UpDraft magic-link auth sends TO arbitrary users — Resend rejected those sends with 403/422, and the route returned 500 to the client. Beau's husband couldn't sign in. Domain verification (which would lift the sandbox restriction) requires Resend Pro at $20/mo as of 2026-05-04 — that's a paywall I missed when I picked Resend.
+
+**Architectural improvement that came with the swap:**
+
+- New `src/lib/email.ts` with a provider-agnostic `sendEmail({ to, subject, html, text, fromName?, replyTo? })` signature. Both `/api/contact` and `/api/updraft/auth/issue` consume it.
+- New `MAIL_FROM_ADDRESS` env var (format: `"UpDraft <noreply@mail.beaudawson.com>"` or just the email). Replaces the hardcoded `onboarding@resend.dev` strings that were in two places.
+- Future provider swaps: change `src/lib/email.ts`, swap one env var name (`BREVO_API_KEY` → whatever's next), done. No route changes.
+
+**Operational steps (Beau's side, one-time):**
+1. Sign up for Brevo (free).
+2. Add a domain on Brevo — recommended subdomain like `mail.beaudawson.com` to keep main-domain DNS clean.
+3. Add the SPF + DKIM TXT records Brevo provides to DNS.
+4. Wait for DNS propagation; click Verify in Brevo.
+5. Generate a Brevo API key (transactional scope).
+6. Set `BREVO_API_KEY` and `MAIL_FROM_ADDRESS` in Vercel Project Settings.
+7. Optionally remove `RESEND_API_KEY` from Vercel (no longer used).
+
+**Lesson captured:** Memory entry `feedback_resend_sandbox_sender.md` (renamed `project_resend_sandbox_sender.md`) flags this for future infra picks. When choosing email provider — or any infra with a sandbox/limited free tier — verify the *specific feature being built* (here: send-to-arbitrary-users) works on the free tier, not just "is the API nice."
+
+**Invalidated by:** Brevo deliverability proving worse than Resend in production (would push toward SES or back to Resend Pro), or Brevo deprecating their free-tier domain verification (would force the same migration we just did).

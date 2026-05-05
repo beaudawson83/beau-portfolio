@@ -95,7 +95,7 @@ src/
 │   │       └── [slug]/page.tsx        # The editor
 │   └── api/
 │       ├── ask-beau/route.ts          # Gemini chatbot, rate-limited
-│       ├── contact/route.ts           # Resend email, rate-limited, HTML-escaped
+│       ├── contact/route.ts           # Transactional email (Brevo), rate-limited, HTML-escaped
 │       ├── global-conflict/route.ts   # Public payload, ISR 15m
 │       ├── global-conflict/news/route.ts  # Per-conflict timeline
 │       ├── conflict/status/route.ts   # Diagnostic, CRON_SECRET-gated
@@ -158,7 +158,7 @@ src/
 | Route                       | Method | Purpose                  | Auth / Rate                    |
 |-----------------------------|--------|--------------------------|--------------------------------|
 | `/api/ask-beau`             | POST   | AI chatbot (Gemini 2.0)  | Rate: 20/hr per IP             |
-| `/api/contact`              | POST   | Contact form (Resend)    | Rate: 5/hr per IP, HTML-escaped|
+| `/api/contact`              | POST   | Contact form (Brevo)     | Rate: 5/hr per IP, HTML-escaped|
 | `/api/global-conflict`      | GET    | Conflict payload         | ISR 15m                        |
 | `/api/global-conflict/news` | GET    | Per-conflict timeline    | Cursor pagination              |
 | `/api/conflict/status`      | GET    | Diagnostic heartbeat     | `Bearer $CRON_SECRET`          |
@@ -180,7 +180,8 @@ src/
 | Variable                          | Required | Purpose                                |
 |-----------------------------------|----------|----------------------------------------|
 | `GEMINI_API_KEY`                  | Yes      | AskBeau chatbot                        |
-| `RESEND_API_KEY`                  | Yes      | Contact form email                     |
+| `BREVO_API_KEY`                   | Yes      | Transactional email (contact form + UpDraft magic links). Replaced `RESEND_API_KEY` on 2026-05-04 — Resend's free tier sandboxed `onboarding@resend.dev` to the account-owner inbox only, which broke magic-link sends to anyone but Beau. Brevo's free tier supports domain verification at 300 sends/day. |
+| `MAIL_FROM_ADDRESS`               | Yes      | From-address for transactional email. Format: `"UpDraft <noreply@mail.beaudawson.com>"` or just the email. Domain must be verified on Brevo (one-time DNS work — SPF + DKIM TXT records). |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID`   | Yes      | GA4 (no fallback — required for tracking) |
 | `SUPABASE_URL`                    | Yes      | All Supabase reads/writes              |
 | `SUPABASE_ANON_KEY`               | Yes      | Anon Supabase client                   |
@@ -355,7 +356,7 @@ A resume + cover-letter generation tool operated by an AI character named **Audi
 
 **Architecture is "skill-as-orchestrator":** the host program (this Next.js app) owns UI, state, file generation, and the regex anti-pattern lint pass. The AI model (Gemini 2.0 Flash) owns parsing, voice, bullet rewriting, scoring, and CL drafting. Backend is the source of truth — conversation history is intentionally not preserved across stages; only structured stage outputs persist.
 
-**Auth + privacy:** magic-link login from day one (Resend), authenticated identity for accountability + 30-day automated session purge by `last_activity_at` for liability cap + user-controlled "Delete my data" button + self-serve data export. Login page reserves a `<PrivacyCallout>` slot **below** the email input rendering the verbiage at [`skills/updraft/PRIVACY-COPY.md`](skills/updraft/PRIVACY-COPY.md).
+**Auth + privacy:** magic-link login from day one (Brevo for delivery), authenticated identity for accountability + 30-day automated session purge by `last_activity_at` for liability cap + user-controlled "Delete my data" button + self-serve data export. Login page reserves a `<PrivacyCallout>` slot **below** the email input rendering the verbiage at [`skills/updraft/PRIVACY-COPY.md`](skills/updraft/PRIVACY-COPY.md).
 
 **Cost guardrails:** all thresholds are env vars (`UPDRAFT_DAILY_*`, `UPDRAFT_PER_IP_*`, `UPDRAFT_SESSION_TOKEN_CAP_*`) dialable from the Vercel dashboard. Owner bypass via `UPDRAFT_OWNER_SECRET` Bearer header (mirrors `BLOG_EDITOR_SECRET`); owner sessions skip caps and tag events `owner: true`. BYOK fallback deferred to v1.0.
 
@@ -371,7 +372,7 @@ A resume + cover-letter generation tool operated by an AI character named **Audi
 - [`scripts/setup-supabase-updraft.sql`](scripts/setup-supabase-updraft.sql) — tables: `updraft_users`, `updraft_magic_tokens`, `updraft_sessions`, `updraft_events`, `updraft_exports`, `updraft_quota_daily`. RLS default-deny on all UpDraft tables; service-role only.
 - [`scripts/setup-supabase-updraft-storage.sql`](scripts/setup-supabase-updraft-storage.sql) — private `updraft-exports` bucket (signed-URL reads only, 5 MB cap, docx/pdf/md MIME allowlist). Output-only — raw uploaded resumes are parsed in-memory and discarded, never persisted.
 
-**Data flow when v0.1 lands:** browser → `/updraft/login` (magic link via Resend) → `/updraft` dashboard → `/updraft/[sessionId]` runs the 4 stages (each stage's structured JSON persists to `updraft_sessions.stage_outputs` on completion) → Stage 04 generates DOCX → Supabase Storage write → signed-URL download. PDF generation arrives in v0.5 via Vercel Sandbox + custom LibreOffice image.
+**Data flow when v0.1 lands:** browser → `/updraft/login` (magic link via Brevo) → `/updraft` dashboard → `/updraft/[sessionId]` runs the 4 stages (each stage's structured JSON persists to `updraft_sessions.stage_outputs` on completion) → Stage 04 generates DOCX → Supabase Storage write → signed-URL download. PDF generation arrives in v0.5 via Vercel Sandbox + custom LibreOffice image.
 
 ---
 
@@ -391,7 +392,7 @@ npm run typecheck    # tsc --noEmit
 
 - **No newsletter capture.**
 - **No post-view analytics.** Site-wide GA4 covers page views; AskBeau conversations are logged to Supabase. The blog inherits that — no per-post analytics yet.
-- **No email-out from the site.** Resend is used only for the inbound contact form (visitor → Beau's inbox).
+- **No email-out from the site beyond the contact form + UpDraft auth.** Brevo handles both via [`src/lib/email.ts`](src/lib/email.ts). The contact form delivers to Beau's inbox; UpDraft sends magic-link sign-in emails to whoever's signing in. No marketing, broadcast, or product-update sends.
 - **No `/api/conflict/ingest` endpoint.** The Routine writes direct-to-Supabase via PostgREST.
 - **No `/admin/*` UI for chat logs.** View those via the Supabase dashboard. The blog editor at `/blog/edit/*` is the only authenticated admin surface.
 - **No video/audio upload.** Both are URL-only (paste YouTube/Vimeo for video). Blog images do upload directly to Supabase Storage — see the Blog section.

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ContactFormData, OBJECTIVE_LABELS } from '@/types';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { extractClientIp } from '@/lib/chat-log';
+import { sendEmail } from '@/lib/email';
+
+const CONTACT_INBOX = 'beau.dawson83@gmail.com';
 
 function escapeHtml(s: string): string {
   return s
@@ -44,46 +47,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      console.error('RESEND_API_KEY not configured');
-      return NextResponse.json(
-        { error: 'Email service not configured' },
-        { status: 500 }
-      );
-    }
-
     const objectiveLabel = OBJECTIVE_LABELS[objective] || objective;
     const safeName = escapeHtml(name);
     const safeObjective = escapeHtml(objectiveLabel);
     const safeMessage = escapeHtml(message);
 
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        from: 'Portfolio Contact <onboarding@resend.dev>',
-        to: ['beau.dawson83@gmail.com'],
-        subject: `Portfolio Contact: ${objectiveLabel}`,
-        html: `
-          <div style="font-family: monospace; padding: 20px; background: #0a0a0a; color: #fff;">
-            <h2 style="color: #7C3AED; margin-bottom: 20px;">> NEW_TRANSMISSION_RECEIVED</h2>
-            <p><strong style="color: #94A3B8;">> FROM:</strong> ${safeName}</p>
-            <p><strong style="color: #94A3B8;">> OBJECTIVE:</strong> ${safeObjective}</p>
-            <p><strong style="color: #94A3B8;">> MESSAGE:</strong></p>
-            <div style="background: #1F1F1F; padding: 16px; margin-top: 8px; white-space: pre-wrap;">${safeMessage}</div>
-          </div>
-        `,
-        text: `New Portfolio Contact\n\nFrom: ${name}\nObjective: ${objectiveLabel}\n\nMessage:\n${message}`,
-      }),
+    const sent = await sendEmail({
+      to: CONTACT_INBOX,
+      fromName: 'Portfolio Contact',
+      subject: `Portfolio Contact: ${objectiveLabel}`,
+      html: `
+        <div style="font-family: monospace; padding: 20px; background: #0a0a0a; color: #fff;">
+          <h2 style="color: #7C3AED; margin-bottom: 20px;">> NEW_TRANSMISSION_RECEIVED</h2>
+          <p><strong style="color: #94A3B8;">> FROM:</strong> ${safeName}</p>
+          <p><strong style="color: #94A3B8;">> OBJECTIVE:</strong> ${safeObjective}</p>
+          <p><strong style="color: #94A3B8;">> MESSAGE:</strong></p>
+          <div style="background: #1F1F1F; padding: 16px; margin-top: 8px; white-space: pre-wrap;">${safeMessage}</div>
+        </div>
+      `,
+      text: `New Portfolio Contact\n\nFrom: ${name}\nObjective: ${objectiveLabel}\n\nMessage:\n${message}`,
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('Resend API error:', error);
+    if (!sent.ok) {
+      console.error('contact: send failed', sent.error);
       return NextResponse.json(
         { error: 'Failed to send email' },
         { status: 500 }
