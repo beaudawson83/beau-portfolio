@@ -1,27 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readSessionCookieValue, SESSION_COOKIE_NAME, isUpdraftOwner } from '@/lib/updraft/auth';
+import {
+  isUpdraftOwner,
+  readSessionCookieValue,
+  SESSION_COOKIE_NAME,
+} from '@/lib/updraft/auth';
 import {
   logEvent,
   patchSessionStage,
   readSessionForUser,
 } from '@/lib/updraft/store';
 import { canMakeAiCall, recordQuotaUsage } from '@/lib/updraft/quotas';
-import { extractResumeText, parseResumeFromText } from '@/lib/updraft/resume-parser';
+import { parseResumeFromUpload } from '@/lib/updraft/resume-parser';
 
 /**
  * POST /api/updraft/sessions/[id]/parse-upload
  *
- * Stage 01.2A end-to-end: multipart file upload → text extraction
- * (deterministic) → SYS_RESUME_PARSER (AI, silent extraction). On success
- * persists resume_raw + resume_parsed + path='upload' to stage_01 and
- * returns the parsed JSON for client display.
+ * Stage 01.2A: multipart upload → resume parsing → persist to stage_01.
  *
- * On extraction failure (image-only PDF, unsupported type, too-large)
- * returns 400 with a user-actionable message — does NOT bill quota or
- * persist anything.
+ * As of 2026-05-04 the parser path is single-step: parseResumeFromUpload()
+ * dispatches by file-type internally and ends with structured JSON. PDFs
+ * go to Gemini directly (handles image-based PDFs via OCR for free); DOCX
+ * goes through mammoth → Gemini text-mode.
  *
- * On AI parse failure returns 502 with a generic message and persists
- * resume_raw so the user could retry without re-uploading.
+ * Failure modes:
+ *   - 400 for size/type validation, "empty" file, mammoth DOCX-extract failure.
+ *     No quota burn, no persistence.
+ *   - 502 for AI parse failure (Gemini returned error or malformed JSON
+ *     after retry). Tokens billed are still recorded; we persist nothing
+ *     to stage_01 since there's no resume_raw to reuse on retry.
+ *   - 200 on success — persists path='upload' + resume_parsed.
  */
 export async function POST(
   request: NextRequest,
@@ -36,7 +43,7 @@ export async function POST(
   const session = await readSessionForUser(sessionId, userId);
   if (!session) return NextResponse.json({ error: 'not-found' }, { status: 404 });
 
-  // Quota — only the AI call burns budget; extraction is local CPU
+  // Quota — only the AI call burns budget; mammoth/file-validation is free
   const quota = await canMakeAiCall(request);
   if (!quota.allowed) {
     return NextResponse.json(
@@ -58,68 +65,65 @@ export async function POST(
   }
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  // Step 1 — deterministic extraction
-  const extracted = await extractResumeText(buffer);
-  if (!extracted.ok) {
-    await logEvent({
-      sessionId,
-      stage: '01',
-      eventType: 'extract_failed',
-      data: { error: extracted.error, fileType: extracted.fileType ?? null, size: buffer.length },
-    });
-    return NextResponse.json(
-      { error: extracted.message, code: extracted.error },
-      { status: 400 },
-    );
-  }
+  const result = await parseResumeFromUpload(buffer);
 
-  // Step 2 — AI parse
-  const aiResult = await parseResumeFromText(extracted.text);
+  // Tokens are recorded whether the call succeeded or failed (Gemini
+  // charges either way). Validation failures (empty, too-large, etc.)
+  // never reach the model so tokens stay 0.
   await recordQuotaUsage({
-    tokensIn: aiResult.tokensIn,
-    tokensOut: aiResult.tokensOut,
+    tokensIn: result.ok ? result.tokensIn : (result.tokensIn ?? 0),
+    tokensOut: result.ok ? result.tokensOut : (result.tokensOut ?? 0),
   });
 
-  if (!aiResult.ok) {
-    // Persist resume_raw + path so the user can retry parsing without
-    // re-uploading. resume_parsed stays null until we have a clean parse.
-    await patchSessionStage({
-      sessionId,
-      userId,
-      stageKey: 'stage_01',
-      payload: {
-        path: 'upload',
-        resume_raw: extracted.text,
-        resume_parsed: null,
-      },
-      path: 'upload',
-    });
+  if (!result.ok) {
+    // Validation failures (empty / too-large / unsupported / docx-extract):
+    // 400 with a user-actionable message. Don't persist anything.
+    if (
+      result.error === 'empty' ||
+      result.error === 'too-large' ||
+      result.error === 'unsupported-type' ||
+      result.error === 'docx-extract-failed'
+    ) {
+      await logEvent({
+        sessionId,
+        stage: '01',
+        eventType: 'extract_failed',
+        data: {
+          error: result.error,
+          fileType: result.fileType ?? null,
+          size: buffer.length,
+        },
+      });
+      return NextResponse.json(
+        { error: result.message, code: result.error },
+        { status: 400 },
+      );
+    }
+
+    // AI parse failure: 502, log with the token cost.
     await logEvent({
       sessionId,
       stage: '01',
       eventType: 'parse_failed',
       data: {
-        error: aiResult.error,
-        tokensIn: aiResult.tokensIn,
-        tokensOut: aiResult.tokensOut,
+        error: result.error,
+        fileType: result.fileType ?? null,
+        tokensIn: result.tokensIn ?? 0,
+        tokensOut: result.tokensOut ?? 0,
         owner: isUpdraftOwner(request),
       },
     });
-    return NextResponse.json(
-      { error: 'AI parsing failed. Try again, or pick "Talk it through".' },
-      { status: 502 },
-    );
+    return NextResponse.json({ error: result.message }, { status: 502 });
   }
 
-  // Persist resume_raw + resume_parsed + path
+  // Success — persist + log
   await patchSessionStage({
     sessionId,
     userId,
     stageKey: 'stage_01',
     payload: {
       path: 'upload',
-      resume_raw: extracted.text,
-      resume_parsed: aiResult.parsed,
+      resume_parsed: result.parsed,
     },
     path: 'upload',
   });
@@ -129,16 +133,16 @@ export async function POST(
     stage: '01',
     eventType: 'parse_succeeded',
     data: {
-      fileType: extracted.fileType,
-      tokensIn: aiResult.tokensIn,
-      tokensOut: aiResult.tokensOut,
-      retried: aiResult.retried,
+      fileType: result.fileType,
+      tokensIn: result.tokensIn,
+      tokensOut: result.tokensOut,
+      retried: result.retried,
       owner: isUpdraftOwner(request),
     },
   });
 
   return NextResponse.json({
-    parsed: aiResult.parsed,
-    fileType: extracted.fileType,
+    parsed: result.parsed,
+    fileType: result.fileType,
   });
 }

@@ -1,48 +1,39 @@
-// UpDraft Stage 01.2A — resume extraction + AI parse.
+// UpDraft Stage 01.2A — resume parsing.
 //
-// Two-step pipeline per stage-01-intake.md:
-//   1. Extract raw text from PDF (pdf-parse) or DOCX (mammoth) deterministically.
-//      Reject scanned/image-only PDFs with a clear error.
-//   2. Hand raw text to Gemini with SYS_RESUME_PARSER + a strict response
-//      schema that mirrors the schema in lib-system-prompts.md § SYS_RESUME_PARSER.
+// Single-step pipeline as of 2026-05-04: Gemini reads the file directly
+// and returns structured JSON. Two paths under the hood:
 //
-// Step 1 is fully deterministic — no model call. Step 2 is silent (no Audit
-// voice) since this is structured extraction, not a user-facing turn.
+//   PDF: send bytes inline as application/pdf to Gemini's generateContent
+//        endpoint. Gemini's PDF support handles text-based PDFs AND
+//        image-based PDFs (it OCRs internally) — that's a real win over
+//        the prior pdf-parse approach which rejected image-only PDFs.
+//
+//   DOCX: still extract text via mammoth first (Gemini doesn't read DOCX
+//         natively), then send the extracted text to Gemini. Same
+//         SYS_RESUME_PARSER prompt + schema either way.
+//
+// Both paths converge on parseResumeFromUpload(buffer) — single entry
+// point for the API route.
+//
+// History: this file used to do a deterministic two-step (extract text →
+// pass to AI). pdf-parse was the source of truth for PDF text. Beau's
+// 2026-05-04 testing surfaced that pdf-parse v2 has a different API than
+// v1, leaving the PDF path broken; deeper inspection showed pdf-parse is
+// fragile across PDF generators and rejects image-only PDFs entirely.
+// Switching to Gemini-direct removes the dep, removes the v1/v2 surface,
+// and OCRs image PDFs for free.
 
 import 'server-only';
 import { callGemini } from './gemini';
 import type { ParsedResume } from '@/types';
 
 // ---------------------------------------------------------------------------
-// Step 1 — text extraction (deterministic)
+// File-type detection (deterministic, magic-byte based)
 // ---------------------------------------------------------------------------
 
 export type ResumeFileType = 'pdf' | 'docx' | 'unknown';
 
-export type ExtractError =
-  | 'unsupported-type'
-  | 'image-only-pdf'
-  | 'parse-failed'
-  | 'too-large'
-  | 'empty';
-
-export interface ExtractSuccess {
-  ok: true;
-  text: string;
-  fileType: 'pdf' | 'docx';
-}
-
-export interface ExtractFailure {
-  ok: false;
-  error: ExtractError;
-  message: string;
-  fileType?: ResumeFileType;
-}
-
-export type ExtractResult = ExtractSuccess | ExtractFailure;
-
 const MAX_BYTES = 4 * 1024 * 1024;            // 4 MB per spec
-const MIN_TEXT_CHARS = 200;                    // below this, treat as image-only
 
 export function detectFileType(buf: Buffer): ResumeFileType {
   if (buf.length < 4) return 'unknown';
@@ -57,104 +48,10 @@ export function detectFileType(buf: Buffer): ResumeFileType {
   return 'unknown';
 }
 
-export async function extractResumeText(buffer: Buffer): Promise<ExtractResult> {
-  if (buffer.length === 0) {
-    return { ok: false, error: 'empty', message: 'The uploaded file is empty.' };
-  }
-  if (buffer.length > MAX_BYTES) {
-    return {
-      ok: false,
-      error: 'too-large',
-      message: 'Resume exceeds 4 MB. Compress or save a leaner version.',
-    };
-  }
-
-  const type = detectFileType(buffer);
-
-  if (type === 'pdf') {
-    try {
-      // pdf-parse v2 exposes a PDFParse class — completely different from
-      // v1's default-export-function shape. The v0.1 ship called the v1
-      // signature against the v2 install, so every PDF upload threw and
-      // surfaced as "Couldn't read that PDF." Bug found 2026-05-04 when
-      // Beau's testing showed every PDF failing the same way.
-      //
-      // v2 usage: `new PDFParse({ data: buffer }).getText()` returns
-      // { text, totalPages, pages }. Single class instantiation per
-      // call is fine — the parser is stateless across instances.
-      const { PDFParse } = (await import('pdf-parse')) as {
-        PDFParse: new (opts: { data: Buffer }) => {
-          getText: () => Promise<{ text?: string; totalPages?: number }>;
-        };
-      };
-      const parser = new PDFParse({ data: buffer });
-      const result = await parser.getText();
-      const text = (result?.text ?? '').trim();
-      if (text.length < MIN_TEXT_CHARS) {
-        return {
-          ok: false,
-          fileType: 'pdf',
-          error: 'image-only-pdf',
-          message:
-            'This PDF appears to be image-based. UpDraft can only read text-based resumes. Try uploading the DOCX version, or pick "Talk it through" instead.',
-        };
-      }
-      return { ok: true, fileType: 'pdf', text };
-    } catch (err) {
-      console.error('updraft.extractResumeText: pdf-parse failed', err);
-      return {
-        ok: false,
-        fileType: 'pdf',
-        error: 'parse-failed',
-        message: "Couldn't read that PDF. Try the DOCX version, or pick \"Talk it through\".",
-      };
-    }
-  }
-
-  if (type === 'docx') {
-    try {
-      const mammoth = await import('mammoth');
-      const { value } = await mammoth.extractRawText({ buffer });
-      const text = (value ?? '').trim();
-      if (text.length < MIN_TEXT_CHARS) {
-        return {
-          ok: false,
-          fileType: 'docx',
-          error: 'empty',
-          message: 'That DOCX has no extractable text. Try a different file.',
-        };
-      }
-      return { ok: true, fileType: 'docx', text };
-    } catch (err) {
-      console.error('updraft.extractResumeText: mammoth failed', err);
-      return {
-        ok: false,
-        fileType: 'docx',
-        error: 'parse-failed',
-        message: "Couldn't read that DOCX. Try saving it again, or pick \"Talk it through\".",
-      };
-    }
-  }
-
-  return {
-    ok: false,
-    error: 'unsupported-type',
-    message: 'Only PDF and DOCX files are supported.',
-  };
-}
-
 // ---------------------------------------------------------------------------
-// Step 2 — AI parse (SYS_RESUME_PARSER)
+// SYS_RESUME_PARSER schema (Gemini-flavored)
 // ---------------------------------------------------------------------------
 
-/**
- * Gemini-flavored JSON Schema for SYS_RESUME_PARSER's output.
- * Mirrors the schema documented in lib-system-prompts.md § SYS_RESUME_PARSER.
- *
- * Notes on Gemini's schema flavor:
- *   - Uses OpenAPI 3.0-style `nullable: true` instead of union types.
- *   - `required` is enforced; nullable just means the field can be null.
- */
 const RESUME_PARSE_SCHEMA = {
   type: 'object',
   properties: {
@@ -203,45 +100,150 @@ const RESUME_PARSE_SCHEMA = {
   required: ['identity', 'summary', 'experience', 'education', 'skills'],
 } as const;
 
-export interface AiParseSuccess {
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+export interface ParseSuccess {
   ok: true;
   parsed: ParsedResume;
+  fileType: 'pdf' | 'docx';
   tokensIn: number;
   tokensOut: number;
   retried: boolean;
 }
 
-export interface AiParseFailure {
+export interface ParseFailure {
   ok: false;
-  error: string;
-  tokensIn: number;
-  tokensOut: number;
+  error:
+    | 'unsupported-type'
+    | 'too-large'
+    | 'empty'
+    | 'docx-extract-failed'
+    | 'ai-parse-failed';
+  message: string;
+  fileType?: ResumeFileType;
+  tokensIn?: number;
+  tokensOut?: number;
 }
 
-export type AiParseResult = AiParseSuccess | AiParseFailure;
+export type ParseResult = ParseSuccess | ParseFailure;
 
-export async function parseResumeFromText(rawText: string): Promise<AiParseResult> {
-  const result = await callGemini<ParsedResume>({
-    systemPrompt: 'SYS_RESUME_PARSER',
-    withAuditVoice: false,                             // silent extraction
-    userPrompt: rawText,
-    responseSchema: RESUME_PARSE_SCHEMA,
-    temperature: 0,                                    // determinism for parsing
-  });
+const PDF_USER_PROMPT =
+  "Parse this resume PDF into the structured JSON schema. The PDF is " +
+  "attached as inline data. Follow the SYS_RESUME_PARSER rules exactly — " +
+  "extract only what's explicitly present, preserve bullet text verbatim, " +
+  "and use null for any field not in the source. Return ONLY the JSON.";
 
-  if (!result.ok || !result.json) {
+export async function parseResumeFromUpload(buffer: Buffer): Promise<ParseResult> {
+  if (buffer.length === 0) {
+    return { ok: false, error: 'empty', message: 'The uploaded file is empty.' };
+  }
+  if (buffer.length > MAX_BYTES) {
     return {
       ok: false,
-      error: result.ok ? 'no-json' : result.error,
-      tokensIn: result.tokensIn,
-      tokensOut: result.tokensOut,
+      error: 'too-large',
+      message: 'Resume exceeds 4 MB. Compress or save a leaner version.',
     };
   }
+
+  const fileType = detectFileType(buffer);
+
+  if (fileType === 'pdf') {
+    // Gemini reads PDFs natively. Pass bytes inline as base64.
+    const result = await callGemini<ParsedResume>({
+      systemPrompt: 'SYS_RESUME_PARSER',
+      withAuditVoice: false,
+      userPrompt: PDF_USER_PROMPT,
+      inlineFiles: [
+        {
+          mimeType: 'application/pdf',
+          data: buffer.toString('base64'),
+        },
+      ],
+      responseSchema: RESUME_PARSE_SCHEMA,
+      temperature: 0,
+    });
+
+    if (!result.ok || !result.json) {
+      return {
+        ok: false,
+        error: 'ai-parse-failed',
+        message:
+          "Couldn't parse that PDF. Try the DOCX version, or pick \"Talk it through\".",
+        fileType: 'pdf',
+        tokensIn: result.tokensIn,
+        tokensOut: result.tokensOut,
+      };
+    }
+    return {
+      ok: true,
+      parsed: result.json,
+      fileType: 'pdf',
+      tokensIn: result.tokensIn,
+      tokensOut: result.tokensOut,
+      retried: result.retried,
+    };
+  }
+
+  if (fileType === 'docx') {
+    // DOCX → text via mammoth, then Gemini on the text.
+    let text: string;
+    try {
+      const mammoth = await import('mammoth');
+      const { value } = await mammoth.extractRawText({ buffer });
+      text = (value ?? '').trim();
+    } catch (err) {
+      console.error('updraft.parseResumeFromUpload: mammoth failed', err);
+      return {
+        ok: false,
+        error: 'docx-extract-failed',
+        message:
+          "Couldn't read that DOCX. Try saving it again, or pick \"Talk it through\".",
+        fileType: 'docx',
+      };
+    }
+    if (text.length === 0) {
+      return {
+        ok: false,
+        error: 'empty',
+        message: 'That DOCX has no extractable text. Try a different file.',
+        fileType: 'docx',
+      };
+    }
+
+    const result = await callGemini<ParsedResume>({
+      systemPrompt: 'SYS_RESUME_PARSER',
+      withAuditVoice: false,
+      userPrompt: text,
+      responseSchema: RESUME_PARSE_SCHEMA,
+      temperature: 0,
+    });
+
+    if (!result.ok || !result.json) {
+      return {
+        ok: false,
+        error: 'ai-parse-failed',
+        message:
+          "Couldn't parse that DOCX. Try a different version, or pick \"Talk it through\".",
+        fileType: 'docx',
+        tokensIn: result.tokensIn,
+        tokensOut: result.tokensOut,
+      };
+    }
+    return {
+      ok: true,
+      parsed: result.json,
+      fileType: 'docx',
+      tokensIn: result.tokensIn,
+      tokensOut: result.tokensOut,
+      retried: result.retried,
+    };
+  }
+
   return {
-    ok: true,
-    parsed: result.json,
-    tokensIn: result.tokensIn,
-    tokensOut: result.tokensOut,
-    retried: result.retried,
+    ok: false,
+    error: 'unsupported-type',
+    message: 'Only PDF and DOCX files are supported.',
   };
 }

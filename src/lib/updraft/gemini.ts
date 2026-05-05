@@ -19,6 +19,13 @@ const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 export type UpdraftModel = 'gemini-2.0-flash' | 'gemini-2.5-flash' | 'gemini-2.5-pro';
 
+export interface InlineFile {
+  /** MIME type Gemini should treat the data as. e.g. 'application/pdf'. */
+  mimeType: string;
+  /** Base64-encoded file bytes. */
+  data: string;
+}
+
 export interface CallGeminiArgs {
   /** SYS_* identifier from lib-system-prompts.md, or a raw system instruction string. */
   systemPrompt: SysPromptName | { raw: string };
@@ -30,6 +37,12 @@ export interface CallGeminiArgs {
   withAuditVoice?: boolean;
   /** User-side input. Plain text or pre-stringified JSON. */
   userPrompt: string;
+  /**
+   * Optional inline file attachments — sent as additional parts in the user
+   * content. Used for PDF resume input (Gemini reads PDFs natively, no need
+   * for a separate text-extraction step).
+   */
+  inlineFiles?: InlineFile[];
   /**
    * Gemini-flavored JSON Schema for structured output. When set, the
    * response is parsed as JSON and returned in `.json`. When undefined,
@@ -151,13 +164,21 @@ export async function callGemini<T = unknown>(
     Boolean(args.withAuditVoice),
   );
 
+  // Build the user-content parts. Order matters per Gemini's docs: text
+  // prompt first establishes intent, then inline_data parts the model can
+  // reference. For PDF parsing, the prompt says "extract from this resume",
+  // followed by the PDF bytes.
+  const userParts: Record<string, unknown>[] = [{ text: args.userPrompt }];
+  if (args.inlineFiles && args.inlineFiles.length > 0) {
+    for (const file of args.inlineFiles) {
+      userParts.push({
+        inline_data: { mime_type: file.mimeType, data: file.data },
+      });
+    }
+  }
+
   const requestBody: Record<string, unknown> = {
-    contents: [
-      {
-        parts: [{ text: args.userPrompt }],
-        role: 'user',
-      },
-    ],
+    contents: [{ parts: userParts, role: 'user' }],
     systemInstruction: { parts: [{ text: systemText }] },
   };
 
