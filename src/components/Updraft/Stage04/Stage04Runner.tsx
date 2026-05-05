@@ -2,11 +2,13 @@
 
 // Stage 04 — Generate.
 //
-// Renders the chosen DOCX deliverables from the MOD Stage 03 produced.
-// v0.1 ships DOCX-only (PDF deferred to v0.5 via Vercel Sandbox), one
-// template (Classic) at one density (Regular), Phase 1 lint pass with
-// non-blocking warnings. Cover letters defer to v0.5 alongside the
-// match-analyzer tuning pass.
+// Renders the chosen DOCX + PDF deliverables from the MOD Stage 03
+// produced. One template (Classic) at one density (Regular), Phase 1
+// lint pass with non-blocking warnings. PDFs come from Google Drive
+// API (Workspace-side conversion) preserving the text layer so the
+// PDF parses cleanly through ATSes. PDF generation failures are
+// non-blocking: DOCX still ships, "PDF unavailable" banner surfaces.
+// Cover letters defer to v0.5 alongside the match-analyzer tuning pass.
 //
 // Three states keyed off session state:
 //   - Stage 03 complete, no exports yet  → Generate (CTA)
@@ -78,13 +80,13 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
     }
   };
 
-  const willGenerate: { label: string; kind: 'mod_docx' | 'resume_docx' }[] = [];
+  const willGenerate: { label: string; kind: string }[] = [];
   const deliverables = stage02.deliverables ?? [];
   if (deliverables.includes('mod') || stage02.lightweight_mod === true) {
-    willGenerate.push({ label: stage02.lightweight_mod ? 'MOD (lightweight)' : 'MOD', kind: 'mod_docx' });
+    willGenerate.push({ label: stage02.lightweight_mod ? 'MOD (lightweight)' : 'MOD', kind: 'mod' });
   }
   if (deliverables.includes('jd_build')) {
-    willGenerate.push({ label: 'JD-Specific Resume', kind: 'resume_docx' });
+    willGenerate.push({ label: 'JD-Specific Resume', kind: 'resume' });
   }
 
   return (
@@ -153,11 +155,11 @@ function GenerateView({
     <div>
       <h1 className="text-2xl sm:text-3xl font-bold mb-3">Generate your files</h1>
       <p className="text-sm text-[#cbd5e1] mb-6">
-        Audit assembles the DOCX exports from your MOD using the Classic
-        template (ATS-safe, single column, Times New Roman). The lint pass
-        checks for filler phrases, weak verbs, and AI-tells before export.
-        v0.1 ships DOCX-only — PDF, the template picker, and the JD-tailoring
-        pass arrive in later slices.
+        Audit assembles the DOCX + PDF exports from your MOD using the
+        Classic template (ATS-safe, single column, Times New Roman). The
+        lint pass checks for filler phrases, weak verbs, and AI-tells
+        before export. PDF is converted from the DOCX so the text layer
+        stays ATS-clean.
       </p>
 
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6">
@@ -175,7 +177,7 @@ function GenerateView({
                 <span className="text-[#7C3AED]">▸</span>
                 {w.label}{' '}
                 <span className="text-[10px] uppercase tracking-widest font-mono text-[#64748b]">
-                  Classic · Regular · DOCX
+                  Classic · Regular · DOCX + PDF
                 </span>
               </li>
             ))}
@@ -194,15 +196,16 @@ function GenerateView({
             disabled={generating || willGenerate.length === 0}
             className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            {generating ? 'Building DOCX(s)…' : 'Generate →'}
+            {generating ? 'Building DOCX + PDF…' : 'Generate →'}
           </button>
         </div>
       </div>
 
       <p className="mt-6 text-[11px] text-[#64748b] leading-relaxed">
-        The DOCX generation typically takes 1-3 seconds. PDF generation
-        ships in v0.5 via Vercel Sandbox + a custom LibreOffice image so
-        the text layer stays ATS-clean.
+        Generation typically takes 5-10 seconds — DOCX renders instantly,
+        PDF conversion runs through Google Drive. If PDF generation hits a
+        snag, you&apos;ll still get the DOCX (which is the source-of-truth
+        ATS file anyway).
       </p>
     </div>
   );
@@ -237,11 +240,29 @@ function DoneView({
   sessionId: string;
   lintFlags: UpdraftLintFlag[];
 }) {
+  // Detect missing PDFs — a DOCX without its companion PDF means the PDF
+  // pipeline failed for that deliverable. DOCX still ships per spec § 4.5
+  // graceful degradation.
+  const kinds = new Set(exports.map((e) => e.kind));
+  const missingPdfs: string[] = [];
+  if (kinds.has('mod_docx') && !kinds.has('mod_pdf')) missingPdfs.push('MOD');
+  if (kinds.has('resume_docx') && !kinds.has('resume_pdf')) missingPdfs.push('Resume');
+
+  // Sort: MOD before Resume, DOCX before PDF within each, mod_md last.
+  const KIND_ORDER: Record<string, number> = {
+    mod_docx: 0, mod_pdf: 1, mod_md: 2,
+    resume_docx: 3, resume_pdf: 4,
+    cl_docx: 5, cl_pdf: 6,
+  };
+  const sortedExports = [...exports].sort(
+    (a, b) => (KIND_ORDER[a.kind] ?? 99) - (KIND_ORDER[b.kind] ?? 99),
+  );
+
   return (
     <div className="space-y-6">
       <div>
         <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono mb-2">
-          Stage 04 complete · v0.1
+          Stage 04 complete
         </p>
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">Your files</h1>
         <p className="text-sm text-[#cbd5e1]">
@@ -250,8 +271,23 @@ function DoneView({
         </p>
       </div>
 
+      {missingPdfs.length > 0 && (
+        <div className="bg-[#1A1A1A] border border-amber-900/40 rounded-lg p-4">
+          <p className="text-[10px] tracking-widest text-amber-400 uppercase font-mono mb-2">
+            PDF unavailable for {missingPdfs.join(' + ')}
+          </p>
+          <p className="text-sm text-[#cbd5e1] leading-relaxed">
+            Your DOCX shipped successfully — that&apos;s the source-of-truth
+            ATS file and parses cleanly through every major applicant tracking
+            system. PDF generation hit a snag (rate-limit, network blip, or
+            the service hiccupped). You can open the DOCX in Word, Google
+            Docs, or LibreOffice and use File → Save As PDF as a backup.
+          </p>
+        </div>
+      )}
+
       <ul className="space-y-2">
-        {exports.map((e) => (
+        {sortedExports.map((e) => (
           <li key={e.id}>
             <a
               href={`/api/updraft/sessions/${sessionId}/exports/${e.id}`}

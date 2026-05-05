@@ -182,6 +182,7 @@ src/
 | `GEMINI_API_KEY`                  | Yes      | AskBeau chatbot                        |
 | `BREVO_API_KEY`                   | Yes      | Transactional email (contact form + UpDraft magic links). Replaced `RESEND_API_KEY` on 2026-05-04 — Resend's free tier sandboxed `onboarding@resend.dev` to the account-owner inbox only, which broke magic-link sends to anyone but Beau. Brevo's free tier supports domain verification at 300 sends/day. |
 | `MAIL_FROM_ADDRESS`               | Yes      | From-address for transactional email. Format: `"UpDraft <noreply@mail.beaudawson.com>"` or just the email. Domain must be verified on Brevo (one-time DNS work — SPF + DKIM TXT records). |
+| `UPDRAFT_GOOGLE_SA_JSON_B64`      | No       | Base64-encoded service-account JSON for the dedicated `Updraft` (id `updraft0526`) GCP project. Drive API converts DOCX→PDF for Stage 04 exports via Google Docs as the intermediate format (text-layer preserving). When unset, Stage 04 still ships the DOCX and surfaces a "PDF unavailable" banner per spec § 4.5 graceful degradation. Service account scope: `drive.file` (per-file access only). See `skills/updraft/DECISIONS.md` 2026-05-04 entry for setup. |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID`   | Yes      | GA4 (no fallback — required for tracking) |
 | `SUPABASE_URL`                    | Yes      | All Supabase reads/writes              |
 | `SUPABASE_ANON_KEY`               | Yes      | Anon Supabase client                   |

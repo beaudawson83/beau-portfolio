@@ -13,22 +13,30 @@ import {
 import { renderModDocx, renderResumeDocx } from '@/lib/updraft/docx-builder';
 import { buildExportFilename } from '@/lib/updraft/filename';
 import { lintMod } from '@/lib/updraft/lint';
+import { isPdfRendererConfigured, renderPdf } from '@/lib/updraft/pdf';
 import { buildExportPath, uploadExport } from '@/lib/updraft/storage';
 import type {
   UpdraftDeliverable,
+  UpdraftExportKind,
   UpdraftMod,
   UpdraftTargetRole,
 } from '@/types';
 
 const DOCX_MIME =
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const PDF_MIME = 'application/pdf';
 
 interface GeneratedExport {
-  kind: 'mod_docx' | 'resume_docx';
+  kind: UpdraftExportKind;
   filename: string;
   storagePath: string;
   mime: string;
   bytes: number;
+}
+
+interface PdfFailure {
+  for: 'mod' | 'resume';
+  error: string;
 }
 
 /**
@@ -98,33 +106,91 @@ export async function POST(
 
   const lintFlags = lintMod(mod);
   const generated: GeneratedExport[] = [];
+  const pdfFailures: PdfFailure[] = [];
+  const pdfAvailable = isPdfRendererConfigured();
   const generatedAt = new Date();
+
+  // Helper: PDF companion alongside each DOCX. Failures are non-blocking
+  // per spec § 4.5 — DOCX still ships; UI surfaces a banner indicating
+  // which PDFs didn't make it.
+  const persistPdfFor = async (
+    docxBytes: Buffer,
+    pdfFilename: string,
+    pdfKind: 'mod_pdf' | 'resume_pdf',
+    label: 'mod' | 'resume',
+  ): Promise<void> => {
+    if (!pdfAvailable) {
+      pdfFailures.push({ for: label, error: 'UPDRAFT_GOOGLE_SA_JSON_B64 not configured' });
+      return;
+    }
+    const result = await renderPdf({
+      docxBytes,
+      filename: pdfFilename.replace(/\.pdf$/, '.docx'),
+    });
+    if (!result.ok) {
+      pdfFailures.push({ for: label, error: result.error });
+      return;
+    }
+    const path = buildExportPath({ userId, sessionId, filename: pdfFilename });
+    const upload = await uploadExport({
+      path,
+      bytes: result.pdfBytes,
+      mime: PDF_MIME,
+    });
+    if (!upload.ok) {
+      pdfFailures.push({ for: label, error: `upload-failed: ${upload.error ?? 'unknown'}` });
+      return;
+    }
+    await recordExport({
+      sessionId,
+      kind: pdfKind,
+      filename: pdfFilename,
+      storagePath: path,
+      mime: PDF_MIME,
+      bytes: result.bytes,
+    });
+    generated.push({
+      kind: pdfKind,
+      filename: pdfFilename,
+      storagePath: path,
+      mime: PDF_MIME,
+      bytes: result.bytes,
+    });
+  };
 
   try {
     if (shouldRenderMod) {
-      const filename = buildExportFilename({
+      const docxName = buildExportFilename({
         candidateName: mod.identity.name,
         type: 'MOD',
         date: generatedAt,
         ext: 'docx',
       });
       const buf = await renderModDocx({ mod });
-      const path = buildExportPath({ userId, sessionId, filename });
+      const path = buildExportPath({ userId, sessionId, filename: docxName });
       const upload = await uploadExport({ path, bytes: buf, mime: DOCX_MIME });
       if (!upload.ok) throw new Error(`mod upload failed: ${upload.error ?? 'unknown'}`);
       await recordExport({
         sessionId,
         kind: 'mod_docx',
-        filename,
+        filename: docxName,
         storagePath: path,
         mime: DOCX_MIME,
         bytes: buf.length,
       });
-      generated.push({ kind: 'mod_docx', filename, storagePath: path, mime: DOCX_MIME, bytes: buf.length });
+      generated.push({ kind: 'mod_docx', filename: docxName, storagePath: path, mime: DOCX_MIME, bytes: buf.length });
+
+      const pdfName = buildExportFilename({
+        candidateName: mod.identity.name,
+        type: 'MOD',
+        date: generatedAt,
+        ext: 'pdf',
+      });
+      await persistPdfFor(buf, pdfName, 'mod_pdf', 'mod');
     }
 
     if (shouldRenderResume) {
-      const filename = buildExportFilename({
+      const docxName = buildExportFilename({
         candidateName: mod.identity.name,
         type: 'Resume',
         targetRole: target?.role_title ?? null,
@@ -133,18 +199,28 @@ export async function POST(
         ext: 'docx',
       });
       const buf = await renderResumeDocx({ mod, target });
-      const path = buildExportPath({ userId, sessionId, filename });
+      const path = buildExportPath({ userId, sessionId, filename: docxName });
       const upload = await uploadExport({ path, bytes: buf, mime: DOCX_MIME });
       if (!upload.ok) throw new Error(`resume upload failed: ${upload.error ?? 'unknown'}`);
       await recordExport({
         sessionId,
         kind: 'resume_docx',
-        filename,
+        filename: docxName,
         storagePath: path,
         mime: DOCX_MIME,
         bytes: buf.length,
       });
-      generated.push({ kind: 'resume_docx', filename, storagePath: path, mime: DOCX_MIME, bytes: buf.length });
+      generated.push({ kind: 'resume_docx', filename: docxName, storagePath: path, mime: DOCX_MIME, bytes: buf.length });
+
+      const pdfName = buildExportFilename({
+        candidateName: mod.identity.name,
+        type: 'Resume',
+        targetRole: target?.role_title ?? null,
+        company: target?.company ?? null,
+        date: generatedAt,
+        ext: 'pdf',
+      });
+      await persistPdfFor(buf, pdfName, 'resume_pdf', 'resume');
     }
   } catch (err) {
     console.error('updraft.generate-files:', err);
@@ -191,6 +267,20 @@ export async function POST(
       },
     });
   }
+  if (pdfFailures.length > 0) {
+    // PDF failure is non-blocking per spec — DOCX still ships. Log every
+    // failure so we can see how often the PDF pipeline lets us down,
+    // independent of how often DOCX itself works.
+    await logEvent({
+      sessionId,
+      stage: '04',
+      eventType: 'pdf_failed',
+      data: {
+        failures: pdfFailures,
+        renderer_configured: pdfAvailable,
+      },
+    });
+  }
   if (lintFlags.length > 0) {
     await logEvent({
       sessionId,
@@ -210,5 +300,6 @@ export async function POST(
       bytes: g.bytes,
     })),
     lintFlags,
+    pdfFailures: pdfFailures.length > 0 ? pdfFailures : undefined,
   });
 }

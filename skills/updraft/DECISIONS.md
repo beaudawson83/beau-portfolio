@@ -200,3 +200,57 @@ When a decision is reversed, append a new entry referencing the old one — neve
 **Lesson captured:** Memory entry `feedback_resend_sandbox_sender.md` (renamed `project_resend_sandbox_sender.md`) flags this for future infra picks. When choosing email provider — or any infra with a sandbox/limited free tier — verify the *specific feature being built* (here: send-to-arbitrary-users) works on the free tier, not just "is the API nice."
 
 **Invalidated by:** Brevo deliverability proving worse than Resend in production (would push toward SES or back to Resend Pro), or Brevo deprecating their free-tier domain verification (would force the same migration we just did).
+
+---
+
+## 2026-05-04 — PDF reading: Gemini direct, not pdf-parse
+
+**Decision:** Replace pdf-parse with Gemini's native PDF input for Stage 01 resume parsing. PDF bytes go inline as `application/pdf` data parts in the same `generateContent` call that runs `SYS_RESUME_PARSER`. Single round-trip; no separate text-extraction step.
+
+**Reverses:** the original "PDF/DOCX → mammoth or pdf-parse → SYS_RESUME_PARSER" two-step pipeline (2026-05-03 — *Stage 01 vertical*).
+
+**Alternatives considered:**
+- **Stay with pdf-parse v2 (just fixed).** Pure JS, free, no AI cost. Rejected because: (a) v2.x API churn already bit us once — fragility risk; (b) image-only PDFs are rejected outright, not OCR'd; (c) text-extraction quality varies wildly across PDF generators.
+- **pdfjs-dist (Mozilla's PDF.js).** Battle-tested but heavier dep, same OCR limitation as pdf-parse.
+- **Tesseract / OCR libraries.** Could add OCR for image PDFs, but huge install footprint, high latency, fragile.
+
+**Rationale:** Gemini 2.0 Flash accepts PDF inline data natively. It handles text-based PDFs and image-based PDFs (OCRs internally) — the latter being the case our parser currently rejects. Removes the pdf-parse dependency entirely, removes the v1/v2 API surface concern, removes the "image-only PDF" rejection branch. Cost is negligible (~258 tokens per page of PDF, fractions of a cent per parse). The same `SYS_RESUME_PARSER` prompt + schema is reused unchanged — Gemini just gets the PDF as an additional inline part instead of pre-extracted text.
+
+**For DOCX**, mammoth stays — Gemini doesn't read DOCX natively as of 2026-05-04, and mammoth's text extraction works fine. DOCX path: mammoth → text → Gemini text-mode. PDF path: Gemini direct.
+
+**Public API consolidation:** the previous `extractResumeText()` + `parseResumeFromText()` two-call pattern collapses to a single `parseResumeFromUpload(buffer)` call that dispatches by file-type internally. Cleaner contract for the API route.
+
+**Invalidated by:** Gemini's PDF input limits changing (e.g., max pages, max bytes) in ways that block real resumes, or the per-call cost rising materially.
+
+---
+
+## 2026-05-04 — PDF generation: Google Drive API, not Vercel Sandbox or CloudConvert
+
+**Decision:** Use Google Drive API (DOCX → Google Doc → PDF export → delete temp Doc) for Stage 04 PDF generation. Single dedicated GCP project (`Updraft`, id `updraft0526`) with a service account scoped to `drive.file`. JSON key stored base64-encoded in `UPDRAFT_GOOGLE_SA_JSON_B64`. PDF generation is non-blocking — failures fall back to DOCX-only with a banner.
+
+**Reverses:** the original 2026-05-03 — *PDF generation: Vercel Sandbox + custom LibreOffice image* decision. The architectural escape hatch baked into that decision (provider-agnostic `renderPdf()` interface, "swappable to ... CloudConvert, or self-hosted in <1 day") is exactly what made this swap a single-file change.
+
+**Alternatives considered:**
+- **Vercel Sandbox + custom LibreOffice image (the original lock-in).** 6-10 hours of setup work: Dockerfile spec, font installation, image build, registry pin, validation harness. Free per-conversion at scale. Rejected for v0.1.5 because the work-to-value ratio doesn't match where the product is — testing-with-friends doesn't need self-hosted infrastructure. Still on the v1.0 roadmap if we ever want to cap vendor risk.
+- **CloudConvert paid plan ($8/mo).** Considered. Beau pushed back on adding another monthly recurring cost mid-product-validation; reasonable.
+- **CloudConvert free tier (5 PDFs/day).** Too tight for "you + husband + a couple friends test on the same day."
+- **AWS SES / random PDF API.** Heavier setup, less integrated with Beau's existing toolchain.
+
+**Rationale:**
+- Google Docs is the intermediate format → text layer is preserved end-to-end (same engine you'd use to File→Download as PDF in Google Docs UI).
+- Free within Google's quotas (1000 queries / 100 sec, well past anything we'll need).
+- Beau already has Google Workspace; this is one more dedicated GCP project alongside their existing ones (`BADLabs Syrum`, `Beau Portfolio`, etc. — see screenshots in conversation).
+- Service account at `drive.file` scope means the account can only see/manipulate files it created itself — narrowest possible blast radius if the JSON key is ever compromised.
+- Same `renderPdf(docxBytes): Buffer` interface as the deferred Sandbox path — when v1.0 wants self-hosted, only `lib/updraft/pdf.ts` body changes.
+
+**Setup steps captured (one-time):**
+1. New GCP project: `Updraft` (id `updraft0526`) — separate from existing projects for isolation.
+2. Enable Drive API on the project.
+3. Create service account `updraft-pdf-converter` with NO project-level roles (drive.file scope is per-file, not project-level).
+4. Generate + download JSON key.
+5. `cat <key>.json | base64 | pbcopy`, paste into Vercel as `UPDRAFT_GOOGLE_SA_JSON_B64`.
+6. Delete the JSON file from local disk.
+
+**Lesson captured:** when scoping infrastructure work, enumerate alternatives that leverage existing user-side accounts before committing to building from scratch. Sandbox + LibreOffice was the "build it ourselves" answer; Drive API is the "use what's already in your ecosystem" answer. Both are valid, but the latter ships in 2-3 hours instead of 6-10. Save the bigger build for when product velocity demands fully-owned infrastructure.
+
+**Invalidated by:** Google Drive API quota changes that affect us, the conversion fidelity dropping (font handling, page-break shifts), or product scale demanding more headroom than Drive provides comfortably.
