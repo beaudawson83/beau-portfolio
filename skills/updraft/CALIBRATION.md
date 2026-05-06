@@ -311,3 +311,51 @@ The runtime-addendum pattern is the right place for prompt edits that're
 *tactical* (specific instructions for a known v0.x failure mode). Once a
 tactical fix proves itself, consider promoting it into the canonical
 prompt with a versioning note.
+
+---
+
+## Casing normalization watch — added 2026-05-06
+
+`SYS_RESUME_PARSER` originally said "preserve bullet text VERBATIM" with
+no guidance on other fields. Result: resumes that style the name banner,
+section headers, or job titles in ALL CAPS leaked that styling into the
+parsed data — `identity.name` would come back as `"BEAU DAWSON"` instead
+of `"Beau Dawson"`, which then propagated into the MOD, the cover letter
+greeting, and the rendered DOCX header.
+
+**Fix shipped 2026-05-06:** added field-by-field casing rules to
+`SYS_RESUME_PARSER` (rules 8-11 in the canonical prompt). Brand-name +
+acronym carve-outs are explicit (IBM, eBay, BAD Labs, McKinsey & Company
+all preserve as-is). Skills and bullets are explicitly excluded from
+normalization — those legitimately carry capitalization (SQL, AWS) or
+verbatim styling.
+
+**What to watch for during corpus collection:**
+
+- **Real brand names that the model "corrects":**
+  - "BAD Labs" lowered to "Bad Labs"
+  - "eBay" → "EBay" or "Ebay"
+  - "iPhone" → "IPhone"
+  - "McDonald's" → "Mcdonald's"
+  - Style-trademarked brands ("THE NORTH FACE", "DKNY") — these are
+    intentional all-caps brand styling. Hard to tell automatically.
+  - Real-name lowercase styling ("danah boyd") that the model may
+    auto-Title-Case despite the carve-out.
+- **Acronym false positives:**
+  - 2-4 letter all-caps tokens that are NOT acronyms ("LOVE", "WORK"
+    section headers that leaked into a field). Less likely but possible.
+- **Names with unusual casing:**
+  - "MacBook"-style camel names in identity.name
+  - Hyphenated names with mixed casing ("Beau-James")
+  - Suffix variations ("PhD" vs "Ph.D." vs "Ph.D")
+
+**How to report a casing miss:** capture the exact resume input and the
+parsed JSON output. Add to a casing-misses corpus file alongside the
+match-analyzer benchmark cases. Once we have ≥3 misses, the v0.5 tuning
+pass folds in a tactical addendum on top of the canonical prompt
+(same pattern as `TARGET_EXTRACTION_INSTRUCTION` in
+`match-analyzer.ts`).
+
+**Backfill note:** the prompt change applies to **future parses only**.
+Existing test sessions stay mangled until re-parsed. If you have a
+session you care about — re-upload the resume to start a fresh session.

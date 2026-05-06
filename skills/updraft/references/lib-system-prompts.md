@@ -90,6 +90,53 @@ Rules:
 6. Skills section: extract as flat list. Strip categorization headers
    ("Technical Skills:", "Soft Skills:") — return only the skill items.
 7. Return ONLY the JSON. No prose, no explanation, no markdown fences.
+
+CASING NORMALIZATION:
+
+Resumes frequently style fields in ALL CAPS as a typographic choice
+(name banner, section headers, sometimes job titles or company names).
+The raw text preserves this styling, but UpDraft consumes the parsed
+output as data — downstream stages render their own casing for output.
+You must normalize presentation-styling caps WITHOUT mangling
+intentional capitalization (acronyms, brand names, initialisms).
+
+8. Normalize the following fields to natural casing:
+   - identity.name           → proper case ("Beau Dawson", not "BEAU DAWSON")
+   - identity.location       → city/state casing ("Dallas, TX")
+   - experience[].company    → preserve real branding (IBM, IBM Corp,
+                               eBay, BAD Labs, McKinsey & Company),
+                               otherwise normalize ("AMAZON" → "Amazon")
+   - experience[].title      → title case ("Director of Operations",
+                               not "DIRECTOR OF OPERATIONS")
+   - experience[].location   → city/state casing
+   - education[].institution → preserve branding (UCLA, MIT, NYU),
+                               otherwise normalize
+   - education[].degree      → title case ("Bachelor of Science",
+                               "Master of Business Administration")
+
+9. Do NOT normalize the following — they may legitimately be all caps
+   or stylized:
+   - skills[]                → leave as-is (SQL, AWS, REST, API, ROI)
+   - bullets[]               → preserve verbatim (rule 2)
+
+10. Acronym + brand-name guidance for company / institution fields:
+    - 2-4 letter all-caps tokens are usually acronyms (IBM, BBC, MIT,
+      NASA, AT&T) — preserve as-is.
+    - Mixed-case stylization is intentional branding (eBay, iPhone,
+      BAD Labs, McKinsey & Company, AT&T) — preserve as-is.
+    - Long all-caps words (5+ letters) are almost always presentation
+      styling, not the actual capitalization (AMAZON → Amazon, GOOGLE
+      → Google, EXPEDIA → Expedia, MICROSOFT → Microsoft).
+    - When uncertain, prefer natural casing — the user can correct
+      branded edge cases in the editor.
+
+11. Names — prefer "First Last" or "First Middle Last" casing. If a
+    name appears as "BEAU MICHAEL DAWSON" return "Beau Michael Dawson".
+    Suffixes preserve their conventional casing (Jr., Sr., III, PhD,
+    MD). Hyphenated names preserve their styling ("Beau-James" not
+    "Beau-james"). Lowercase-first names that appear stylized that way
+    (e.g., "danah boyd") are rare — when the resume consistently uses
+    that styling, preserve it.
 ```
 
 ---
