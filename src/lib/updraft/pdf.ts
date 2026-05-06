@@ -25,6 +25,7 @@
 
 import 'server-only';
 import { JWT } from 'google-auth-library';
+import { isTransientDriveError, PDF_RETRY, withRetryResult } from './retry';
 
 const DRIVE_BASE = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
@@ -106,6 +107,13 @@ export type RenderPdfResult =
   | { ok: true; pdfBytes: Buffer; bytes: number; engine: 'google-drive' }
   | { ok: false; error: string };
 
+export interface RenderPdfWithRetryResult {
+  result: RenderPdfResult;
+  /** Total attempts including the first try. 1 = no retry needed.
+   *  Surfaced so the caller can log retry-storm patterns. */
+  attempts: number;
+}
+
 export async function renderPdf(args: RenderPdfArgs): Promise<RenderPdfResult> {
   if (!isPdfRendererConfigured()) {
     return { ok: false, error: 'UPDRAFT_GOOGLE_SA_JSON_B64 not configured' };
@@ -155,6 +163,27 @@ export async function renderPdf(args: RenderPdfArgs): Promise<RenderPdfResult> {
     bytes: pdfBytes.length,
     engine: 'google-drive',
   };
+}
+
+/**
+ * renderPdf wrapped with PDF_RETRY policy. Retries the entire flow
+ * (upload + export + delete) on transient Drive errors — network blips,
+ * 5xx responses, 429 rate limits, "could not mint token" hiccups. Each
+ * retry creates a fresh temp Doc; previous attempts already cleaned up
+ * theirs in the finally block.
+ *
+ * Use this from request handlers — `renderPdf` directly is reserved for
+ * cases where the caller wants to manage their own retry budget.
+ */
+export async function renderPdfWithRetry(
+  args: RenderPdfArgs,
+): Promise<RenderPdfWithRetryResult> {
+  const outcome = await withRetryResult<RenderPdfResult>(
+    () => renderPdf(args),
+    PDF_RETRY,
+    (r) => !r.ok && isTransientDriveError(r.error),
+  );
+  return { result: outcome.result, attempts: outcome.attempts };
 }
 
 // ---------------------------------------------------------------------------

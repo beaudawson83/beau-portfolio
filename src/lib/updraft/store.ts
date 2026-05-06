@@ -502,6 +502,61 @@ export async function logEvent(args: {
 }
 
 // ---------------------------------------------------------------------------
+// Diagnostic — recent-failure aggregation for /api/updraft/status
+// ---------------------------------------------------------------------------
+
+export interface RecentFailureSummary {
+  /** Counts grouped by event_type for the diagnostic window. Includes both
+   *  outright failures (pdf_failed, cover_letter_failed, summary_failed,
+   *  export_failed) AND retry-recovery events (pdf_retry_recovered, etc).
+   *  Empty record means a clean window. */
+  byEventType: Record<string, number>;
+  /** Total number of events scanned (across all event_types of interest). */
+  total: number;
+  /** Hours of history scanned. */
+  windowHours: number;
+}
+
+const FAILURE_EVENT_TYPES = [
+  'pdf_failed',
+  'pdf_retry_recovered',
+  'pdf_retry_exhausted',
+  'cover_letter_failed',
+  'summary_failed',
+  'export_failed',
+] as const;
+
+export async function summarizeRecentFailures(
+  windowHours = 24,
+): Promise<RecentFailureSummary> {
+  const sb = client();
+  const out: RecentFailureSummary = {
+    byEventType: {},
+    total: 0,
+    windowHours,
+  };
+  if (!sb) return out;
+
+  const since = new Date(Date.now() - windowHours * 3600 * 1000).toISOString();
+  const { data, error } = await sb
+    .from('updraft_events')
+    .select('event_type')
+    .in('event_type', FAILURE_EVENT_TYPES as unknown as string[])
+    .gte('created_at', since);
+
+  if (error) {
+    console.error('updraft.summarizeRecentFailures:', error);
+    return out;
+  }
+  for (const row of data ?? []) {
+    const t = row.event_type as string;
+    out.byEventType[t] = (out.byEventType[t] ?? 0) + 1;
+    out.total++;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // EXPORTS — file index entries pointing into the updraft-exports bucket
 // ---------------------------------------------------------------------------
 

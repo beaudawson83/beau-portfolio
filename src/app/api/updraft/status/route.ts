@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isCronAuthorized } from '@/lib/cron-auth';
 import { getTodayQuota, quotaCaps } from '@/lib/updraft/quotas';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { summarizeRecentFailures } from '@/lib/updraft/store';
 
 /**
  * GET /api/updraft/status
  *
  * Diagnostic heartbeat for UpDraft. Mirrors /api/conflict/status — single
- * curl tells you today's quota burn, the configured caps, and which env
- * pieces resolved at runtime. No secrets in the response.
+ * curl tells you today's quota burn, configured caps, env presence, AND
+ * recent-failure counts (pdf_failed, retry_exhausted, cover_letter_failed,
+ * etc.) over the last 24h. No secrets in the response.
  *
  * Auth: `Authorization: Bearer $CRON_SECRET`.
  */
@@ -19,8 +21,11 @@ export async function GET(request: NextRequest) {
 
   const supabaseConfigured = isSupabaseConfigured();
   const today = supabaseConfigured ? await getTodayQuota() : null;
+  const failures = supabaseConfigured ? await summarizeRecentFailures(24) : null;
 
-  // Surface env presence without leaking values.
+  // Surface env presence without leaking values. Reflects the post-Brevo
+  // post-Drive-API world — old Resend env is gone, transactional email
+  // goes through Brevo, PDF conversion needs UPDRAFT_GOOGLE_SA_JSON_B64.
   const envPresent = {
     SUPABASE_URL: Boolean(
       process.env.BEAU_SUPABASE_URL ||
@@ -32,11 +37,13 @@ export async function GET(request: NextRequest) {
         process.env.SUPABASE_SECRET_KEY ||
         process.env.SUPABASE_SERVICE_ROLE_KEY,
     ),
-    GEMINI_API_KEY: Boolean(process.env.GEMINI_API_KEY),
-    RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
-    UPDRAFT_OWNER_SECRET: Boolean(process.env.UPDRAFT_OWNER_SECRET),
-    UPDRAFT_MAGIC_LINK_SECRET: Boolean(process.env.UPDRAFT_MAGIC_LINK_SECRET),
-    UPDRAFT_SESSION_COOKIE_SECRET: Boolean(process.env.UPDRAFT_SESSION_COOKIE_SECRET),
+    GEMINI_API_KEY:                 Boolean(process.env.GEMINI_API_KEY),
+    BREVO_API_KEY:                  Boolean(process.env.BREVO_API_KEY),
+    MAIL_FROM_ADDRESS:              Boolean(process.env.MAIL_FROM_ADDRESS),
+    UPDRAFT_GOOGLE_SA_JSON_B64:     Boolean(process.env.UPDRAFT_GOOGLE_SA_JSON_B64),
+    UPDRAFT_OWNER_SECRET:           Boolean(process.env.UPDRAFT_OWNER_SECRET),
+    UPDRAFT_MAGIC_LINK_SECRET:      Boolean(process.env.UPDRAFT_MAGIC_LINK_SECRET),
+    UPDRAFT_SESSION_COOKIE_SECRET:  Boolean(process.env.UPDRAFT_SESSION_COOKIE_SECRET),
   };
 
   return NextResponse.json({
@@ -45,6 +52,7 @@ export async function GET(request: NextRequest) {
     envPresent,
     caps: quotaCaps(),
     today,
+    failures,
     generatedAt: new Date().toISOString(),
   });
 }

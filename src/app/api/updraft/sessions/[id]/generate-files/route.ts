@@ -19,7 +19,7 @@ import {
 import { draftCoverLetter } from '@/lib/updraft/cover-letter-generator';
 import { buildExportFilename } from '@/lib/updraft/filename';
 import { lintMod } from '@/lib/updraft/lint';
-import { isPdfRendererConfigured, renderPdf } from '@/lib/updraft/pdf';
+import { isPdfRendererConfigured, renderPdfWithRetry } from '@/lib/updraft/pdf';
 import { buildExportPath, uploadExport } from '@/lib/updraft/storage';
 import type {
   UpdraftDeliverable,
@@ -45,6 +45,8 @@ interface GeneratedExport {
 interface PdfFailure {
   for: 'mod' | 'resume' | 'cover_letter';
   error: string;
+  /** Total attempts before giving up — 3 means we hit the policy ceiling. */
+  attempts: number;
 }
 
 interface CoverLetterMeta {
@@ -150,15 +152,29 @@ export async function POST(
     label: 'mod' | 'resume' | 'cover_letter',
   ): Promise<void> => {
     if (!pdfAvailable) {
-      pdfFailures.push({ for: label, error: 'UPDRAFT_GOOGLE_SA_JSON_B64 not configured' });
+      pdfFailures.push({
+        for: label,
+        error: 'UPDRAFT_GOOGLE_SA_JSON_B64 not configured',
+        attempts: 0,
+      });
       return;
     }
-    const result = await renderPdf({
+    const { result, attempts } = await renderPdfWithRetry({
       docxBytes,
       filename: pdfFilename.replace(/\.pdf$/, '.docx'),
     });
+    // Always log attempts so we can spot retry-storm patterns even on
+    // success — a 3-attempt success is a near-miss worth knowing about.
+    if (attempts > 1) {
+      await logEvent({
+        sessionId,
+        stage: '04',
+        eventType: result.ok ? 'pdf_retry_recovered' : 'pdf_retry_exhausted',
+        data: { for: label, attempts, error: result.ok ? null : result.error },
+      });
+    }
     if (!result.ok) {
-      pdfFailures.push({ for: label, error: result.error });
+      pdfFailures.push({ for: label, error: result.error, attempts });
       return;
     }
     const path = buildExportPath({ userId, sessionId, filename: pdfFilename });
@@ -168,7 +184,11 @@ export async function POST(
       mime: PDF_MIME,
     });
     if (!upload.ok) {
-      pdfFailures.push({ for: label, error: `upload-failed: ${upload.error ?? 'unknown'}` });
+      pdfFailures.push({
+        for: label,
+        error: `upload-failed: ${upload.error ?? 'unknown'}`,
+        attempts,
+      });
       return;
     }
     await recordExport({
