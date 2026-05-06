@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { trackCTAClick } from '@/lib/analytics';
 
 interface DashboardProps {
   onClose: () => void;
@@ -112,6 +113,20 @@ export default function Dashboard({ onClose }: DashboardProps) {
               className="block text-green-500/60 hover:text-green-500 font-mono text-sm transition-colors"
             >
               {'>'} OPEN_BLOG_EDITOR <span className="text-yellow-500/60">[ADMIN]</span>
+            </Link>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.7 }}
+          >
+            <Link
+              href="/updraft"
+              onClick={() => trackCTAClick('updraft_open', 'pi_dashboard')}
+              className="block text-green-500/60 hover:text-green-500 font-mono text-sm transition-colors"
+            >
+              {'>'} OPEN_UPDRAFT <span className="text-purple-400/70">[BETA]</span>
             </Link>
           </motion.div>
         </div>
