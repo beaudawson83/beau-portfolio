@@ -254,3 +254,39 @@ When a decision is reversed, append a new entry referencing the old one — neve
 **Lesson captured:** when scoping infrastructure work, enumerate alternatives that leverage existing user-side accounts before committing to building from scratch. Sandbox + LibreOffice was the "build it ourselves" answer; Drive API is the "use what's already in your ecosystem" answer. Both are valid, but the latter ships in 2-3 hours instead of 6-10. Save the bigger build for when product velocity demands fully-owned infrastructure.
 
 **Invalidated by:** Google Drive API quota changes that affect us, the conversion fidelity dropping (font handling, page-break shifts), or product scale demanding more headroom than Drive provides comfortably.
+
+---
+
+## 2026-05-06 — Cover Letter generation: fold into `generate-files`, single Gemini hop
+
+**Decision:** Cover letter drafting happens inside the existing `POST /api/updraft/sessions/[id]/generate-files` route, not in a separate endpoint. One Gemini call to `SYS_COVER_LETTER_DRAFTER` runs after MOD/Resume DOCX render and before CL DOCX render. Failure to draft is non-blocking — other deliverables still ship and the user sees a banner. Structured metadata (`hook_type`, `p3_branch`, `close_type`, `word_count`) persists to `stage_04.cover_letter_meta` for future tuning.
+
+**Alternatives considered:**
+- **Separate `/generate-cover-letter` endpoint that runs on Stage 03 completion.** Mirrors the pattern of `/generate-summary`, which drafts the executive summary in Stage 03 and stores it on `mod.summary` before Stage 04. Rejected because the CL is not a field on the MOD — it's a separate document. Storing the draft would require yet another stage_outputs slot, and the user expects a single "Generate" button at Stage 04 to produce all selected deliverables.
+- **Two-shot: draft + revise loop if word count outside 250-400.** Spec calls for "one revision loop max." v0.5 ships single-shot — log the count and accept whatever falls in range. Revision loop is a v1.0 quality polish.
+- **Build a separate "Cover Letter editor" UI in Stage 04 to let the user revise before download.** Out of scope for the v0.5 slice. User edits the DOCX after download (same pattern as the lint-flag policy).
+
+**Rationale:** CL is a per-Stage-04 deliverable, not a stage-output that gets re-used. Folding it into `generate-files` keeps the wiring symmetrical with the other deliverables (one button → all files). Non-blocking failure mirrors the existing PDF-failure policy: degrade gracefully, surface a banner. Single Gemini hop keeps cost predictable (~1k tokens per CL) and well under the daily quota.
+
+**Path B handling:** if `match_analysis` is null at this point (Stage 02 didn't compute it), `draftCoverLetter` passes null through to the prompt. The system prompt has fallbacks (Hook D / Branch 3 are data-light). Spec § "No Match Analysis" suggests re-running match analysis at Stage 04 if missing — deferred to v1.0; v0.5 lets the model cope.
+
+**Stage 02 picker un-disabled:** the Cover Letter checkbox is now selectable. `lightweight_mod` already triggers when CL is selected without MOD, so the user gets a lightweight MOD + CL even if they pick CL alone. No extra plumbing needed.
+
+**Frontend banner branches:** the failure banner has three message branches based on `coverLetterError` — `tier-missing` (Stage 01 didn't finish), substring `capacity` (quota tripped), or generic ("MOD might be too thin"). Aimed at telling the user *what to try next*, not the raw error.
+
+**Invalidated by:** persistent quality complaints about single-shot drafts (would push us to the revision loop), or telemetry showing `cover_letter_failed` events climbing past a few percent (would push us to retry logic / fallback to user-written CL slot).
+
+---
+
+## 2026-05-06 — Pi-egg reveal: single dashboard slot, not full unlock screen
+
+**Decision:** Pi-egg reveal exposes UpDraft as a new staging slot (`OPEN_UPDRAFT [BETA]`) on the existing Operator Dashboard component, alongside `OPEN_BLOG_EDITOR [ADMIN]`. Tracked via `trackCTAClick('updraft_open', 'pi_dashboard')` for GA4 funnel analysis. No separate "you've unlocked UpDraft" celebratory screen.
+
+**Alternatives considered:**
+- **Bespoke unlock screen** with copy framing UpDraft as an earned reward. Heavier build, opinionated, doesn't compose with the existing slot pattern.
+- **Auto-redirect** to `/updraft` on Pi-challenge success. Skips user agency — they came for the easter-egg dashboard, not necessarily for UpDraft.
+- **Modal popover** announcing the new slot. Friction without information.
+
+**Rationale:** the dashboard already has a staging-slot pattern; adding UpDraft is one motion.div block of code. Matches the existing visual language (green terminal, monospace, `>` prefix). User clicks intentionally, not by accident. `[BETA]` color (purple) distinguishes from `[ADMIN]` (yellow) so the user understands this is user-facing, not gated to Beau.
+
+**Invalidated by:** the dashboard pattern changing (e.g., a future redesign that does explicit unlock celebrations), or telemetry showing Pi-solvers don't click through (would push us to a more prominent reveal).

@@ -532,3 +532,84 @@ export async function renderModDocx(args: RenderArgs): Promise<Buffer> {
   const doc = assembleDocument(children);
   return Packer.toBuffer(doc);
 }
+
+// ---------------------------------------------------------------------------
+// Cover Letter render
+// ---------------------------------------------------------------------------
+
+export interface RenderCoverLetterArgs {
+  identity: ParsedResumeIdentity;
+  greeting: string;
+  paragraphs: string[];
+  signoff: string;
+  /** Used in nothing visible — reserved for future date-line localization. */
+  generatedAt?: Date;
+}
+
+function formatLetterDate(d: Date): string {
+  // Long-form date for cover-letter convention. en-US is the default
+  // audience; ATSes don't parse this section so locale isn't load-bearing.
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+/**
+ * Render the cover letter — same Classic header primitives as the resume
+ * (so a recruiter sees a consistent identity block across both files),
+ * then a date line, greeting, four prose paragraphs, signoff.
+ *
+ * ATS-safe single column, Times New Roman 11pt body. No tables, no
+ * graphics, no columns — same parser-safe rules as the resume.
+ */
+export async function renderCoverLetterDocx(args: RenderCoverLetterArgs): Promise<Buffer> {
+  const dateLine = formatLetterDate(args.generatedAt ?? new Date());
+
+  const children: Paragraph[] = [
+    ...buildHeader(args.identity, /* headline */ null),
+    // Date — left-aligned, modest spacing above the greeting
+    new Paragraph({
+      spacing: {
+        line: LINE_SPACING_BODY,
+        lineRule: 'auto',
+        before: 0,
+        after: SPACING_BETWEEN_SECTIONS,
+      },
+      children: [bodyRun(dateLine)],
+    }),
+    // Greeting
+    bodyParagraph(args.greeting, { spacingAfter: SPACING_BETWEEN_SECTIONS }),
+  ];
+
+  // Body paragraphs — each its own block, with a section-sized gap between
+  // so the prose breathes. Trailing whitespace inside any paragraph is stripped.
+  for (const p of args.paragraphs) {
+    const text = p.trim();
+    if (!text) continue;
+    children.push(
+      bodyParagraph(text, { spacingAfter: SPACING_BETWEEN_SECTIONS }),
+    );
+  }
+
+  // Signoff — already includes "Looking forward,\n[Name]" from the model.
+  // Render as separate runs so the candidate's name lands on its own line.
+  const signoffParts = args.signoff.split('\n').map((s) => s.trim()).filter(Boolean);
+  for (let i = 0; i < signoffParts.length; i++) {
+    children.push(
+      new Paragraph({
+        spacing: {
+          line: LINE_SPACING_BODY,
+          lineRule: 'auto',
+          before: 0,
+          after: i === signoffParts.length - 1 ? 0 : SPACING_BETWEEN_BULLETS,
+        },
+        children: [bodyRun(signoffParts[i])],
+      }),
+    );
+  }
+
+  const doc = assembleDocument(children);
+  return Packer.toBuffer(doc);
+}

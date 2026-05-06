@@ -8,7 +8,11 @@
 // API (Workspace-side conversion) preserving the text layer so the
 // PDF parses cleanly through ATSes. PDF generation failures are
 // non-blocking: DOCX still ships, "PDF unavailable" banner surfaces.
-// Cover letters defer to v0.5 alongside the match-analyzer tuning pass.
+//
+// Cover letters draft via SYS_COVER_LETTER_DRAFTER on this same call
+// (one Gemini hop), then render through the same Classic primitives.
+// CL drafting failure is non-blocking — other deliverables still ship,
+// banner surfaces explaining the CL didn't make it.
 //
 // Three states keyed off session state:
 //   - Stage 03 complete, no exports yet  → Generate (CTA)
@@ -24,12 +28,21 @@ import type {
   UpdraftSession,
 } from '@/types';
 
+interface CoverLetterMeta {
+  word_count: number;
+  hook_type: string | null;
+  p3_branch: string | null;
+  close_type: string | null;
+}
+
 interface Stage04Output {
   template_selected?: 'classic' | 'modern' | 'structured' | 'creative';
   density_selected?: 'compact' | 'regular' | 'comfy';
   lint_flags?: UpdraftLintFlag[];
   lint_flags_count?: number;
   generated_at?: string;
+  cover_letter_meta?: CoverLetterMeta | null;
+  cover_letter_error?: string | null;
 }
 
 interface ExportSummary {
@@ -88,13 +101,22 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
   if (deliverables.includes('jd_build')) {
     willGenerate.push({ label: 'JD-Specific Resume', kind: 'resume' });
   }
+  if (deliverables.includes('cover_letter')) {
+    willGenerate.push({ label: 'Cover Letter', kind: 'cover_letter' });
+  }
 
   return (
     <main className="min-h-screen bg-[#111111] text-white">
       <SessionHeader sessionId={session.id} userEmail={userEmail} />
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {hasExports ? (
-          <DoneView exports={priorExports} sessionId={session.id} lintFlags={lintFlags} />
+          <DoneView
+            exports={priorExports}
+            sessionId={session.id}
+            lintFlags={lintFlags}
+            coverLetterError={stage04.cover_letter_error ?? null}
+            coverLetterRequested={deliverables.includes('cover_letter')}
+          />
         ) : (
           <GenerateView
             willGenerate={willGenerate}
@@ -235,10 +257,14 @@ function DoneView({
   exports,
   sessionId,
   lintFlags,
+  coverLetterError,
+  coverLetterRequested,
 }: {
   exports: ExportSummary[];
   sessionId: string;
   lintFlags: UpdraftLintFlag[];
+  coverLetterError: string | null;
+  coverLetterRequested: boolean;
 }) {
   // Detect missing PDFs — a DOCX without its companion PDF means the PDF
   // pipeline failed for that deliverable. DOCX still ships per spec § 4.5
@@ -247,6 +273,13 @@ function DoneView({
   const missingPdfs: string[] = [];
   if (kinds.has('mod_docx') && !kinds.has('mod_pdf')) missingPdfs.push('MOD');
   if (kinds.has('resume_docx') && !kinds.has('resume_pdf')) missingPdfs.push('Resume');
+  if (kinds.has('cl_docx') && !kinds.has('cl_pdf')) missingPdfs.push('Cover Letter');
+
+  // Cover letter never made it to DOCX either — drafting itself failed
+  // (model returned wrong shape, or quota tripped). Show the user a
+  // separate banner so they know to try again or write one manually.
+  const coverLetterDocxMissing =
+    coverLetterRequested && !kinds.has('cl_docx');
 
   // Sort: MOD before Resume, DOCX before PDF within each, mod_md last.
   const KIND_ORDER: Record<string, number> = {
@@ -282,6 +315,21 @@ function DoneView({
             system. PDF generation hit a snag (rate-limit, network blip, or
             the service hiccupped). You can open the DOCX in Word, Google
             Docs, or LibreOffice and use File → Save As PDF as a backup.
+          </p>
+        </div>
+      )}
+
+      {coverLetterDocxMissing && (
+        <div className="bg-[#1A1A1A] border border-amber-900/40 rounded-lg p-4">
+          <p className="text-[10px] tracking-widest text-amber-400 uppercase font-mono mb-2">
+            Cover Letter not generated
+          </p>
+          <p className="text-sm text-[#cbd5e1] leading-relaxed">
+            {coverLetterError === 'tier-missing'
+              ? 'Your tier wasn’t set on this session, so the cover letter couldn’t be drafted. This usually means Stage 01 didn’t finish cleanly — try a fresh session.'
+              : coverLetterError && coverLetterError.toLowerCase().includes('capacity')
+                ? 'I hit my daily AI capacity for cover letters. Your other files shipped — try again tomorrow, or write the cover letter yourself for now.'
+                : 'I couldn’t draft a cover letter this round — your other files still shipped. Click Generate again to retry; if it persists, your MOD might be too thin to anchor a letter.'}
           </p>
         </div>
       )}

@@ -6,9 +6,11 @@
 //   2.1 Deliverable Picker → 2.2 Target Form → 2.3 SYS_MATCH_ANALYZER
 //   → 2.4 Match Briefing → Stage 03 handoff
 //
-// v0.1 cut: Cover Letter is selectable but disabled (ships v0.5+). The
-// Audit-voiced briefing in 2.4 is rendered as a structured panel for v0.1;
-// the full tier-aware voice arrives in a later iteration.
+// All three deliverables (MOD / JD-Build / Cover Letter) are selectable.
+// Cover Letter and JD-Build both gate on a target JD — the picker forwards
+// either to the target form or directly to Stage 03 depending on what's
+// selected. The Audit-voiced briefing in 2.4 is rendered as a structured
+// panel for v0.1.5; full tier-aware voice arrives in a later iteration.
 
 import { ChangeEvent, FormEvent, useState } from 'react';
 import Link from 'next/link';
@@ -226,12 +228,10 @@ function DeliverablePicker({ sessionId }: { sessionId: string }) {
           body="Tailored to one job posting. Match-scored. Auto-builds an MOD if you skipped it. DOCX + PDF export."
         />
         <DeliverableCheck
-          checked={false}
-          onToggle={() => {}}
+          checked={selected.has('cover_letter')}
+          onToggle={() => toggle('cover_letter')}
           title="Cover Letter"
           body="Four paragraphs, targeted, no filler. Requires a JD."
-          disabled
-          disabledNote="Ships in v0.5"
         />
 
         <div className="flex items-center justify-between pt-4">

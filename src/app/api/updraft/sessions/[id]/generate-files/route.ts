@@ -10,7 +10,13 @@ import {
   readSessionForUser,
   recordExport,
 } from '@/lib/updraft/store';
-import { renderModDocx, renderResumeDocx } from '@/lib/updraft/docx-builder';
+import { canMakeAiCall, recordQuotaUsage } from '@/lib/updraft/quotas';
+import {
+  renderCoverLetterDocx,
+  renderModDocx,
+  renderResumeDocx,
+} from '@/lib/updraft/docx-builder';
+import { draftCoverLetter } from '@/lib/updraft/cover-letter-generator';
 import { buildExportFilename } from '@/lib/updraft/filename';
 import { lintMod } from '@/lib/updraft/lint';
 import { isPdfRendererConfigured, renderPdf } from '@/lib/updraft/pdf';
@@ -18,8 +24,10 @@ import { buildExportPath, uploadExport } from '@/lib/updraft/storage';
 import type {
   UpdraftDeliverable,
   UpdraftExportKind,
+  UpdraftMatchAnalysis,
   UpdraftMod,
   UpdraftTargetRole,
+  UpdraftTier,
 } from '@/types';
 
 const DOCX_MIME =
@@ -35,24 +43,33 @@ interface GeneratedExport {
 }
 
 interface PdfFailure {
-  for: 'mod' | 'resume';
+  for: 'mod' | 'resume' | 'cover_letter';
   error: string;
+}
+
+interface CoverLetterMeta {
+  word_count: number;
+  hook_type: string | null;
+  p3_branch: string | null;
+  close_type: string | null;
 }
 
 /**
  * POST /api/updraft/sessions/[id]/generate-files
  *
- * Stage 04 — render the chosen DOCX deliverables, run the Phase 1 lint
- * pass, persist to Storage + the exports table, log events, mark the
- * session completed.
+ * Stage 04 — render the chosen DOCX + PDF deliverables, run the Phase 1
+ * lint pass on the MOD, persist to Storage + the exports table, log
+ * events, mark the session completed.
  *
- * v0.1 ships DOCX-only (PDF deferred to v0.5 via Vercel Sandbox), one
- * template (Classic) at one density (Regular). The full template picker
- * + tailoring AI calls + Phase 2 lint rewrite all defer per PLAN.md §8.
+ * v0.1.5 + Cover Letter (v0.5 slice): MOD / Resume / Cover Letter, one
+ * template (Classic) at one density (Regular). Cover letter goes through
+ * SYS_COVER_LETTER_DRAFTER (one AI call) before DOCX rendering; failure
+ * to draft the CL is non-blocking — other deliverables still ship.
+ * Tailoring AI calls + template picker + Phase 2 lint rewrite all defer.
  *
- * Lint flags are returned in the response but do NOT block export in
- * v0.1 — they surface as warnings on the download page so the user can
- * tighten manually. v0.5 routes them through SYS_ANTIPATTERN_REVIEWER.
+ * Lint flags are returned in the response but do NOT block export — they
+ * surface as warnings on the download page so the user can tighten
+ * manually. v0.5+ routes them through SYS_ANTIPATTERN_REVIEWER.
  */
 export async function POST(
   request: NextRequest,
@@ -85,21 +102,32 @@ export async function POST(
     deliverables?: UpdraftDeliverable[];
     target?: UpdraftTargetRole | null;
     lightweight_mod?: boolean;
+    match_analysis?: UpdraftMatchAnalysis | null;
   };
   const deliverables = stage02.deliverables ?? [];
   const target = stage02.target ?? null;
+  const matchAnalysis = stage02.match_analysis ?? null;
 
-  // Decide what to render. v0.1 ships:
-  //   - mod_docx if 'mod' selected OR lightweight_mod=true (always carry the
-  //     MOD as the source-of-truth doc, even in lightweight mode)
+  // Decide what to render:
+  //   - mod_docx if 'mod' selected OR lightweight_mod=true (always carry
+  //     the MOD as the source-of-truth doc, even in lightweight mode)
   //   - resume_docx if 'jd_build' selected
-  // Cover letter (cl_docx) deferred to v0.5.
+  //   - cl_docx if 'cover_letter' selected (requires target — Stage 02
+  //     gates this; defensive check below)
   const shouldRenderMod = deliverables.includes('mod') || stage02.lightweight_mod === true;
   const shouldRenderResume = deliverables.includes('jd_build');
+  const shouldRenderCoverLetter = deliverables.includes('cover_letter');
 
-  if (!shouldRenderMod && !shouldRenderResume) {
+  if (!shouldRenderMod && !shouldRenderResume && !shouldRenderCoverLetter) {
     return NextResponse.json(
-      { error: 'nothing-to-render', message: 'No deliverables match v0.1 scope (Cover Letter is deferred to v0.5).' },
+      { error: 'nothing-to-render', message: 'Pick at least one deliverable in Stage 02.' },
+      { status: 409 },
+    );
+  }
+
+  if (shouldRenderCoverLetter && !target) {
+    return NextResponse.json(
+      { error: 'cover-letter-needs-target', message: 'A cover letter needs a target role — go back to Stage 02 and add the JD.' },
       { status: 409 },
     );
   }
@@ -109,6 +137,8 @@ export async function POST(
   const pdfFailures: PdfFailure[] = [];
   const pdfAvailable = isPdfRendererConfigured();
   const generatedAt = new Date();
+  let coverLetterMeta: CoverLetterMeta | null = null;
+  let coverLetterError: string | null = null;
 
   // Helper: PDF companion alongside each DOCX. Failures are non-blocking
   // per spec § 4.5 — DOCX still ships; UI surfaces a banner indicating
@@ -116,8 +146,8 @@ export async function POST(
   const persistPdfFor = async (
     docxBytes: Buffer,
     pdfFilename: string,
-    pdfKind: 'mod_pdf' | 'resume_pdf',
-    label: 'mod' | 'resume',
+    pdfKind: 'mod_pdf' | 'resume_pdf' | 'cl_pdf',
+    label: 'mod' | 'resume' | 'cover_letter',
   ): Promise<void> => {
     if (!pdfAvailable) {
       pdfFailures.push({ for: label, error: 'UPDRAFT_GOOGLE_SA_JSON_B64 not configured' });
@@ -222,6 +252,100 @@ export async function POST(
       });
       await persistPdfFor(buf, pdfName, 'resume_pdf', 'resume');
     }
+
+    // Cover Letter — drafted via SYS_COVER_LETTER_DRAFTER, then rendered
+    // through the same Classic primitives. Failure to draft is non-blocking
+    // for the rest of the deliverables (matches the PDF-failure policy).
+    // Quota gate runs only when CL is selected — MOD + Resume don't call AI.
+    if (shouldRenderCoverLetter && target) {
+      const quota = await canMakeAiCall(request);
+      if (!quota.allowed) {
+        coverLetterError = quota.message ?? 'Capacity limit reached.';
+      } else {
+        const tier = (session.tier as UpdraftTier | null | undefined) ?? null;
+        if (!tier) {
+          coverLetterError = 'tier-missing';
+        } else {
+          const draftResult = await draftCoverLetter({
+            mod,
+            target,
+            matchAnalysis,
+            tier,
+          });
+          await recordQuotaUsage({
+            tokensIn: draftResult.tokensIn,
+            tokensOut: draftResult.tokensOut,
+          });
+
+          if (!draftResult.ok) {
+            coverLetterError = draftResult.error;
+            await logEvent({
+              sessionId,
+              stage: '04',
+              eventType: 'cover_letter_failed',
+              data: {
+                error: draftResult.error,
+                tokensIn: draftResult.tokensIn,
+                tokensOut: draftResult.tokensOut,
+                owner: isUpdraftOwner(request),
+              },
+            });
+          } else {
+            const draft = draftResult.draft;
+            coverLetterMeta = {
+              word_count: draft.wordCount,
+              hook_type:  draft.hookType,
+              p3_branch:  draft.p3Branch,
+              close_type: draft.closeType,
+            };
+
+            const clDocxName = buildExportFilename({
+              candidateName: mod.identity.name,
+              type: 'CoverLetter',
+              targetRole: target.role_title,
+              company: target.company,
+              date: generatedAt,
+              ext: 'docx',
+            });
+            const clBuf = await renderCoverLetterDocx({
+              identity: mod.identity,
+              greeting: draft.greeting,
+              paragraphs: draft.paragraphs,
+              signoff: draft.signoff,
+              generatedAt,
+            });
+            const clPath = buildExportPath({ userId, sessionId, filename: clDocxName });
+            const clUpload = await uploadExport({ path: clPath, bytes: clBuf, mime: DOCX_MIME });
+            if (!clUpload.ok) throw new Error(`cover letter upload failed: ${clUpload.error ?? 'unknown'}`);
+            await recordExport({
+              sessionId,
+              kind: 'cl_docx',
+              filename: clDocxName,
+              storagePath: clPath,
+              mime: DOCX_MIME,
+              bytes: clBuf.length,
+            });
+            generated.push({
+              kind: 'cl_docx',
+              filename: clDocxName,
+              storagePath: clPath,
+              mime: DOCX_MIME,
+              bytes: clBuf.length,
+            });
+
+            const clPdfName = buildExportFilename({
+              candidateName: mod.identity.name,
+              type: 'CoverLetter',
+              targetRole: target.role_title,
+              company: target.company,
+              date: generatedAt,
+              ext: 'pdf',
+            });
+            await persistPdfFor(clBuf, clPdfName, 'cl_pdf', 'cover_letter');
+          }
+        }
+      }
+    }
   } catch (err) {
     console.error('updraft.generate-files:', err);
     await logEvent({
@@ -250,6 +374,8 @@ export async function POST(
       lint_flags_count: lintFlags.length,
       lint_flags: lintFlags,
       generated_at: generatedAt.toISOString(),
+      cover_letter_meta:  coverLetterMeta,
+      cover_letter_error: coverLetterError,
     },
     status: 'completed',
   });
@@ -300,6 +426,8 @@ export async function POST(
       bytes: g.bytes,
     })),
     lintFlags,
-    pdfFailures: pdfFailures.length > 0 ? pdfFailures : undefined,
+    pdfFailures:        pdfFailures.length > 0 ? pdfFailures : undefined,
+    coverLetterError:   coverLetterError ?? undefined,
+    coverLetterMeta:    coverLetterMeta  ?? undefined,
   });
 }

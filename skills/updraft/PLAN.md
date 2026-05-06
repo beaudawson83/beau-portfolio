@@ -388,13 +388,13 @@ Implementation files (`src/app/updraft/*`, `src/lib/updraft/*`, `src/components/
 
 ## 11. State of play
 
-**v0.1.5 has shipped.** Live on `beaudawson.com/updraft` (unlinked URL, share manually). Verified end-to-end with two test accounts (Beau + Ian) on 2026-05-06 — full happy path from magic-link sign-in through downloading both DOCX and PDF deliverables, plus exercising the privacy controls (keep flag, data export, delete-my-account cascade).
+**v0.1.5 has shipped** + **Pi-egg reveal** + **Cover Letter generation** landed 2026-05-06 in the same session.
 
-The next slice is whichever you pick from §8's v0.5 roadmap. The biggest wins for early-test traffic are probably:
+- v0.1.5 happy path verified with two test accounts (Beau + Ian) on 2026-05-06 — magic-link sign-in → MOD/Resume DOCX + PDF download → privacy controls exercised (keep flag, data export, delete-my-account cascade).
+- **Pi-egg reveal** — Operator Dashboard now exposes `OPEN_UPDRAFT [BETA]` alongside `OPEN_BLOG_EDITOR [ADMIN]`, so anyone who solves the Pi challenge gets a path to UpDraft. Tracked via `trackCTAClick('updraft_open', 'pi_dashboard')`.
+- **Cover Letter** — Stage 02 picker now accepts `cover_letter`; Stage 04 drafts a 4-paragraph CL via `SYS_COVER_LETTER_DRAFTER` (one Gemini hop), renders DOCX through the same Classic primitives, converts to PDF via Drive API. Failure to draft is non-blocking — other deliverables still ship and the user sees a banner. Structured metadata (`hook_type`, `p3_branch`, `close_type`, `word_count`) persists to `stage_04.cover_letter_meta` for future tuning.
+
+The remaining v0.5 slice (pick by appetite — both are independent):
 
 1. **`SYS_MATCH_ANALYZER` prompt tuning** — see `CALIBRATION.md`. Beau is collecting a calibration corpus.
-2. **Cover letter generation** — `SYS_COVER_LETTER_DRAFTER` already specced; lifts deliverables from MOD+Resume to MOD+Resume+CL.
-3. **Pi-egg reveal** — quick ship, gets `/updraft` discoverable to Pi-challenge solvers.
-4. **Conversational Stage 03** — bigger build, but it's where Audit's voice actually shows up properly. Currently Stage 03 is "edit a form"; the spec calls for a Phase A-D conversation.
-
-All four are independent — pick by appetite, not order.
+2. **Conversational Stage 03** — bigger build, but it's where Audit's voice actually shows up properly. Currently Stage 03 is "edit a form"; the spec calls for a Phase A-D conversation. Parked deliverables in `CALIBRATION.md` § 'Stage 03 deferred features' (AI bullet rewriter, Phase C/D prompts, STAR extraction, tier branches) get folded into this slice.
