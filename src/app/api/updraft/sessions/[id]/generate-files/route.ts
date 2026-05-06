@@ -69,6 +69,14 @@ interface CoverLetterMeta {
  * to draft the CL is non-blocking — other deliverables still ship.
  * Tailoring AI calls + template picker + Phase 2 lint rewrite all defer.
  *
+ * Body accepts an optional `selection: UpdraftExportKind[]` to scope this
+ * round of generation. Absent / empty → render every kind valid for the
+ * Stage 02 deliverables (full default, backwards compatible). Present →
+ * render only the named kinds. Lets the UI surface a per-deliverable +
+ * per-format picker for partial regeneration ("just the CL PDF this
+ * round"). Re-rendering an existing kind overwrites the prior storage
+ * file via recordExport's upsert semantics.
+ *
  * Lint flags are returned in the response but do NOT block export — they
  * surface as warnings on the download page so the user can tighten
  * manually. v0.5+ routes them through SYS_ANTIPATTERN_REVIEWER.
@@ -83,6 +91,34 @@ export async function POST(
     request.cookies.get(SESSION_COOKIE_NAME)?.value,
   );
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
+  // Optional selection — narrows which kinds get rendered this round.
+  // Empty / missing → fall through to "render every kind allowed by
+  // Stage 02 deliverables" (the v0.1.5 default).
+  let requestedKinds: Set<UpdraftExportKind> | null = null;
+  try {
+    const body = (await request.json().catch(() => ({}))) as {
+      selection?: unknown;
+    };
+    if (Array.isArray(body.selection) && body.selection.length > 0) {
+      const VALID = new Set<UpdraftExportKind>([
+        'mod_docx', 'mod_pdf', 'mod_md',
+        'resume_docx', 'resume_pdf',
+        'cl_docx', 'cl_pdf',
+      ]);
+      requestedKinds = new Set();
+      for (const k of body.selection) {
+        if (typeof k === 'string' && VALID.has(k as UpdraftExportKind)) {
+          requestedKinds.add(k as UpdraftExportKind);
+        }
+      }
+      if (requestedKinds.size === 0) requestedKinds = null;
+    }
+  } catch {
+    requestedKinds = null;
+  }
+  const wants = (kind: UpdraftExportKind): boolean =>
+    requestedKinds === null || requestedKinds.has(kind);
 
   const session = await readSessionForUser(sessionId, userId);
   if (!session) return NextResponse.json({ error: 'not-found' }, { status: 404 });
@@ -209,7 +245,12 @@ export async function POST(
   };
 
   try {
-    if (shouldRenderMod) {
+    // MOD — render DOCX in memory only if either MOD format is requested.
+    // PDF derives from the same DOCX, so we always have it available even
+    // if the user only asked for the PDF (we just don't persist the DOCX).
+    const wantModDocx = shouldRenderMod && wants('mod_docx');
+    const wantModPdf  = shouldRenderMod && wants('mod_pdf');
+    if (wantModDocx || wantModPdf) {
       const docxName = buildExportFilename({
         candidateName: mod.identity.name,
         type: 'MOD',
@@ -217,29 +258,34 @@ export async function POST(
         ext: 'docx',
       });
       const buf = await renderModDocx({ mod });
-      const path = buildExportPath({ userId, sessionId, filename: docxName });
-      const upload = await uploadExport({ path, bytes: buf, mime: DOCX_MIME });
-      if (!upload.ok) throw new Error(`mod upload failed: ${upload.error ?? 'unknown'}`);
-      await recordExport({
-        sessionId,
-        kind: 'mod_docx',
-        filename: docxName,
-        storagePath: path,
-        mime: DOCX_MIME,
-        bytes: buf.length,
-      });
-      generated.push({ kind: 'mod_docx', filename: docxName, storagePath: path, mime: DOCX_MIME, bytes: buf.length });
-
-      const pdfName = buildExportFilename({
-        candidateName: mod.identity.name,
-        type: 'MOD',
-        date: generatedAt,
-        ext: 'pdf',
-      });
-      await persistPdfFor(buf, pdfName, 'mod_pdf', 'mod');
+      if (wantModDocx) {
+        const path = buildExportPath({ userId, sessionId, filename: docxName });
+        const upload = await uploadExport({ path, bytes: buf, mime: DOCX_MIME });
+        if (!upload.ok) throw new Error(`mod upload failed: ${upload.error ?? 'unknown'}`);
+        await recordExport({
+          sessionId,
+          kind: 'mod_docx',
+          filename: docxName,
+          storagePath: path,
+          mime: DOCX_MIME,
+          bytes: buf.length,
+        });
+        generated.push({ kind: 'mod_docx', filename: docxName, storagePath: path, mime: DOCX_MIME, bytes: buf.length });
+      }
+      if (wantModPdf) {
+        const pdfName = buildExportFilename({
+          candidateName: mod.identity.name,
+          type: 'MOD',
+          date: generatedAt,
+          ext: 'pdf',
+        });
+        await persistPdfFor(buf, pdfName, 'mod_pdf', 'mod');
+      }
     }
 
-    if (shouldRenderResume) {
+    const wantResumeDocx = shouldRenderResume && wants('resume_docx');
+    const wantResumePdf  = shouldRenderResume && wants('resume_pdf');
+    if (wantResumeDocx || wantResumePdf) {
       const docxName = buildExportFilename({
         candidateName: mod.identity.name,
         type: 'Resume',
@@ -249,35 +295,47 @@ export async function POST(
         ext: 'docx',
       });
       const buf = await renderResumeDocx({ mod, target });
-      const path = buildExportPath({ userId, sessionId, filename: docxName });
-      const upload = await uploadExport({ path, bytes: buf, mime: DOCX_MIME });
-      if (!upload.ok) throw new Error(`resume upload failed: ${upload.error ?? 'unknown'}`);
-      await recordExport({
-        sessionId,
-        kind: 'resume_docx',
-        filename: docxName,
-        storagePath: path,
-        mime: DOCX_MIME,
-        bytes: buf.length,
-      });
-      generated.push({ kind: 'resume_docx', filename: docxName, storagePath: path, mime: DOCX_MIME, bytes: buf.length });
-
-      const pdfName = buildExportFilename({
-        candidateName: mod.identity.name,
-        type: 'Resume',
-        targetRole: target?.role_title ?? null,
-        company: target?.company ?? null,
-        date: generatedAt,
-        ext: 'pdf',
-      });
-      await persistPdfFor(buf, pdfName, 'resume_pdf', 'resume');
+      if (wantResumeDocx) {
+        const path = buildExportPath({ userId, sessionId, filename: docxName });
+        const upload = await uploadExport({ path, bytes: buf, mime: DOCX_MIME });
+        if (!upload.ok) throw new Error(`resume upload failed: ${upload.error ?? 'unknown'}`);
+        await recordExport({
+          sessionId,
+          kind: 'resume_docx',
+          filename: docxName,
+          storagePath: path,
+          mime: DOCX_MIME,
+          bytes: buf.length,
+        });
+        generated.push({ kind: 'resume_docx', filename: docxName, storagePath: path, mime: DOCX_MIME, bytes: buf.length });
+      }
+      if (wantResumePdf) {
+        const pdfName = buildExportFilename({
+          candidateName: mod.identity.name,
+          type: 'Resume',
+          targetRole: target?.role_title ?? null,
+          company: target?.company ?? null,
+          date: generatedAt,
+          ext: 'pdf',
+        });
+        await persistPdfFor(buf, pdfName, 'resume_pdf', 'resume');
+      }
     }
 
     // Cover Letter — drafted via SYS_COVER_LETTER_DRAFTER, then rendered
     // through the same Classic primitives. Failure to draft is non-blocking
     // for the rest of the deliverables (matches the PDF-failure policy).
     // Quota gate runs only when CL is selected — MOD + Resume don't call AI.
-    if (shouldRenderCoverLetter && target) {
+    //
+    // The selection picker treats CL DOCX + PDF as a unit: re-drafting the
+    // letter for one format only would cause drift between the persisted
+    // DOCX and PDF (different runs of the model produce different text).
+    // So we draft once and emit whichever CL formats the user requested
+    // — but if they ask for a CL at all, both formats refresh from the
+    // same draft.
+    const wantClDocx = shouldRenderCoverLetter && wants('cl_docx');
+    const wantClPdf  = shouldRenderCoverLetter && wants('cl_pdf');
+    if ((wantClDocx || wantClPdf) && target) {
       const quota = await canMakeAiCall(request);
       if (!quota.allowed) {
         coverLetterError = quota.message ?? 'Capacity limit reached.';
@@ -334,34 +392,37 @@ export async function POST(
               signoff: draft.signoff,
               generatedAt,
             });
-            const clPath = buildExportPath({ userId, sessionId, filename: clDocxName });
-            const clUpload = await uploadExport({ path: clPath, bytes: clBuf, mime: DOCX_MIME });
-            if (!clUpload.ok) throw new Error(`cover letter upload failed: ${clUpload.error ?? 'unknown'}`);
-            await recordExport({
-              sessionId,
-              kind: 'cl_docx',
-              filename: clDocxName,
-              storagePath: clPath,
-              mime: DOCX_MIME,
-              bytes: clBuf.length,
-            });
-            generated.push({
-              kind: 'cl_docx',
-              filename: clDocxName,
-              storagePath: clPath,
-              mime: DOCX_MIME,
-              bytes: clBuf.length,
-            });
-
-            const clPdfName = buildExportFilename({
-              candidateName: mod.identity.name,
-              type: 'CoverLetter',
-              targetRole: target.role_title,
-              company: target.company,
-              date: generatedAt,
-              ext: 'pdf',
-            });
-            await persistPdfFor(clBuf, clPdfName, 'cl_pdf', 'cover_letter');
+            if (wantClDocx) {
+              const clPath = buildExportPath({ userId, sessionId, filename: clDocxName });
+              const clUpload = await uploadExport({ path: clPath, bytes: clBuf, mime: DOCX_MIME });
+              if (!clUpload.ok) throw new Error(`cover letter upload failed: ${clUpload.error ?? 'unknown'}`);
+              await recordExport({
+                sessionId,
+                kind: 'cl_docx',
+                filename: clDocxName,
+                storagePath: clPath,
+                mime: DOCX_MIME,
+                bytes: clBuf.length,
+              });
+              generated.push({
+                kind: 'cl_docx',
+                filename: clDocxName,
+                storagePath: clPath,
+                mime: DOCX_MIME,
+                bytes: clBuf.length,
+              });
+            }
+            if (wantClPdf) {
+              const clPdfName = buildExportFilename({
+                candidateName: mod.identity.name,
+                type: 'CoverLetter',
+                targetRole: target.role_title,
+                company: target.company,
+                date: generatedAt,
+                ext: 'pdf',
+              });
+              await persistPdfFor(clBuf, clPdfName, 'cl_pdf', 'cover_letter');
+            }
           }
         }
       }

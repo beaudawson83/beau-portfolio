@@ -19,11 +19,12 @@
 //   - Generation in flight                → Spinner
 //   - Done                                → Download list + lint warnings
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type {
   UpdraftDeliverable,
+  UpdraftExportKind,
   UpdraftLintFlag,
   UpdraftSession,
 } from '@/types';
@@ -59,6 +60,13 @@ interface Props {
   exports: ExportSummary[];
 }
 
+interface AvailableDeliverable {
+  key: 'mod' | 'resume' | 'cover_letter';
+  label: string;
+  docxKind: UpdraftExportKind;
+  pdfKind: UpdraftExportKind;
+}
+
 export default function Stage04Runner({ session, userEmail, exports: priorExports }: Props) {
   const router = useRouter();
   const stage04 = (session.stageOutputs.stage_04 ?? {}) as Stage04Output;
@@ -69,16 +77,98 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
 
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // forceRegenerate flips DoneView → Picker (regen flavor — defaults
+  // all unchecked so the user has to actively pick what to refresh).
+  const [forceRegenerate, setForceRegenerate] = useState(false);
 
-  const hasExports = priorExports.length > 0;
   const lintFlags = stage04.lint_flags ?? [];
 
+  const available = useMemo<AvailableDeliverable[]>(() => {
+    const deliverables = stage02.deliverables ?? [];
+    const out: AvailableDeliverable[] = [];
+    if (deliverables.includes('mod') || stage02.lightweight_mod === true) {
+      out.push({
+        key: 'mod',
+        label: stage02.lightweight_mod ? 'MOD (lightweight)' : 'Master Overview Document',
+        docxKind: 'mod_docx',
+        pdfKind: 'mod_pdf',
+      });
+    }
+    if (deliverables.includes('jd_build')) {
+      out.push({
+        key: 'resume',
+        label: 'JD-Specific Resume',
+        docxKind: 'resume_docx',
+        pdfKind: 'resume_pdf',
+      });
+    }
+    if (deliverables.includes('cover_letter')) {
+      out.push({
+        key: 'cover_letter',
+        label: 'Cover Letter',
+        docxKind: 'cl_docx',
+        pdfKind: 'cl_pdf',
+      });
+    }
+    return out;
+  }, [stage02.deliverables, stage02.lightweight_mod]);
+
+  const deliverables = stage02.deliverables ?? [];
+
+  // Picker selection state — keyed by export kind. Two preset modes:
+  // first-time generate (all checked), regenerate (all unchecked).
+  const isRegenMode = priorExports.length > 0 && forceRegenerate;
+  const [selection, setSelection] = useState<Partial<Record<UpdraftExportKind, boolean>>>(() => {
+    const out: Partial<Record<UpdraftExportKind, boolean>> = {};
+    for (const a of available) {
+      out[a.docxKind] = true;
+      out[a.pdfKind]  = true;
+    }
+    return out;
+  });
+
+  const toggleKind = (kind: UpdraftExportKind): void => {
+    setSelection((prev) => ({ ...prev, [kind]: !prev[kind] }));
+  };
+  const setAll = (value: boolean): void => {
+    const next: Partial<Record<UpdraftExportKind, boolean>> = {};
+    for (const a of available) {
+      next[a.docxKind] = value;
+      next[a.pdfKind]  = value;
+    }
+    setSelection(next);
+  };
+
+  const enterRegenerateMode = (): void => {
+    setForceRegenerate(true);
+    setAll(false);                                 // start blank — explicit pick
+    setError(null);
+  };
+
+  const cancelRegenerate = (): void => {
+    setForceRegenerate(false);
+    setError(null);
+  };
+
+  const selectedKinds = available.flatMap((a) => {
+    const out: UpdraftExportKind[] = [];
+    if (selection[a.docxKind]) out.push(a.docxKind);
+    if (selection[a.pdfKind])  out.push(a.pdfKind);
+    return out;
+  });
+
   const generate = async () => {
+    if (selectedKinds.length === 0) {
+      setError('Pick at least one file to generate.');
+      return;
+    }
     setGenerating(true);
     setError(null);
     try {
       const res = await fetch(`/api/updraft/sessions/${session.id}/generate-files`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selection: selectedKinds }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -86,6 +176,8 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
         setGenerating(false);
         return;
       }
+      // Success — drop regen mode (DoneView will render again on refresh).
+      setForceRegenerate(false);
       router.refresh();
     } catch {
       setError('Network error. Try again.');
@@ -93,36 +185,33 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
     }
   };
 
-  const willGenerate: { label: string; kind: string }[] = [];
-  const deliverables = stage02.deliverables ?? [];
-  if (deliverables.includes('mod') || stage02.lightweight_mod === true) {
-    willGenerate.push({ label: stage02.lightweight_mod ? 'MOD (lightweight)' : 'MOD', kind: 'mod' });
-  }
-  if (deliverables.includes('jd_build')) {
-    willGenerate.push({ label: 'JD-Specific Resume', kind: 'resume' });
-  }
-  if (deliverables.includes('cover_letter')) {
-    willGenerate.push({ label: 'Cover Letter', kind: 'cover_letter' });
-  }
+  const showPicker = priorExports.length === 0 || forceRegenerate;
 
   return (
     <main className="min-h-screen bg-[#111111] text-white">
       <SessionHeader sessionId={session.id} userEmail={userEmail} />
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {hasExports ? (
+        {showPicker ? (
+          <GenerateView
+            available={available}
+            selection={selection}
+            isRegenMode={isRegenMode}
+            generating={generating}
+            error={error}
+            onToggle={toggleKind}
+            onSelectAll={() => setAll(true)}
+            onSelectNone={() => setAll(false)}
+            onGenerate={generate}
+            onCancelRegen={cancelRegenerate}
+          />
+        ) : (
           <DoneView
             exports={priorExports}
             sessionId={session.id}
             lintFlags={lintFlags}
             coverLetterError={stage04.cover_letter_error ?? null}
             coverLetterRequested={deliverables.includes('cover_letter')}
-          />
-        ) : (
-          <GenerateView
-            willGenerate={willGenerate}
-            generating={generating}
-            error={error}
-            onGenerate={generate}
+            onRegenerate={enterRegenerateMode}
           />
         )}
       </section>
@@ -163,44 +252,93 @@ function SessionHeader({ sessionId, userEmail }: { sessionId: string; userEmail:
 // ---------------------------------------------------------------------------
 
 function GenerateView({
-  willGenerate,
+  available,
+  selection,
+  isRegenMode,
   generating,
   error,
+  onToggle,
+  onSelectAll,
+  onSelectNone,
   onGenerate,
+  onCancelRegen,
 }: {
-  willGenerate: { label: string; kind: string }[];
+  available: AvailableDeliverable[];
+  selection: Partial<Record<UpdraftExportKind, boolean>>;
+  isRegenMode: boolean;
   generating: boolean;
   error: string | null;
+  onToggle: (kind: UpdraftExportKind) => void;
+  onSelectAll: () => void;
+  onSelectNone: () => void;
   onGenerate: () => Promise<void>;
+  onCancelRegen: () => void;
 }) {
+  const anyChecked = available.some(
+    (a) => selection[a.docxKind] || selection[a.pdfKind],
+  );
+  const heading = isRegenMode ? 'Regenerate files' : 'Generate your files';
+  const subhead = isRegenMode
+    ? 'Pick what to refresh — only the files you check below will be re-rendered. Existing files of the same kind get overwritten.'
+    : 'Audit assembles the DOCX + PDF exports from your MOD using the Classic template (ATS-safe, single column, Times New Roman). The lint pass checks for filler phrases, weak verbs, and AI-tells before export. PDF is converted from the DOCX so the text layer stays ATS-clean.';
+
   return (
     <div>
-      <h1 className="text-2xl sm:text-3xl font-bold mb-3">Generate your files</h1>
-      <p className="text-sm text-[#cbd5e1] mb-6">
-        Audit assembles the DOCX + PDF exports from your MOD using the
-        Classic template (ATS-safe, single column, Times New Roman). The
-        lint pass checks for filler phrases, weak verbs, and AI-tells
-        before export. PDF is converted from the DOCX so the text layer
-        stays ATS-clean.
-      </p>
+      <h1 className="text-2xl sm:text-3xl font-bold mb-3">{heading}</h1>
+      <p className="text-sm text-[#cbd5e1] mb-6 leading-relaxed">{subhead}</p>
 
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6">
-        <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono mb-3">
-          About to generate
-        </p>
-        {willGenerate.length === 0 ? (
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono">
+            {isRegenMode ? 'Files to regenerate' : 'About to generate'}
+          </p>
+          <div className="flex items-center gap-2 text-[11px] font-mono">
+            <button
+              type="button"
+              onClick={onSelectAll}
+              className="text-[#94A3B8] hover:text-white transition-colors uppercase tracking-wider"
+            >
+              All
+            </button>
+            <span className="text-[#2A2A2A]">·</span>
+            <button
+              type="button"
+              onClick={onSelectNone}
+              className="text-[#94A3B8] hover:text-white transition-colors uppercase tracking-wider"
+            >
+              None
+            </button>
+          </div>
+        </div>
+
+        {available.length === 0 ? (
           <p className="text-sm text-[#94A3B8]">
-            No deliverables match v0.1 scope. Cover Letter ships in v0.5.
+            No deliverables selected at Stage 02 — go back and pick what you
+            want to build.
           </p>
         ) : (
-          <ul className="space-y-1.5">
-            {willGenerate.map((w) => (
-              <li key={w.kind} className="text-sm text-[#cbd5e1] flex items-center gap-2">
-                <span className="text-[#7C3AED]">▸</span>
-                {w.label}{' '}
-                <span className="text-[10px] uppercase tracking-widest font-mono text-[#64748b]">
-                  Classic · Regular · DOCX + PDF
-                </span>
+          <ul className="space-y-2">
+            {available.map((a) => (
+              <li
+                key={a.key}
+                className="grid grid-cols-[1fr_auto_auto] gap-4 items-center bg-[#111111] border border-[#1F1F1F] rounded-md px-4 py-3"
+              >
+                <div>
+                  <p className="text-sm text-white font-medium">{a.label}</p>
+                  <p className="text-[10px] uppercase tracking-widest font-mono text-[#64748b] mt-0.5">
+                    Classic · Regular
+                  </p>
+                </div>
+                <FormatCheck
+                  label="DOCX"
+                  checked={Boolean(selection[a.docxKind])}
+                  onToggle={() => onToggle(a.docxKind)}
+                />
+                <FormatCheck
+                  label="PDF"
+                  checked={Boolean(selection[a.pdfKind])}
+                  onToggle={() => onToggle(a.pdfKind)}
+                />
               </li>
             ))}
           </ul>
@@ -212,24 +350,58 @@ function GenerateView({
               {error}
             </p>
           )}
+          {isRegenMode && (
+            <button
+              type="button"
+              onClick={onCancelRegen}
+              disabled={generating}
+              className="text-sm text-[#94A3B8] hover:text-white transition-colors px-3 py-2"
+            >
+              Cancel
+            </button>
+          )}
           <button
             type="button"
             onClick={onGenerate}
-            disabled={generating || willGenerate.length === 0}
+            disabled={generating || available.length === 0 || !anyChecked}
             className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            {generating ? 'Building DOCX + PDF…' : 'Generate →'}
+            {generating ? 'Building…' : isRegenMode ? 'Regenerate selected →' : 'Generate →'}
           </button>
         </div>
       </div>
 
       <p className="mt-6 text-[11px] text-[#64748b] leading-relaxed">
-        Generation typically takes 5-10 seconds — DOCX renders instantly,
-        PDF conversion runs through Google Drive. If PDF generation hits a
-        snag, you&apos;ll still get the DOCX (which is the source-of-truth
-        ATS file anyway).
+        Generation typically takes 5-10 seconds per deliverable — DOCX
+        renders instantly, PDF conversion runs through Google Drive (auto-
+        retried on transient errors). If PDF generation still hits a snag
+        after retries, you&apos;ll still get the DOCX.
       </p>
     </div>
+  );
+}
+
+function FormatCheck({
+  label,
+  checked,
+  onToggle,
+}: {
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onToggle}
+        className="h-4 w-4 rounded border-[#2A2A2A] bg-[#111111] text-[#7C3AED] focus:ring-[#7C3AED] focus:ring-offset-0 cursor-pointer"
+      />
+      <span className="text-xs uppercase tracking-widest font-mono text-[#cbd5e1]">
+        {label}
+      </span>
+    </label>
   );
 }
 
@@ -259,12 +431,14 @@ function DoneView({
   lintFlags,
   coverLetterError,
   coverLetterRequested,
+  onRegenerate,
 }: {
   exports: ExportSummary[];
   sessionId: string;
   lintFlags: UpdraftLintFlag[];
   coverLetterError: string | null;
   coverLetterRequested: boolean;
+  onRegenerate: () => void;
 }) {
   // Detect missing PDFs — a DOCX without its companion PDF means the PDF
   // pipeline failed for that deliverable. DOCX still ships per spec § 4.5
@@ -366,16 +540,25 @@ function DoneView({
         <LintWarnings flags={lintFlags} />
       )}
 
-      <div className="border-t border-[#1F1F1F] pt-6 flex items-center justify-between">
+      <div className="border-t border-[#1F1F1F] pt-6 flex items-center justify-between gap-4">
         <p className="text-xs text-[#94A3B8]">
           Files are kept for 30 days unless you mark this session as kept.
         </p>
-        <Link
-          href="/updraft"
-          className="text-xs text-[#7C3AED] hover:text-[#a855f7] underline"
-        >
-          Back to dashboard →
-        </Link>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onRegenerate}
+            className="text-xs text-[#7C3AED] hover:text-[#a855f7] underline"
+          >
+            Regenerate ↻
+          </button>
+          <Link
+            href="/updraft"
+            className="text-xs text-[#7C3AED] hover:text-[#a855f7] underline"
+          >
+            Back to dashboard →
+          </Link>
+        </div>
       </div>
     </div>
   );
