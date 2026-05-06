@@ -93,6 +93,12 @@ src/
 │   │       ├── page.tsx               # Drafts list
 │   │       ├── new/page.tsx           # Create + redirect
 │   │       └── [slug]/page.tsx        # The editor
+│   ├── updraft/                       # UpDraft v0.1.5 — auth-gated, unlinked
+│   │   ├── login/page.tsx             # Magic-link request + privacy callout
+│   │   ├── auth/callback/route.ts     # (also under api/)
+│   │   ├── account/page.tsx           # Sessions · keep flags · data export · delete
+│   │   ├── page.tsx                   # Auth-gated dashboard (session list)
+│   │   └── [sessionId]/page.tsx       # Stage runner (dispatches Stage 01/02/03/04)
 │   └── api/
 │       ├── ask-beau/route.ts          # Gemini chatbot, rate-limited
 │       ├── contact/route.ts           # Transactional email (Brevo), rate-limited, HTML-escaped
@@ -103,7 +109,13 @@ src/
 │       ├── blog/posts/route.ts        # GET (list) + POST (create) — Bearer-gated
 │       ├── blog/posts/[slug]/route.ts # GET + PATCH + DELETE — Bearer-gated
 │       ├── blog/media/sign/route.ts   # Signed upload URL → blog-media bucket
-│       └── pi-challenge/{issue,validate}/route.ts
+│       ├── pi-challenge/{issue,validate}/route.ts
+│       └── updraft/                   # All UpDraft endpoints — see API Routes table
+│           ├── auth/{issue,callback,logout}/route.ts
+│           ├── me/{route,delete,data-export}/route.ts
+│           ├── status/route.ts
+│           ├── cron/purge/route.ts
+│           └── sessions/{route,[id]/{route,keep,parse-upload,match-analyze,generate-summary,generate-files,exports/[exportId],stage/[n]}}/route.ts
 ├── components/
 │   ├── Header.tsx, Hero.tsx, AskBeau.tsx
 │   ├── TelemetryGrid.tsx, CaseStudies.tsx, BadLabsShowcase.tsx
@@ -118,11 +130,19 @@ src/
 │   │   ├── blocks/Blocks.tsx          # All 17 read-mode blocks + TOC + ReadingProgress
 │   │   ├── Reader/{IndexView,ArticleView}.tsx
 │   │   └── Builder/                   # Editor + slash menu + cmd+K + sidebar + modals
+│   ├── Updraft/                       # UpDraft UI
+│   │   ├── LoginForm.tsx, PrivacyCallout.tsx, Dashboard.tsx
+│   │   ├── Stage01/Stage01Runner.tsx  # Path picker + upload + identity + tier
+│   │   ├── Stage02/Stage02Runner.tsx  # Deliverable picker + target + match briefing
+│   │   ├── Stage03/Stage03Runner.tsx  # Editable MOD + tier-2 deepening + summary
+│   │   ├── Stage04/Stage04Runner.tsx  # Generate + DOCX/PDF download cards + lint
+│   │   └── Account/AccountPanel.tsx   # Sessions / data export / delete-my-data
 │   └── ui/                            # EnergyButton, Button, Skeleton
 ├── lib/
 │   ├── data.ts                        # All portfolio content (single source of truth)
 │   ├── analytics.ts                   # GA4 event helpers
 │   ├── supabase.ts                    # Shared Supabase client + env resolution
+│   ├── email.ts                       # Brevo transactional email (contact form + UpDraft auth)
 │   ├── chat-log.ts                    # AI-chat conversation logging
 │   ├── rate-limit.ts                  # Per-IP rate-limit RPC wrapper
 │   ├── conflict-data.ts               # Conflict types + read entry point
@@ -134,7 +154,11 @@ src/
 │   ├── blog-utils.ts                  # Block helpers (word count, headings, slugify)
 │   ├── blog-media.ts                  # Signed-upload-URL helper for blog-media bucket
 │   ├── module-telemetry.ts            # Reads Conflict + Blog stats for the homepage MODULES section
-│   └── pi-challenge/                  # HMAC token + challenges
+│   ├── pi-challenge/                  # HMAC token + challenges
+│   └── updraft/                       # 15 files — auth, store, storage, gemini, parser,
+│                                       # tier, match-analyzer, summary-generator, lint,
+│                                       # docx-builder, pdf (Drive API), filename, quotas,
+│                                       # data-export, skill-files. See skills/updraft/PLAN.md §3.4
 ├── hooks/useTrackSection.ts
 ├── types/index.ts                     # All portfolio types
 └── proxy.ts                           # Security headers + CSP (Next 16 middleware)
@@ -172,6 +196,24 @@ src/
 | `/api/blog/categories`      | GET    | Distinct categories (admin sees drafts) | Optional Bearer            |
 | `/api/pi-challenge/issue`   | POST   | Issue HMAC challenge     | —                              |
 | `/api/pi-challenge/validate`| POST   | Validate response        | —                              |
+| **UpDraft v0.1.5 (auth + sessions + stages + account + cron):** | | | |
+| `/api/updraft/auth/issue`   | POST   | Issue magic-link email   | Rate: 10/hr per IP             |
+| `/api/updraft/auth/callback`| GET    | Verify magic-link, set session cookie | one-shot HMAC token |
+| `/api/updraft/auth/logout`  | POST   | Clear session cookie     | session cookie                 |
+| `/api/updraft/me`           | GET    | Current user info        | session cookie                 |
+| `/api/updraft/me/data-export` | GET  | JSON archive (GDPR portability) | session cookie         |
+| `/api/updraft/me/delete`    | POST   | Cascade-delete account + storage | session cookie + email confirm |
+| `/api/updraft/sessions`     | POST   | Create new session       | session cookie + quota         |
+| `/api/updraft/sessions/[id]`| GET/DELETE | Read or delete session | cookie + ownership          |
+| `/api/updraft/sessions/[id]/parse-upload` | POST | Stage 01 — multipart upload, parse via Gemini, persist | cookie + ownership + AI quota |
+| `/api/updraft/sessions/[id]/match-analyze` | POST | Stage 02 — `SYS_MATCH_ANALYZER` + target metadata | cookie + ownership + AI quota |
+| `/api/updraft/sessions/[id]/generate-summary` | POST | Stage 03 — `SYS_SUMMARY_GENERATOR` | cookie + ownership + AI quota |
+| `/api/updraft/sessions/[id]/generate-files` | POST | Stage 04 — render DOCX + PDF, lint, persist exports | cookie + ownership + AI quota |
+| `/api/updraft/sessions/[id]/exports/[exportId]` | GET | 302-redirect to 10-min signed Storage URL | cookie + ownership |
+| `/api/updraft/sessions/[id]/stage/[n]` | PATCH | Merge-patch stage_outputs.{stage_NN} | cookie + ownership |
+| `/api/updraft/sessions/[id]/keep` | PATCH | Toggle keep-indefinitely flag | cookie + ownership |
+| `/api/updraft/status`       | GET    | Diagnostic — today's quota burn + env presence map | `Bearer $CRON_SECRET` |
+| `/api/updraft/cron/purge`   | GET/POST | 30-day inactivity purge | `Bearer $CRON_SECRET` (Vercel Cron supplies) |
 
 ---
 
@@ -349,15 +391,17 @@ Phase 2: cross-prompt audit. Phase 3: ACLED/UCDP/SIPRI reconciliation. Phase 4: 
 
 ---
 
-## UpDraft — v0.1 IN PROGRESS
+## UpDraft — v0.1.5 LIVE (unlinked URL)
 
-A resume + cover-letter generation tool operated by an AI character named **Audit**. 4-stage flow (intake → target → interview → generate) producing three deliverables in any combination: Master Overview Document (MOD), JD-tailored Resume, Cover Letter. Outputs DOCX + PDF + (MOD only) Markdown. ATS-safe single-column templates.
+A resume + cover-letter generation tool operated by an AI character named **Audit**. 4-stage flow (intake → target → interview → generate) producing three deliverables in any combination: Master Overview Document (MOD), JD-tailored Resume, Cover Letter. Outputs DOCX + PDF (Markdown for MOD ships v0.5+). ATS-safe single-column templates.
 
-**Status:** v0.1 is in active build. Until promoted to a MODULES card at v1.0, the feature lives at an unlinked `/updraft` URL Beau shares manually with friends. Pi-egg reveal arrives at v0.5; MODULES card at v1.0.
+**Status:** v0.1.5 SHIPPED end-to-end as of 2026-05-06 — verified with two test accounts (Beau + Ian) walking the full path from magic-link sign-in through downloading both DOCX and PDF deliverables, plus exercising the privacy controls. Lives at unlinked `/updraft` URL — share manually. Pi-egg reveal at v0.5; MODULES card promotion at v1.0. Cover Letter ships v0.5.
 
 **Architecture is "skill-as-orchestrator":** the host program (this Next.js app) owns UI, state, file generation, and the regex anti-pattern lint pass. The AI model (Gemini 2.0 Flash) owns parsing, voice, bullet rewriting, scoring, and CL drafting. Backend is the source of truth — conversation history is intentionally not preserved across stages; only structured stage outputs persist.
 
-**Auth + privacy:** magic-link login from day one (Brevo for delivery), authenticated identity for accountability + 30-day automated session purge by `last_activity_at` for liability cap + user-controlled "Delete my data" button + self-serve data export. Login page reserves a `<PrivacyCallout>` slot **below** the email input rendering the verbiage at [`skills/updraft/PRIVACY-COPY.md`](skills/updraft/PRIVACY-COPY.md).
+**Auth + privacy:** magic-link login (Brevo delivery — originally Resend, pivoted 2026-05-04 because Resend's free tier sandboxes the from-address). Authenticated identity for accountability + 30-day automated session purge by `last_activity_at` for liability cap + user-controlled "Delete my data" + per-session keep flag + self-serve JSON data export. Login page reserves a `<PrivacyCallout>` slot **below** the email input rendering the verbiage at [`skills/updraft/PRIVACY-COPY.md`](skills/updraft/PRIVACY-COPY.md).
+
+**PDF subsystem:** Stage 01 reads PDFs via Gemini's native `inline_data` input on `generateContent` (handles image-based PDFs via OCR — replaces the original pdf-parse plan after the v1/v2 API mismatch bit us 2026-05-04). Stage 04 writes PDFs via Google Drive API (DOCX → Google Doc → PDF export → delete temp Doc) on a dedicated `Updraft` GCP project (id `updraft0526`) with a `drive.file`-scoped service account. PDF generation is non-blocking — failures fall back to DOCX-only with a banner. Sandbox + LibreOffice deferred to v1.0 if scale demands self-hosted.
 
 **Cost guardrails:** all thresholds are env vars (`UPDRAFT_DAILY_*`, `UPDRAFT_PER_IP_*`, `UPDRAFT_SESSION_TOKEN_CAP_*`) dialable from the Vercel dashboard. Owner bypass via `UPDRAFT_OWNER_SECRET` Bearer header (mirrors `BLOG_EDITOR_SECRET`); owner sessions skip caps and tag events `owner: true`. BYOK fallback deferred to v1.0.
 
@@ -366,14 +410,16 @@ A resume + cover-letter generation tool operated by an AI character named **Audi
 - [`README.md`](skills/updraft/README.md) — engineering handoff
 - [`PLAN.md`](skills/updraft/PLAN.md) — durable design + integration record (locked decisions, full route/lib/component inventory, phased roadmap)
 - [`DECISIONS.md`](skills/updraft/DECISIONS.md) — append-only decision log (alternatives, rationale, what would invalidate each call)
+- [`CALIBRATION.md`](skills/updraft/CALIBRATION.md) — match-analyzer prompt-tuning notes + parked v0.5 features list (read before picking up v0.5 work)
 - [`PRIVACY-COPY.md`](skills/updraft/PRIVACY-COPY.md) — Beau-edited canonical privacy verbiage for the login page
 - [`references/`](skills/updraft/references/) — 12 spec files: 4 stage files + 8 lib files
 
 **Migration scripts:**
 - [`scripts/setup-supabase-updraft.sql`](scripts/setup-supabase-updraft.sql) — tables: `updraft_users`, `updraft_magic_tokens`, `updraft_sessions`, `updraft_events`, `updraft_exports`, `updraft_quota_daily`. RLS default-deny on all UpDraft tables; service-role only.
+- [`scripts/setup-supabase-updraft-rpc.sql`](scripts/setup-supabase-updraft-rpc.sql) — atomic UPSERT-increment helper (`updraft_increment_quota`) + today-snapshot read (`updraft_today_quota`). Drives the kill-switch counters.
 - [`scripts/setup-supabase-updraft-storage.sql`](scripts/setup-supabase-updraft-storage.sql) — private `updraft-exports` bucket (signed-URL reads only, 5 MB cap, docx/pdf/md MIME allowlist). Output-only — raw uploaded resumes are parsed in-memory and discarded, never persisted.
 
-**Data flow when v0.1 lands:** browser → `/updraft/login` (magic link via Brevo) → `/updraft` dashboard → `/updraft/[sessionId]` runs the 4 stages (each stage's structured JSON persists to `updraft_sessions.stage_outputs` on completion) → Stage 04 generates DOCX → Supabase Storage write → signed-URL download. PDF generation arrives in v0.5 via Vercel Sandbox + custom LibreOffice image.
+**Data flow (v0.1.5 LIVE):** browser → `/updraft/login` (magic link via Brevo) → `/updraft` dashboard → `/updraft/[sessionId]` runs the 4 stages (each stage's structured JSON persists to `updraft_sessions.stage_outputs` on completion). Stage 01 PDF reading is via Gemini direct (handles image PDFs via OCR); DOCX reading is via mammoth. Stage 04 generates DOCX via the `docx` npm package, then converts to PDF via Google Drive API (DOCX → temp Google Doc → PDF export). Both files write to Supabase Storage and download via 10-min signed URLs. PDF generation is non-blocking — DOCX always ships, PDF surfaces a "PDF unavailable" banner if Drive API hiccups. Daily 30-day inactivity purge runs at 09:00 UTC via Vercel Cron.
 
 ---
 

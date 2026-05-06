@@ -110,7 +110,7 @@ PUT    /api/users/[id]/active-mod       Set user's active MOD
 
 ### Required Backend Services
 
-1. **Resume parser** — pdfplumber (Python) or pdf-parse (Node) for PDF extraction; python-docx or mammoth for DOCX. Reject scanned/image-only PDFs explicitly.
+1. **Resume parser** — Gemini's native PDF input on `generateContent` (`mime_type: application/pdf` inline data) handles both text-based and image-based PDFs (Gemini OCRs internally). DOCX uses mammoth for text extraction, then the same Gemini call with `SYS_RESUME_PARSER`. Originally specced around pdf-parse + a separate text-extraction step; pivoted 2026-05-04 — see `DECISIONS.md`.
 
 2. **DOCX generator** — docx-js (Node) or python-docx. Must support: single-column layouts, paragraph borders for section dividers, native bullet list styling, named font specification (no fallback fonts).
 

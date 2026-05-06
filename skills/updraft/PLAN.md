@@ -1,7 +1,7 @@
 # UpDraft — Master Build Plan
 
-**Status:** design locked. v0.1 implementation pending.
-**Last updated:** 2026-05-03.
+**Status:** v0.1.5 shipped end-to-end (auth · 4 stages · DOCX + PDF · account · purge cron). Real-traffic verified 2026-05-06 with husband as second test account.
+**Last updated:** 2026-05-06.
 
 The skill spec itself lives in `SKILL.md` and `references/`. This file is the durable design + integration record for the host program build-out on beaudawson.com. `DECISIONS.md` is the append-only decision log (alternatives considered, rationale, what would invalidate each call).
 
@@ -25,9 +25,10 @@ Architecture is "skill-as-orchestrator": the host program (this Next.js app) own
 |---|---|---|
 | 1 | Entry phasing: unlinked URL (v0.1) → Pi-egg reveal (v0.5) → MODULES card (v1.0) | Smallest blast radius first |
 | 2 | AI provider: Gemini (`gemini-2.0-flash` default) | Matches existing AskBeau infra |
-| 3 | PDF generation: Vercel Sandbox running LibreOffice in a custom image | Preserves DOCX text layer for ATS parsing |
+| 3 | PDF generation: Google Drive API (DOCX → Google Doc → PDF export). Sandbox + LibreOffice deferred to v1.0 if self-hosted scale demands it. | Free within Google's quotas, text-layer preserving, leverages existing Workspace |
+| 3a | PDF reading: Gemini's native PDF input on `generateContent`. Replaces pdf-parse. | Handles image-based PDFs (OCR), removes lib API churn risk, single round-trip |
 | 4 | Storage: Supabase only (single source of truth across the site) | Reuses existing patterns + RLS |
-| 5 | Auth: magic-link from day one (Resend) | No anonymous PII; no v1.5 migration |
+| 5 | Auth: magic-link from day one (Brevo). Originally planned on Resend; pivoted 2026-05-04 because Resend's free-tier sandbox sender only delivers to the account owner — broke for any other user. | No anonymous PII; no v1.5 migration |
 | 6 | Retention: 30-day auto-purge + user-controlled "Delete my data" + per-session keep flag | Strongest privacy posture |
 | 7 | Cost guardrails: env-var caps + `UPDRAFT_OWNER_SECRET` bypass for owner | Dial from Vercel dashboard, no redeploy |
 | 8 | BYOK fallback: deferred to v1.0 | Built carefully or not at all |
@@ -50,8 +51,8 @@ Login (magic link) → Create session → Stage 01 (Intake)
                                           ↓
                                       Stage 04 (Generate)
                                           ↓
-                                  DOCX builder ──→ Vercel Sandbox (LibreOffice)
-                                          │                 │
+                                  DOCX builder ──→ Google Drive API
+                                          │       (DOCX → Google Doc → PDF export)
                                           └─→ PDF writer ←──┘
                                                  ↓
                                        Supabase Storage (signed URLs)
@@ -96,18 +97,23 @@ Login (magic link) → Create session → Stage 01 (Intake)
 
 | File | Responsibility |
 |---|---|
-| `orchestrator.ts` | Stage state machine; reads `[DET]/[AI]/[AI+DET]` flags; routes to host UI vs AI call |
-| `store.ts` | Supabase CRUD: users, sessions, events, exports |
-| `auth.ts` | Magic-link issue/verify · session cookie · owner-secret bypass |
-| `gemini.ts` | Model wrapper with explicit context caching for lib files |
-| `parser.ts` | Resume PDF/DOCX → structured JSON (`pdf-parse` + `mammoth`) |
-| `lint.ts` | Phase 1 regex (8 categories) + Phase 2 AI rewrite |
-| `bullet.ts` | Bullet engineering toolkit (calls `lib-bullet-engineer.md`) |
-| `confidence.ts` | 4-dim match scoring (calls `lib-confidence-rubric.md`) |
-| `cover-letter.ts` | 4-paragraph CL drafting (calls `lib-cover-letter.md`) |
-| `templates/` | DOCX templates × densities (calls `lib-templates.md`) |
-| `docx.ts` | DOCX builder using `docx` npm package |
-| `pdf.ts` | Vercel Sandbox driver behind a provider-agnostic interface |
+| `auth.ts` | Magic-link issue/verify · session cookie HMAC · owner-secret bypass · server cookie helper |
+| `store.ts` | Supabase CRUD: users, magic tokens, sessions, events, exports + cascade-delete + purge query |
+| `storage.ts` | Supabase Storage helpers — upload, signed URL, delete-by-path, delete-session-prefix |
+| `quotas.ts` | Daily caps · per-IP buckets · owner bypass · global kill switch · status snapshot |
+| `gemini.ts` | Gemini wrapper. Structured output via `responseSchema`; supports inline file parts (PDF input). Loads SYS_* prompts + Audit voice from skill-files. |
+| `skill-files.ts` | Reads + caches `lib-audit-voice.md` + `lib-system-prompts.md` (parses out individual SYS_* sections) + `lib-confidence-rubric.md` |
+| `resume-parser.ts` | Resume → structured JSON. PDF: Gemini direct (handles image PDFs via OCR). DOCX: mammoth → text → Gemini. |
+| `tier.ts` | Pure deterministic tier classifier (years/role-level/reports → tier 1-4) + auto-classify-from-parsed-resume |
+| `match-analyzer.ts` | SYS_MATCH_ANALYZER call + target-metadata extraction in the same Gemini round-trip (Stage 02) |
+| `summary-generator.ts` | SYS_SUMMARY_GENERATOR call (Stage 03 closing phase) |
+| `lint.ts` | Phase 1 regex anti-pattern detection (8 categories). Phase 2 AI rewrite deferred to v0.5. |
+| `docx-builder.ts` | DOCX builder using `docx` npm — Classic template / Regular density. `renderModDocx` + `renderResumeDocx`. |
+| `pdf.ts` | Google Drive API DOCX→PDF behind a provider-agnostic `renderPdf()` interface (swappable to Sandbox/LibreOffice in v1.0). JWT auth via google-auth-library, access-token cached in module scope. |
+| `filename.ts` | Spec-compliant export filename builder (`Lastname_Type_Role_Company_MonYYYY.ext`) |
+| `data-export.ts` | GDPR/CCPA archive builder — user + sessions + events + exports w/ signed URLs |
+
+Purge logic lives in the `/api/updraft/cron/purge` route directly rather than a `purge.ts` lib (small enough to inline cleanly).
 | `quotas.ts` | Daily caps · per-IP buckets · owner bypass · kill switch |
 | `purge.ts` | 30-day purge logic (called by cron) |
 | `data-export.ts` | GDPR/CCPA archive builder |
@@ -193,45 +199,45 @@ Migration script: `scripts/setup-supabase-updraft.sql` (idempotent, follows the 
 
 ---
 
-## 4. Vercel Sandbox — PDF subsystem
+## 4. PDF subsystem — Google Drive API
 
-### 4.1 Custom image
+Originally locked as Vercel Sandbox + custom LibreOffice image; pivoted 2026-05-04 to Google Drive API after weighing the work-vs-value tradeoff. The Sandbox path is preserved as the v1.0 evolution if scale demands fully-owned infrastructure. See [`DECISIONS.md`](DECISIONS.md) entry of 2026-05-04 for the full alternatives-considered.
 
-Base: Debian-slim. Pre-installed:
-- `libreoffice-core`, `libreoffice-writer`
-- Liberation fonts, DejaVu fonts, **Carlito** (Calibri-metric-compatible), **Croscore** (Arial-metric-compatible), Linux Libertine (Times-metric-compatible)
-- LibreOffice user profile pre-warmed (skip first-run setup at runtime)
+### 4.1 Setup (one-time, on Beau's side)
 
-Build-time validation step:
-1. Convert a known fixture DOCX (`fixtures/ats-fixture.docx`).
-2. Parse the resulting PDF with `pdf-parse`.
-3. Assert text layer contains expected strings ("Professional Experience", fixture name).
-4. Assert font fidelity (Carlito present in the PDF font dictionary).
+Dedicated GCP project (`Updraft`, project id `updraft0526`) — separate from Beau's existing `BADLabs Syrum` / `Beau Portfolio` projects for scope isolation. Drive API enabled on it. Service account `updraft-pdf-converter` with NO project-level roles — scope is `drive.file` (per-file access; service account can only see/manipulate files it created itself). Service-account JSON key generated, base64-encoded, stored in Vercel as `UPDRAFT_GOOGLE_SA_JSON_B64`.
 
-Image is tagged `updraft-pdf:<git-sha>` and pinned via `UPDRAFT_SANDBOX_IMAGE_TAG`. Roll-back is a one-line tag swap.
+### 4.2 Conversion flow
 
-### 4.2 Driver interface
+Three Drive API calls per DOCX → PDF:
 
-`lib/updraft/pdf.ts` exports a single function:
+1. **Upload as Google Doc** — multipart upload to `/upload/drive/v3/files?uploadType=multipart` with metadata `mimeType: application/vnd.google-apps.document`, which tells Drive to convert the DOCX into Google Docs format on import.
+2. **Export as PDF** — `GET /drive/v3/files/{id}/export?mimeType=application/pdf`. Returns the rendered PDF bytes. Google Docs is the intermediate format, so the text layer is preserved end-to-end (same engine you'd use to File→Download as PDF in the Google Docs UI).
+3. **Delete the temp Doc** — best-effort `DELETE /drive/v3/files/{id}`. Wrapped in `finally` so a delete failure doesn't fail an otherwise-successful conversion. Drive auto-trashes orphans after 30 days as a safety net.
+
+### 4.3 Driver interface
+
+`lib/updraft/pdf.ts` exports:
 
 ```ts
-async function renderPdf(docxBytes: Buffer, options?: PdfRenderOptions): Promise<Buffer>
+async function renderPdf(args: { docxBytes: Buffer | Uint8Array; filename?: string }): Promise<RenderPdfResult>;
+function isPdfRendererConfigured(): boolean;
 ```
 
-Implementation calls Sandbox; signature is provider-agnostic. Swappable to Fly Machines, Railway, CloudConvert, or self-hosted in <1 day.
+Auth: JWT minted from the service-account JSON via `google-auth-library`, exchanged for a 1-hour OAuth access token. Token cached in module scope across function invocations (Fluid Compute reuses instances; this is the right pattern). Provider-agnostic signature — when v1.0 swaps to Sandbox + LibreOffice, only this file's body changes.
 
-### 4.3 Failure handling
+### 4.4 Failure handling
 
-- **Sandbox down or quota-burned:** fall back to DOCX-only with a banner — *"PDF unavailable. Your DOCX is ATS-safe and parses identically."*
-- **Single-flight lock per session** prevents double-billing on rapid clicks.
-- **Cold start (5–15s):** pre-warm at Stage 04 entry, hide behind "rendering PDF" spinner.
+- **`UPDRAFT_GOOGLE_SA_JSON_B64` not set / Drive unreachable / export error:** fall back to DOCX-only with the spec § 4.5 banner — *"PDF unavailable. Your DOCX is ATS-safe and parses identically."* The Stage 04 UI surfaces a "PDF unavailable for X" amber banner so users understand what's missing.
+- **PDF failure is non-blocking:** the DOCX still renders, uploads, and ships. PDF is best-effort.
 
-### 4.4 Risks (acknowledged)
+### 4.5 Cost + scale
 
-1. New product (GA Jan 2026); pricing/API may shift. Mitigation: provider-agnostic interface (§4.2).
-2. Active CPU pricing scales linearly with concurrency. Mitigation: hard daily Sandbox-invocation cap.
-3. No baked LibreOffice. Solved by custom image (§4.1).
-4. Concurrency quota plan-dependent. Mitigation: single-flight lock per session.
+Free within Google Drive's quotas: 1000 queries / 100 sec ≈ 333 conversions per 100-sec window (each conversion uses 3 queries). Well past anything realistic at testing scale. Latency ~5-10 seconds per conversion (Drive's import + export round-trip). Token-account-side, the conversion itself doesn't consume Gemini tokens — that's only on Stage 01 PDF reading.
+
+### 4.6 Why not Sandbox + LibreOffice (the original plan)
+
+Trade-offs documented in DECISIONS.md (2026-05-04). Short version: Sandbox is the right answer for "fully self-hosted at v1.0 scale" but ~6-10 hours of setup (Docker spec, font installation, validation harness, image registry pin, driver code) for a product still being validated. Drive API ships in 2-3 hours, leverages Beau's existing Google ecosystem, and the same `renderPdf()` interface lets us swap to Sandbox later without route changes.
 
 ---
 
@@ -241,7 +247,7 @@ Implementation calls Sandbox; signature is provider-agnostic. Swappable to Fly M
 
 1. **Per-session token cap.** Hard ceiling on input + output tokens per session. Defaults: 200K in, 50K out. Exceeded mid-session → pause + offer BYOK (v1.0+) or "come back tomorrow."
 2. **Per-IP daily cap.** N sessions/day per hashed IP via existing `rate_limits` table. Default 2.
-3. **Global daily kill switch.** `updraft_quota_daily` row tracks total tokens, Sandbox invocations, PDFs. When over: `/updraft` lands on a "closed for the day" page. Resets at midnight Central.
+3. **Global daily kill switch.** `updraft_quota_daily` row tracks total tokens + PDFs generated. When over: `/updraft` lands on a "closed for the day" page. Resets at midnight Central. (The schema has a `sandbox_invocations` column from the original Sandbox plan — currently unused; will repurpose if/when v1.0 swaps to Sandbox.)
 
 ### 5.2 Defaults (env-var configurable)
 
@@ -261,7 +267,7 @@ UPDRAFT_SESSION_TOKEN_CAP_OUT=50000
 
 ### 5.4 Diagnostic endpoint
 
-`/api/updraft/status` (CRON_SECRET-gated): single curl returns today's burn — sessions, tokens, Sandbox invocations, PDFs — with no secrets in response. First stop when something looks off.
+`/api/updraft/status` (CRON_SECRET-gated): single curl returns today's burn — sessions, tokens, PDFs — plus an env-presence map (true/false per env var, never values). First stop when something looks off.
 
 ### 5.5 BYOK (v1.0)
 
@@ -272,10 +278,12 @@ Bring-your-own Gemini key. Held in `sessionStorage` only, sent per-request as `X
 ## 6. Gemini strategy
 
 - **Default model:** `gemini-2.0-flash` (matches AskBeau).
-- **Premium model:** `gemini-2.5-pro` reserved for cover-letter draft only if quality demands after testing.
+- **Premium model:** `gemini-2.5-pro` reserved for cover-letter draft only if quality demands after testing (CL ships v0.5).
 - **Structured output:** every `[AI]` step uses `response_mime_type: application/json` + `response_schema` matching the spec's per-stage JSON contract. Schema-enforced output reduces parse-retry churn.
-- **Context caching:** explicit Gemini cache for the lib files (`lib-audit-voice.md`, `lib-system-prompts.md`, `lib-bullet-engineer.md`, `lib-anti-patterns.md`, `lib-output-contract.md`) at TTL ~1 hour. Biggest cost lever — these are loaded across most calls.
+- **Multimodal input:** PDF resume uploads go to Gemini directly via `inline_data` parts on `generateContent` (mime: `application/pdf`). Removes the deterministic text-extraction step entirely. Handles image-based PDFs via Gemini's internal OCR.
 - **Voice:** every user-facing AI call gets `lib-audit-voice.md` as system addendum + active `SYS_*` prompt. Silent extraction calls (parse, score, lint rewrite) skip the voice file per spec.
+- **Lib loading:** `skill-files.ts` reads + caches `lib-audit-voice.md`, `lib-system-prompts.md` (parsed into individual SYS_* sections by header), and `lib-confidence-rubric.md` from `skills/updraft/references/`. Cache lives for the lifetime of the function instance — Fluid Compute reuse means the cache hit is the common case after cold start.
+- **Context caching (Gemini's explicit cache API):** not yet wired. The original PLAN called for it as the biggest cost lever; v0.1.5 ships without it because token volume so far is well under the cost-justification threshold. Add it when traffic warrants. Tracked in CALIBRATION.md.
 - **Retry policy:** on malformed JSON, retry once with stricter schema reminder. Second fail surfaces error UI per spec's failure modes.
 
 ---
@@ -285,7 +293,7 @@ Bring-your-own Gemini key. Held in `sessionStorage` only, sent per-request as `X
 ### 7.1 Magic-link flow
 
 1. User enters email at `/updraft/login`.
-2. Server issues HMAC token (15-min single-use) → emails magic link via Resend.
+2. Server issues HMAC token (15-min single-use) → emails magic link via Brevo (originally Resend; pivoted 2026-05-04 — see DECISIONS.md).
 3. User clicks link → `/updraft/auth/callback?token=…` → token verified, session cookie set (HttpOnly, Secure, SameSite=Lax, 30-day TTL).
 4. Cookie carries `user_id`. Sessions and exports are scoped to that `user_id`.
 
@@ -324,11 +332,10 @@ Purge driver: `last_activity_at` column. Cron runs daily via `/api/updraft/cron/
 
 | Version | Scope | Entry surface |
 |---|---|---|
-| **v0.1** "Vertical slice" | Magic-link auth · Path A only · Tier 2 only · MOD + Resume (no CL) · 1 template × 1 density (Classic) · DOCX-only export · Lint Phase 1 (regex) · per-IP + global kill switch · 30-day purge cron · delete-my-data · data-export | Unlinked URL — share manually |
-| **v0.5** "Make it good" | Path B added · all 4 tiers · Cover Letter · Lint Phase 2 (AI) · Vercel Sandbox PDF live with custom LibreOffice image · daily caps tuned to real traffic · keep-this-session flag · **`SYS_MATCH_ANALYZER` prompt tuning** (see [`CALIBRATION.md`](CALIBRATION.md)) | Pi-egg reveal |
-| **v1.0** "Complete" | All 4 templates × 3 densities (12) · ATS quarterly parsing tests · BYOK with safety harness · session resumption flow · active-MOD pointer + session history UI | Promote to MODULES card as `LIVE` |
-| **v1.5** "Reusable" | Re-tailoring flow (existing MOD + new JD → new resume, skip Stages 1–3) · refined account UX | MODULES card |
-| **v2.0+** | Portfolio-site generator (Tier 4) · multi-language (Spanish first) · recruiter-perspective scoring | MODULES card |
+| **v0.1.5** "Vertical slice — SHIPPED 2026-05-06" | Magic-link auth (Brevo) · Path A only · Tier 2 only · MOD + Resume (no CL) · 1 template × 1 density (Classic) · **DOCX + PDF export** (Drive API) · **Gemini-direct PDF reading** · Lint Phase 1 (regex) · per-IP + global kill switch · 30-day purge cron · keep flags · delete-my-data · data-export | Unlinked URL — share manually |
+| **v0.5** "Make it good" | Path B (talk-it-through) · all 4 tiers (1/3/4 deepening branches) · Cover Letter (`SYS_COVER_LETTER_DRAFTER`) · Lint Phase 2 (AI rewrite via `SYS_ANTIPATTERN_REVIEWER`) · AI bullet rewriter (`SYS_BULLET_REWRITER`) · conversational Stage 03 (Phase A-D + STAR stories + skill surfacing card) · daily caps tuned to real traffic · **`SYS_MATCH_ANALYZER` prompt tuning** (see [`CALIBRATION.md`](CALIBRATION.md)) · Gemini explicit context caching | Pi-egg reveal |
+| **v1.0** "Complete" | All 4 templates × 3 densities (12) · ATS quarterly parsing tests · BYOK with safety harness · session resumption flow · active-MOD pointer + session history UI · re-tailoring flow (existing MOD + new JD → new resume, skip Stages 1–3) · **Vercel Sandbox + LibreOffice migration** if scale demands self-hosted PDF | Promote to MODULES card as `LIVE` |
+| **v1.5+** | Portfolio-site generator (Tier 4) · multi-language (Spanish first) · recruiter-perspective scoring | MODULES card |
 
 ---
 
@@ -342,28 +349,31 @@ Purge driver: `last_activity_at` column. Cron runs daily via `/api/updraft/cron/
 | `UPDRAFT_DAILY_SESSION_CAP` | v0.1 | Default 50 |
 | `UPDRAFT_DAILY_TOKEN_CAP_IN` | v0.1 | Default 500000 |
 | `UPDRAFT_DAILY_TOKEN_CAP_OUT` | v0.1 | Default 100000 |
-| `UPDRAFT_DAILY_PDF_CAP` | v0.5 | Default 30 |
 | `UPDRAFT_PER_IP_DAILY` | v0.1 | Default 2 |
 | `UPDRAFT_SESSION_TOKEN_CAP_IN` | v0.1 | Default 200000 |
 | `UPDRAFT_SESSION_TOKEN_CAP_OUT` | v0.1 | Default 50000 |
-| `UPDRAFT_SANDBOX_IMAGE_TAG` | v0.5 | Pinned LibreOffice image tag |
+| `UPDRAFT_DAILY_PDF_CAP` | v0.1.5 | Default 30 — global daily cap on PDF conversions |
+| `UPDRAFT_GOOGLE_SA_JSON_B64` | v0.1.5 | Base64-encoded Google service-account JSON for Drive API DOCX→PDF. When unset, Stage 04 still ships DOCX with a "PDF unavailable" banner (graceful degradation). |
+| `UPDRAFT_SANDBOX_IMAGE_TAG` | v1.0 (if needed) | Pinned LibreOffice image tag — only used if v1.0 swaps from Drive API to Sandbox |
 
-Reused from existing site config: `GEMINI_API_KEY`, `RESEND_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `CHAT_IP_SALT`.
+Reused from existing site config: `GEMINI_API_KEY`, `BREVO_API_KEY`, `MAIL_FROM_ADDRESS`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `CHAT_IP_SALT`.
 
 ---
 
-## 10. Repo layout when migrated in
+## 10. Repo layout (current, post-migration)
 
-When v0.1 is ready to start coding, this folder moves into the repo at:
+This folder lives in the repo at:
 
 ```
 beau-portfolio/
 └── skills/
     └── updraft/
-        ├── README.md
-        ├── SKILL.md
-        ├── PLAN.md
-        ├── DECISIONS.md
+        ├── README.md          (engineering handoff — load second)
+        ├── SKILL.md           (orchestrator — load first)
+        ├── PLAN.md            (this file — durable design + integration record)
+        ├── DECISIONS.md       (append-only decision log)
+        ├── CALIBRATION.md     (prompt tuning + parked-features list, fed into v0.5)
+        ├── PRIVACY-COPY.md    (Beau-edited login privacy verbiage)
         └── references/
             ├── stage-01-intake.md
             ├── stage-02-target.md
@@ -372,15 +382,19 @@ beau-portfolio/
             └── lib-*.md (8 files)
 ```
 
-Implementation files (`src/app/updraft/*`, `src/lib/updraft/*`, `src/components/Updraft/*`, `scripts/setup-supabase-updraft.sql`) ship in the Next.js tree as normal. The skill bundle stays self-contained at `skills/updraft/` so it can be versioned, audited, or extracted independently.
+Implementation files (`src/app/updraft/*`, `src/lib/updraft/*`, `src/components/Updraft/*`, `scripts/setup-supabase-updraft*.sql`) ship in the Next.js tree as normal. The skill bundle stays self-contained at `skills/updraft/` so it can be versioned, audited, or extracted independently.
 
 ---
 
-## 11. Open questions
+## 11. State of play
 
-None at this stage. v0.1 implementation can begin once:
+**v0.1.5 has shipped.** Live on `beaudawson.com/updraft` (unlinked URL, share manually). Verified end-to-end with two test accounts (Beau + Ian) on 2026-05-06 — full happy path from magic-link sign-in through downloading both DOCX and PDF deliverables, plus exercising the privacy controls (keep flag, data export, delete-my-account cascade).
 
-1. This folder migrates into the repo.
-2. The Supabase migration runs.
-3. The new env vars are set in Vercel.
-4. Beau provides final verbiage for the privacy callout.
+The next slice is whichever you pick from §8's v0.5 roadmap. The biggest wins for early-test traffic are probably:
+
+1. **`SYS_MATCH_ANALYZER` prompt tuning** — see `CALIBRATION.md`. Beau is collecting a calibration corpus.
+2. **Cover letter generation** — `SYS_COVER_LETTER_DRAFTER` already specced; lifts deliverables from MOD+Resume to MOD+Resume+CL.
+3. **Pi-egg reveal** — quick ship, gets `/updraft` discoverable to Pi-challenge solvers.
+4. **Conversational Stage 03** — bigger build, but it's where Audit's voice actually shows up properly. Currently Stage 03 is "edit a form"; the spec calls for a Phase A-D conversation.
+
+All four are independent — pick by appetite, not order.
