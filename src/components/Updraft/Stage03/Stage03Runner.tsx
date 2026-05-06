@@ -461,46 +461,74 @@ interface FormProps {
 }
 
 function Stage03Form(p: FormProps) {
+  const totalSteps = p.modMode === 'full' ? 3 : 2;
+
   return (
     <div className="space-y-10">
-      <header className="space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-bold">Build your story</h1>
-        <p className="text-sm text-[#cbd5e1]">
-          {p.modMode === 'full'
-            ? 'Walk through your career, edit anything Audit pulled wrong, surface what got buried. Auto-saves as you go.'
-            : "Lightweight build — just enough to power the JD-tailored output. You can come back for a full MOD pass later. Auto-saves as you go."}
-        </p>
-        <SaveIndicator phase={p.savePhase} />
+      <header className="space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">Build your story</h1>
+            <p className="text-sm text-[#cbd5e1] mt-1">
+              {p.modMode === 'full'
+                ? 'Walk through three steps below. Edit anything Audit pulled wrong, add detail where bullets feel thin. Your work autosaves as you go — no Save button.'
+                : 'Lightweight build — two steps below, just enough to power the JD-tailored output. You can come back for a full MOD pass later. Autosaves as you go.'}
+            </p>
+          </div>
+          <SaveIndicator phase={p.savePhase} />
+        </div>
+        <StepProgress total={totalSteps} />
       </header>
 
-      <RolesSection
-        roles={p.mod.experience}
-        updateRole={p.updateRole}
-        updateBullet={p.updateBullet}
-        addBullet={p.addBullet}
-        removeBullet={p.removeBullet}
-      />
+      <StepBlock
+        n={1}
+        total={totalSteps}
+        title="Review your job history"
+        description="For each role: confirm the basics (company, title, dates), then make the bullets do the work. Edit anything Audit pulled wrong, drop in metrics where a bullet feels thin, and add a context line if the role's scope isn't obvious from the title alone."
+      >
+        <RolesSection
+          roles={p.mod.experience}
+          updateRole={p.updateRole}
+          updateBullet={p.updateBullet}
+          addBullet={p.addBullet}
+          removeBullet={p.removeBullet}
+        />
 
-      <EarlierCareerSection
-        entries={p.mod.earlier_career}
-        onChange={(earlier_career) => p.updateMod({ earlier_career })}
-      />
+        <EarlierCareerSection
+          entries={p.mod.earlier_career}
+          onChange={(earlier_career) => p.updateMod({ earlier_career })}
+        />
+      </StepBlock>
 
-      <EducationSection
-        entries={p.mod.education}
-        onChange={(education) => p.updateMod({ education })}
-      />
+      <StepBlock
+        n={2}
+        total={totalSteps}
+        title="Round out your background"
+        description="Education and the keyword-aligned skills line. The skills list is what shows up at the bottom of the resume — keep it tight (5+ skills, no LinkedIn-style endorsement soup)."
+      >
+        <EducationSection
+          entries={p.mod.education}
+          onChange={(education) => p.updateMod({ education })}
+        />
 
-      <SkillsSection
-        skills={p.mod.skills}
-        onChange={(skills) => p.updateMod({ skills })}
-      />
+        <SkillsSection
+          skills={p.mod.skills}
+          onChange={(skills) => p.updateMod({ skills })}
+        />
+      </StepBlock>
 
       {p.modMode === 'full' && (
-        <Tier2Section
-          mod={p.mod}
-          updateMod={p.updateMod}
-        />
+        <StepBlock
+          n={3}
+          total={totalSteps}
+          title="Tell Audit about you"
+          description="The deepening fields below don't appear on every resume — they shape how Audit writes your executive summary and (later) your cover letter. Skip what doesn't apply; nothing here is required to advance."
+        >
+          <Tier2Section
+            mod={p.mod}
+            updateMod={p.updateMod}
+          />
+        </StepBlock>
       )}
 
       <div className="border-t border-[#1F1F1F] pt-6 flex items-center justify-between gap-4">
@@ -540,7 +568,63 @@ function SaveIndicator({ phase }: { phase: 'idle' | 'saving' | 'saved' | 'error'
     error: { label: 'Save failed — your changes may not persist', color: 'text-red-400' },
   } as const;
   const { label, color } = map[phase];
-  return <p className={`text-[11px] ${color} font-mono uppercase tracking-widest`}>{label}</p>;
+  return <p className={`text-[11px] ${color} font-mono uppercase tracking-widest whitespace-nowrap`}>{label}</p>;
+}
+
+// ---------------------------------------------------------------------------
+// Step progress strip + step block — visual scaffolding for Stage 03's
+// three phases. Non-interactive: the strip just signals where the user
+// is in the flow, scrolling moves through the steps in order.
+// ---------------------------------------------------------------------------
+
+function StepProgress({ total }: { total: number }) {
+  const labels = total === 3
+    ? ['Job history', 'Background', 'About you']
+    : ['Job history', 'Background'];
+  return (
+    <ol className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-mono text-[#94A3B8] flex-wrap">
+      {labels.map((label, i) => (
+        <li key={label} className="flex items-center gap-2">
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-[#7C3AED]/40 text-[#a855f7]">
+            {i + 1}
+          </span>
+          <span>{label}</span>
+          {i < labels.length - 1 && (
+            <span className="text-[#2A2A2A] mx-1">→</span>
+          )}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function StepBlock({
+  n,
+  total,
+  title,
+  description,
+  children,
+}: {
+  n: number;
+  total: number;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-8 border-t border-[#1F1F1F] pt-8">
+      <div className="space-y-1.5">
+        <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono">
+          Step {n} of {total}
+        </p>
+        <h2 className="text-xl sm:text-2xl font-semibold text-white">{title}</h2>
+        <p className="text-sm text-[#94A3B8] leading-relaxed max-w-prose">
+          {description}
+        </p>
+      </div>
+      {children}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
