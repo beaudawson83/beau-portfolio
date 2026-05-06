@@ -19,13 +19,14 @@
 //   - Generation in flight                → Spinner
 //   - Done                                → Download list + lint warnings
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type {
   UpdraftDeliverable,
   UpdraftExportKind,
   UpdraftLintFlag,
+  UpdraftMod,
   UpdraftSession,
 } from '@/types';
 
@@ -74,12 +75,93 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
     deliverables?: UpdraftDeliverable[];
     lightweight_mod?: boolean;
   };
+  const stage03 = (session.stageOutputs.stage_03 ?? {}) as { mod?: UpdraftMod };
+  const initialMod = stage03.mod ?? null;
 
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // forceRegenerate flips DoneView → Picker (regen flavor — defaults
   // all unchecked so the user has to actively pick what to refresh).
   const [forceRegenerate, setForceRegenerate] = useState(false);
+
+  // Summary lives at the top of Stage 04 in v0.5: auto-drafted on Stage
+  // 03 advance, the user reviews/edits/regenerates here before clicking
+  // Generate. Local edits autosave (800ms debounce) → mod.summary on the
+  // session so generate-files reads the latest.
+  const [summary, setSummary] = useState<string>(initialMod?.summary ?? '');
+  const [summaryPhase, setSummaryPhase] = useState<
+    'idle' | 'saving' | 'generating' | 'error'
+  >('idle');
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const summaryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const persistSummary = async (text: string): Promise<boolean> => {
+    if (!initialMod) return false;
+    const nextMod: UpdraftMod = { ...initialMod, summary: text };
+    try {
+      const res = await fetch(`/api/updraft/sessions/${session.id}/stage/03`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payload: { mod: nextMod } }),
+      });
+      if (!res.ok) {
+        setSummaryPhase('error');
+        return false;
+      }
+      setSummaryPhase('idle');
+      return true;
+    } catch {
+      setSummaryPhase('error');
+      return false;
+    }
+  };
+
+  const flushSummary = async (): Promise<void> => {
+    if (summaryTimer.current) {
+      clearTimeout(summaryTimer.current);
+      summaryTimer.current = null;
+    }
+    await persistSummary(summary);
+  };
+
+  const onSummaryChange = (v: string): void => {
+    setSummary(v);
+    setSummaryError(null);
+    setSummaryPhase('saving');
+    if (summaryTimer.current) clearTimeout(summaryTimer.current);
+    summaryTimer.current = setTimeout(() => { void persistSummary(v); }, 800);
+  };
+
+  const regenerateSummary = async (): Promise<void> => {
+    setSummaryPhase('generating');
+    setSummaryError(null);
+    await flushSummary();
+    try {
+      const res = await fetch(
+        `/api/updraft/sessions/${session.id}/generate-summary`,
+        { method: 'POST' },
+      );
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSummaryError(body.error || 'Could not draft a summary. Try again.');
+        setSummaryPhase('error');
+        return;
+      }
+      setSummary(String(body.summary ?? ''));
+      setSummaryPhase('idle');
+    } catch {
+      setSummaryError('Network error. Try again.');
+      setSummaryPhase('error');
+    }
+  };
+
+  // Cleanup any pending debounce on unmount so a closing tab doesn't
+  // leave the autosave timer dangling against an unmounted component.
+  useEffect(() => {
+    return () => {
+      if (summaryTimer.current) clearTimeout(summaryTimer.current);
+    };
+  }, []);
 
   const lintFlags = stage04.lint_flags ?? [];
 
@@ -162,8 +244,15 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
       setError('Pick at least one file to generate.');
       return;
     }
+    if (!summary.trim()) {
+      setError('Add an executive summary above before generating.');
+      return;
+    }
     setGenerating(true);
     setError(null);
+    // Flush any pending summary edit before kicking off generation —
+    // generate-files reads mod.summary off the persisted session.
+    await flushSummary();
     try {
       const res = await fetch(`/api/updraft/sessions/${session.id}/generate-files`, {
         method: 'POST',
@@ -203,6 +292,11 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
             onSelectNone={() => setAll(false)}
             onGenerate={generate}
             onCancelRegen={cancelRegenerate}
+            summary={summary}
+            summaryPhase={summaryPhase}
+            summaryError={summaryError}
+            onSummaryChange={onSummaryChange}
+            onRegenerateSummary={regenerateSummary}
           />
         ) : (
           <DoneView
@@ -262,6 +356,11 @@ function GenerateView({
   onSelectNone,
   onGenerate,
   onCancelRegen,
+  summary,
+  summaryPhase,
+  summaryError,
+  onSummaryChange,
+  onRegenerateSummary,
 }: {
   available: AvailableDeliverable[];
   selection: Partial<Record<UpdraftExportKind, boolean>>;
@@ -273,19 +372,34 @@ function GenerateView({
   onSelectNone: () => void;
   onGenerate: () => Promise<void>;
   onCancelRegen: () => void;
+  summary: string;
+  summaryPhase: 'idle' | 'saving' | 'generating' | 'error';
+  summaryError: string | null;
+  onSummaryChange: (v: string) => void;
+  onRegenerateSummary: () => Promise<void>;
 }) {
   const anyChecked = available.some(
     (a) => selection[a.docxKind] || selection[a.pdfKind],
   );
-  const heading = isRegenMode ? 'Regenerate files' : 'Generate your files';
+  const heading = isRegenMode ? 'Regenerate files' : 'Review and generate';
   const subhead = isRegenMode
     ? 'Pick what to refresh — only the files you check below will be re-rendered. Existing files of the same kind get overwritten.'
-    : 'Audit assembles the DOCX + PDF exports from your MOD using the Classic template (ATS-safe, single column, Times New Roman). The lint pass checks for filler phrases, weak verbs, and AI-tells before export. PDF is converted from the DOCX so the text layer stays ATS-clean.';
+    : 'Audit drafted your executive summary based on the MOD. Review or edit it below, then pick what to generate. Files render in the Classic template (ATS-safe, single column, Times New Roman); PDFs auto-retry on transient errors.';
 
   return (
     <div>
       <h1 className="text-2xl sm:text-3xl font-bold mb-3">{heading}</h1>
       <p className="text-sm text-[#cbd5e1] mb-6 leading-relaxed">{subhead}</p>
+
+      {!isRegenMode && (
+        <SummaryPanel
+          summary={summary}
+          phase={summaryPhase}
+          error={summaryError}
+          onChange={onSummaryChange}
+          onRegenerate={onRegenerateSummary}
+        />
+      )}
 
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
@@ -402,6 +516,90 @@ function FormatCheck({
         {label}
       </span>
     </label>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Summary panel (top of picker view)
+// ---------------------------------------------------------------------------
+
+function SummaryPanel({
+  summary,
+  phase,
+  error,
+  onChange,
+  onRegenerate,
+}: {
+  summary: string;
+  phase: 'idle' | 'saving' | 'generating' | 'error';
+  error: string | null;
+  onChange: (v: string) => void;
+  onRegenerate: () => Promise<void>;
+}) {
+  const isEmpty = summary.trim() === '';
+  const phaseLabel: Record<typeof phase, string> = {
+    idle:        'Saved',
+    saving:      'Saving…',
+    generating:  'Drafting…',
+    error:       'Failed',
+  };
+  const phaseColor: Record<typeof phase, string> = {
+    idle:        'text-emerald-400/70',
+    saving:      'text-[#94A3B8]',
+    generating:  'text-[#a855f7]',
+    error:       'text-red-400',
+  };
+
+  return (
+    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono">
+            Executive summary
+          </p>
+          <p className="text-xs text-[#94A3B8] mt-1">
+            The 4-6 sentence opener at the top of your resume. Audit drafted; edit anything.
+          </p>
+        </div>
+        <p className={`text-[10px] uppercase tracking-widest font-mono ${phaseColor[phase]}`}>
+          {phaseLabel[phase]}
+        </p>
+      </div>
+
+      <textarea
+        value={summary}
+        onChange={(e) => onChange(e.target.value)}
+        rows={6}
+        placeholder={
+          isEmpty
+            ? 'Auto-draft is still running, or it failed. Click Regenerate to try again, or write your own summary here.'
+            : ''
+        }
+        className="w-full bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg resize-y leading-relaxed"
+      />
+
+      <div className="flex items-center justify-between mt-3 gap-3">
+        {error ? (
+          <p role="alert" className="text-xs text-red-400 leading-relaxed">
+            {error}
+          </p>
+        ) : (
+          <p className="text-[11px] text-[#64748b] leading-relaxed">
+            Edits autosave. Regenerate to redraft from the latest MOD content.
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={onRegenerate}
+          disabled={phase === 'generating' || phase === 'saving'}
+          className="text-xs text-[#7C3AED] hover:text-[#a855f7] underline disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+        >
+          {phase === 'generating'
+            ? 'Drafting…'
+            : isEmpty ? 'Generate summary ↻' : 'Regenerate ↻'}
+        </button>
+      </div>
+    </div>
   );
 }
 

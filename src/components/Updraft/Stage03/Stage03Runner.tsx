@@ -166,9 +166,9 @@ export default function Stage03Runner({ session, userEmail }: Props) {
 
   const [mod, setMod] = useState<UpdraftMod>(initialMod);
   const [savePhase, setSavePhase] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [summaryPhase, setSummaryPhase] = useState<'idle' | 'generating' | 'error'>('idle');
-  const [summaryError, setSummaryError] = useState<string | null>(null);
-  const [summaryDetail, setSummaryDetail] = useState<string | null>(null);
+  // Summary moved to Stage 04 (auto-generated on advance, edited there
+  // before the user picks deliverables). Stage 03 no longer manages
+  // summary state directly.
   const [continuePhase, setContinuePhase] = useState<'idle' | 'advancing' | 'error'>('idle');
   const [continueError, setContinueError] = useState<string | null>(null);
 
@@ -300,41 +300,10 @@ export default function Stage03Runner({ session, userEmail }: Props) {
     scheduleSave();
   };
 
-  const generateSummary = async () => {
-    setSummaryPhase('generating');
-    setSummaryError(null);
-    setSummaryDetail(null);
-    // Flush any pending save first so the server has the latest MOD when
-    // the summary endpoint reads it back off the session.
-    if (saveTimer.current) {
-      clearTimeout(saveTimer.current);
-      saveTimer.current = null;
-    }
-    await flush(latestModRef.current);
-    try {
-      const res = await fetch(
-        `/api/updraft/sessions/${session.id}/generate-summary`,
-        { method: 'POST' },
-      );
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setSummaryError(body.error || 'Could not draft a summary.');
-        setSummaryDetail(typeof body.detail === 'string' ? body.detail : null);
-        setSummaryPhase('error');
-        return;
-      }
-      // Server persisted the summary; reflect it in local state too.
-      const next = { ...latestModRef.current, summary: String(body.summary ?? '') };
-      latestModRef.current = next;
-      setMod(next);
-      setSummaryPhase('idle');
-    } catch {
-      setSummaryError('Network error. Try again.');
-      setSummaryPhase('error');
-    }
-  };
-
   // Continue → Stage 04. Validates spec completion criteria first.
+  // Summary is no longer required here — Stage 04 auto-drafts it after
+  // this advance succeeds, and the user can review/edit/regenerate
+  // there before clicking Generate.
   const advance = async () => {
     setContinuePhase('advancing');
     setContinueError(null);
@@ -345,7 +314,6 @@ export default function Stage03Runner({ session, userEmail }: Props) {
     }
     if (mod.skills.length < 5) missing.push(`At least 5 skills (you have ${mod.skills.length})`);
     if (mod.education.length === 0) missing.push('At least one education entry');
-    if (!mod.summary || mod.summary.trim() === '') missing.push('A summary');
 
     if (missing.length > 0) {
       setContinueError(`Still need: ${missing.join(' · ')}`);
@@ -377,6 +345,21 @@ export default function Stage03Runner({ session, userEmail }: Props) {
         setContinuePhase('error');
         return;
       }
+      // Auto-draft the executive summary on transition. Don't fail the
+      // advance if it errors — Stage 04 will surface a "summary not yet
+      // drafted" state with a manual Generate button so the user is
+      // never blocked. Skip if user already has a summary in place.
+      const haveSummary = (latestModRef.current.summary ?? '').trim().length > 0;
+      if (!haveSummary) {
+        try {
+          await fetch(
+            `/api/updraft/sessions/${session.id}/generate-summary`,
+            { method: 'POST' },
+          );
+        } catch {
+          /* non-blocking — Stage 04 falls back to manual */
+        }
+      }
       router.refresh();
     } catch {
       setContinueError('Network error. Try again.');
@@ -406,9 +389,6 @@ export default function Stage03Runner({ session, userEmail }: Props) {
             mod={mod}
             modMode={initialModMode}
             savePhase={savePhase}
-            summaryPhase={summaryPhase}
-            summaryError={summaryError}
-            summaryDetail={summaryDetail}
             continuePhase={continuePhase}
             continueError={continueError}
             updateMod={updateMod}
@@ -416,7 +396,6 @@ export default function Stage03Runner({ session, userEmail }: Props) {
             updateBullet={updateBullet}
             addBullet={addBullet}
             removeBullet={removeBullet}
-            generateSummary={generateSummary}
             advance={advance}
           />
         )}
@@ -471,9 +450,6 @@ interface FormProps {
   mod: UpdraftMod;
   modMode: UpdraftModMode;
   savePhase: 'idle' | 'saving' | 'saved' | 'error';
-  summaryPhase: 'idle' | 'generating' | 'error';
-  summaryError: string | null;
-  summaryDetail: string | null;
   continuePhase: 'idle' | 'advancing' | 'error';
   continueError: string | null;
   updateMod: (patch: Partial<UpdraftMod>) => void;
@@ -481,7 +457,6 @@ interface FormProps {
   updateBullet: (roleIdx: number, bulletIdx: number, text: string) => void;
   addBullet: (roleIdx: number) => void;
   removeBullet: (roleIdx: number, bulletIdx: number) => void;
-  generateSummary: () => Promise<void>;
   advance: () => Promise<void>;
 }
 
@@ -528,26 +503,19 @@ function Stage03Form(p: FormProps) {
         />
       )}
 
-      <SummarySection
-        summary={p.mod.summary ?? ''}
-        phase={p.summaryPhase}
-        error={p.summaryError}
-        detail={p.summaryDetail}
-        onChange={(summary) => p.updateMod({ summary })}
-        onGenerate={p.generateSummary}
-      />
-
-      <div className="border-t border-[#1F1F1F] pt-6 flex items-center justify-between">
-        <p className="text-xs text-[#94A3B8]">
-          Stage 04 generates DOCX exports from your MOD.
+      <div className="border-t border-[#1F1F1F] pt-6 flex items-center justify-between gap-4">
+        <p className="text-xs text-[#94A3B8] leading-relaxed">
+          When you continue, Audit drafts your executive summary in the
+          background and lands you on the review page — you&apos;ll get to
+          edit or regenerate it before files render.
         </p>
         <button
           type="button"
           onClick={p.advance}
           disabled={p.continuePhase === 'advancing'}
-          className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+          className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium whitespace-nowrap"
         >
-          {p.continuePhase === 'advancing' ? 'Advancing…' : 'Continue → Stage 04'}
+          {p.continuePhase === 'advancing' ? 'Drafting summary…' : 'Continue → review summary'}
         </button>
       </div>
 
@@ -966,69 +934,11 @@ function Tier2Section({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Summary section
-// ---------------------------------------------------------------------------
-
-function SummarySection({
-  summary,
-  phase,
-  error,
-  detail,
-  onChange,
-  onGenerate,
-}: {
-  summary: string;
-  phase: 'idle' | 'generating' | 'error';
-  error: string | null;
-  detail: string | null;
-  onChange: (s: string) => void;
-  onGenerate: () => Promise<void>;
-}) {
-  return (
-    <Section
-      title="Executive summary"
-      subtitle="The 4-6 sentence paragraph at the top of the resume. Audit drafts; you can edit."
-    >
-      <div className="space-y-3">
-        <button
-          type="button"
-          onClick={onGenerate}
-          disabled={phase === 'generating'}
-          className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-        >
-          {phase === 'generating' ? 'Drafting…' : summary ? 'Re-generate with Audit' : 'Draft with Audit'}
-        </button>
-        <textarea
-          value={summary}
-          onChange={(e) => onChange(e.target.value)}
-          rows={6}
-          placeholder="Generated summary will appear here. You can edit anything Audit drafts."
-          className="w-full bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg resize-y leading-relaxed"
-        />
-        {error && (
-          <div role="alert" className="space-y-1.5">
-            <p className="text-sm text-red-400">{error}</p>
-            {detail && (
-              <details className="text-[11px] text-[#64748b]">
-                <summary className="cursor-pointer hover:text-[#94A3B8] transition-colors">
-                  Show technical details
-                </summary>
-                <pre className="mt-1.5 font-mono text-[11px] text-[#94A3B8] bg-[#111111] border border-[#2A2A2A] rounded p-2 whitespace-pre-wrap break-words">
-                  {detail}
-                </pre>
-              </details>
-            )}
-          </div>
-        )}
-      </div>
-    </Section>
-  );
-}
-
-// (Stage 04 stub used to live here. With Stage 04 shipping, the page-
-// level dispatcher routes ready_for_generation sessions to Stage04Runner
-// directly, so this component is no longer reachable. Removed.)
+// (SummarySection used to live here. Summary review moved to Stage 04
+// in v0.5: Stage 03 advance auto-drafts the summary in the background;
+// the user reviews / edits / regenerates it on the Stage 04 picker page
+// before clicking Generate. See Stage04Runner's SummaryPanel for the
+// new home of this UI.)
 
 // ---------------------------------------------------------------------------
 // Reusable form atoms
