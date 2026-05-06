@@ -88,9 +88,12 @@ export async function POST(
   if (mod.tools_stack?.trim()) {
     seedParts.push(`Tools / stack: ${mod.tools_stack.trim()}`);
   }
-  if (mod.interview_objections && mod.interview_objections.length > 0) {
+  const cleanedObjections = (mod.interview_objections ?? [])
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (cleanedObjections.length > 0) {
     seedParts.push(
-      `Things to preempt on the resume: ${mod.interview_objections.join('; ')}`,
+      `Things to preempt on the resume: ${cleanedObjections.join('; ')}`,
     );
   }
   const summarySeed = seedParts.length

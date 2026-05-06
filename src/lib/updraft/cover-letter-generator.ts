@@ -86,7 +86,12 @@ export async function draftCoverLetter(
   const sysPrompt = await loadSystemPrompt('SYS_COVER_LETTER_DRAFTER');
 
   // Mirror summary-generator's payload shape — JSON the model can index
-  // by exact field name. interview_objections lifts straight from MOD.
+  // by exact field name. Filter empty interview_objections (the Stage 03
+  // textarea persists raw line splits to keep mid-typing spaces; we
+  // clean here before the prompt sees them).
+  const cleanedObjections = (args.mod.interview_objections ?? [])
+    .map((s) => s.trim())
+    .filter(Boolean);
   const userPayload = JSON.stringify(
     {
       mod: args.mod,
@@ -96,7 +101,7 @@ export async function draftCoverLetter(
         jd_text:    args.target.jd_text,
       },
       match_analysis:        args.matchAnalysis,
-      interview_objections:  args.mod.interview_objections ?? [],
+      interview_objections:  cleanedObjections,
       tier:                  args.tier,
     },
     null,

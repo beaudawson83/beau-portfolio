@@ -950,10 +950,12 @@ function Tier2Section({
           value={(mod.interview_objections ?? []).join('\n')}
           onChange={(v) =>
             updateMod({
-              interview_objections: v
-                .split('\n')
-                .map((s) => s.trim())
-                .filter(Boolean),
+              // Keep raw line splits — no per-keystroke trim/filter.
+              // Trimming on every change strips trailing spaces as the
+              // user types them; filtering empties drops newlines mid-edit.
+              // Consumers (cover-letter-generator, docx-builder, summary
+              // seed) filter empties + trim at consumption time.
+              interview_objections: v.split('\n'),
             })
           }
           rows={3}

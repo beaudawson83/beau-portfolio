@@ -390,10 +390,13 @@ function buildEducation(education: UpdraftMod['education']): Paragraph[] {
 // ATS rules; the MOD is the source-of-truth doc, can hold extra context).
 function buildModDeepening(mod: UpdraftMod): Paragraph[] {
   const out: Paragraph[] = [];
+  const nonEmptyObjections = (mod.interview_objections ?? [])
+    .map((s) => s.trim())
+    .filter(Boolean);
   const hasAny =
     (mod.through_line && mod.through_line.trim()) ||
     (mod.tools_stack && mod.tools_stack.trim()) ||
-    (mod.interview_objections && mod.interview_objections.length > 0) ||
+    nonEmptyObjections.length > 0 ||
     (mod.leadership_brand && mod.leadership_brand.trim()) ||
     (mod.transformation_arc && mod.transformation_arc.trim());
   if (!hasAny) return out;
@@ -420,9 +423,9 @@ function buildModDeepening(mod: UpdraftMod): Paragraph[] {
       bodyParagraph([bodyRun('Tools / stack: ', { bold: true }), bodyRun(mod.tools_stack.trim())]),
     );
   }
-  if (mod.interview_objections && mod.interview_objections.length > 0) {
+  if (nonEmptyObjections.length > 0) {
     out.push(bodyParagraph([bodyRun("Things you're tired of explaining:", { bold: true })]));
-    for (const o of mod.interview_objections) {
+    for (const o of nonEmptyObjections) {
       out.push(bulletParagraph(o));
     }
   }
