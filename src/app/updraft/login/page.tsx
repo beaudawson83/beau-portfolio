@@ -40,15 +40,21 @@ export default async function UpdraftLoginPage({
   return (
     <main className="min-h-screen bg-[#111111] text-white">
       <div className="px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-        {/* Brand mark — horizontal lockup: wordmark left, logo right.
-            "by BAD Labs" centered below the whole pair. */}
+        {/* Brand mark — wordmark + "by BAD Labs" tagline stacked tight in
+            a single column, logo flush to the right. The whole lockup
+            should read as one artifact. */}
         <div className="max-w-lg mx-auto mb-12">
-          <div className="flex items-center justify-center gap-4 sm:gap-5">
-            <h1
-              className={`${orbitron.className} text-5xl sm:text-6xl font-black tracking-tight text-white leading-none`}
-            >
-              UpDraft
-            </h1>
+          <div className="flex items-end justify-center gap-1.5 sm:gap-2">
+            <div className="flex flex-col">
+              <h1
+                className={`${orbitron.className} text-5xl sm:text-6xl font-black tracking-tight text-white leading-none`}
+              >
+                UpDraft
+              </h1>
+              <p className="mt-1 text-[10px] sm:text-[11px] tracking-[0.25em] text-[#7C3AED] uppercase font-semibold leading-none">
+                by BAD Labs
+              </p>
+            </div>
 
             {/* Logo — set updraftLogoPath in src/lib/data.ts to swap in */}
             {updraftLogoPath ? (
@@ -73,24 +79,21 @@ export default async function UpdraftLoginPage({
               </div>
             )}
           </div>
-
-          <p className="mt-3 text-center text-xs tracking-widest text-[#7C3AED] uppercase">
-            by BAD Labs
-          </p>
-
-          <h2 className="mt-10 text-xl sm:text-2xl font-semibold text-white text-center">
-            Sign in
-          </h2>
         </div>
 
-        {/* Login functionality — top of the page */}
-        <div className="max-w-md mx-auto">
-          <LoginForm initialError={errorCode} />
+        {/* Login + privacy — side-by-side on lg+, stacked otherwise. The
+            privacy callout reads as a sidebar at desktop widths so it's
+            visible without dominating. PLAN.md §7.2 display contract:
+            never collapsed, body-copy weight, always present. */}
+        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] gap-12 lg:gap-14 items-start">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-semibold text-white mb-6 text-center lg:text-left">
+              Sign in
+            </h2>
+            <LoginForm initialError={errorCode} />
+          </div>
+          <PrivacyCallout copy={updraftPrivacyCopy} />
         </div>
-
-        {/* Privacy callout — directly below the login functionality, body
-            copy weight, never collapsed. PLAN.md §7.2 display contract. */}
-        <PrivacyCallout copy={updraftPrivacyCopy} />
       </div>
     </main>
   );
