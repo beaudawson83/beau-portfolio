@@ -8,8 +8,7 @@ import LoginForm from '@/components/Updraft/LoginForm';
 import PrivacyCallout from '@/components/Updraft/PrivacyCallout';
 
 // Sci-fi display font for the UpDraft wordmark. Scoped to this page —
-// not loaded on the rest of the site. Bold/black weights are the ones
-// that read as a logo type; lighter weights look thin at large sizes.
+// not loaded on the rest of the site.
 const orbitron = Orbitron({
   subsets: ['latin'],
   weight: ['700', '900'],
@@ -22,8 +21,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// Reading cookies forces dynamic rendering anyway; making it explicit avoids
-// surprises if Next ever decides to cache.
 export const dynamic = 'force-dynamic';
 
 export default async function UpdraftLoginPage({
@@ -38,44 +35,33 @@ export default async function UpdraftLoginPage({
   const errorCode = typeof params.err === 'string' ? params.err : null;
 
   return (
-    <main className="min-h-screen bg-[#111111] text-white">
-      <div className="px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-        {/* Brand mark — wordmark + "by BAD Labs" tagline stacked tight in
-            a single column, logo flush to the right. The whole lockup
-            should read as one artifact. */}
-        <div className="max-w-lg mx-auto mb-12">
-          <div className="flex items-end justify-center gap-0.5 sm:gap-1">
-            {/* Wordmark column. Tagline is absolutely positioned so it
-                doesn't contribute to the column height — that lets
-                items-end on the parent align the wordmark's bottom with
-                the logo's bottom (rather than aligning the tagline's
-                bottom with the logo's bottom). */}
-            <div className="relative">
-              <h1
-                className={`${orbitron.className} text-5xl sm:text-6xl font-black tracking-tight text-white leading-none`}
-              >
-                UpDraft
-              </h1>
-              <p className="absolute left-0 top-full mt-1 ml-[72px] sm:ml-[90px] text-[10px] sm:text-[11px] tracking-[0.25em] text-[#7C3AED] uppercase font-semibold leading-none whitespace-nowrap">
-                by BAD Labs
-              </p>
-            </div>
-
-            {/* Logo — set updraftLogoPath in src/lib/data.ts to swap in */}
+    <main
+      className="min-h-screen text-white"
+      style={{
+        background:
+          'radial-gradient(1200px 600px at 50% -10%, rgba(139,109,255,0.10), transparent 60%), #0e0d12',
+      }}
+    >
+      <div className="px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        {/* Brand lockup — logo butted against UpDraft wordmark, "BY BAD LABS"
+            centered underneath. Single self-contained inline-flex block. */}
+        <div className="flex justify-center mb-10 sm:mb-14">
+          <div className="inline-flex items-center">
             {updraftLogoPath ? (
-              <div className="relative w-28 h-28 sm:w-32 sm:h-32 flex-shrink-0">
+              <div className="relative w-28 h-28 sm:w-32 sm:h-32 -mr-3 sm:-mr-4 flex-shrink-0">
                 <Image
                   src={updraftLogoPath}
-                  alt="UpDraft"
+                  alt=""
+                  aria-hidden="true"
                   fill
-                  sizes="128px"
+                  sizes="(min-width: 640px) 128px, 112px"
                   className="object-contain"
                   priority
                 />
               </div>
             ) : (
               <div
-                className="w-28 h-28 sm:w-32 sm:h-32 flex-shrink-0 border-2 border-dashed border-[#2A2A2A] rounded-xl flex items-center justify-center"
+                className="w-28 h-28 sm:w-32 sm:h-32 -mr-3 sm:-mr-4 flex-shrink-0 border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center"
                 aria-hidden="true"
               >
                 <span className="text-[10px] text-[#64748b] font-mono uppercase tracking-widest">
@@ -83,20 +69,39 @@ export default async function UpdraftLoginPage({
                 </span>
               </div>
             )}
+            <div className="flex flex-col items-center gap-1.5 sm:gap-2 leading-none">
+              <h1
+                className={`${orbitron.className} text-5xl sm:text-6xl font-black tracking-tight text-white leading-none m-0`}
+              >
+                UpDraft
+              </h1>
+              <span className="font-mono text-[10px] sm:text-[11px] tracking-[0.2em] uppercase font-semibold text-[#8b6dff] whitespace-nowrap leading-none">
+                by Bad Labs
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Login + privacy — side-by-side on lg+, stacked otherwise. The
-            privacy callout reads as a sidebar at desktop widths so it's
-            visible without dominating. PLAN.md §7.2 display contract:
-            never collapsed, body-copy weight, always present. */}
-        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] gap-12 lg:gap-14 items-start">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-semibold text-white mb-6 text-center lg:text-left">
-              Sign in
-            </h2>
+        {/* Sign-in card — centered, ~420px wide, lifted off the page with a
+            soft shadow. Card owns the form + trust row + success state. */}
+        <div className="max-w-md mx-auto">
+          <div className="bg-[#15141b] border border-white/[0.08] rounded-2xl p-7 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.5)]">
+            <div className="mb-5">
+              <h2 className="text-xl font-semibold text-white tracking-tight">
+                Sign in to UpDraft
+              </h2>
+              <p className="mt-1.5 text-sm text-white/55 leading-relaxed">
+                We&apos;ll email you a one-time link. No password required.
+              </p>
+            </div>
             <LoginForm initialError={errorCode} />
           </div>
+        </div>
+
+        {/* Canonical privacy copy. Always visible, body-copy weight, never
+            collapsed (PLAN.md §7.2). Sits below the card as a continuation,
+            not a competing sidebar. */}
+        <div className="max-w-2xl mx-auto mt-12 sm:mt-14">
           <PrivacyCallout copy={updraftPrivacyCopy} />
         </div>
       </div>
