@@ -44,14 +44,19 @@ export default async function UpdraftLoginPage({
             a single column, logo flush to the right. The whole lockup
             should read as one artifact. */}
         <div className="max-w-lg mx-auto mb-12">
-          <div className="flex items-end justify-center gap-1.5 sm:gap-2">
-            <div className="flex flex-col">
+          <div className="flex items-end justify-center gap-0.5 sm:gap-1">
+            {/* Wordmark column. Tagline is absolutely positioned so it
+                doesn't contribute to the column height — that lets
+                items-end on the parent align the wordmark's bottom with
+                the logo's bottom (rather than aligning the tagline's
+                bottom with the logo's bottom). */}
+            <div className="relative">
               <h1
                 className={`${orbitron.className} text-5xl sm:text-6xl font-black tracking-tight text-white leading-none`}
               >
                 UpDraft
               </h1>
-              <p className="mt-1 ml-[72px] sm:ml-[90px] text-[10px] sm:text-[11px] tracking-[0.25em] text-[#7C3AED] uppercase font-semibold leading-none">
+              <p className="absolute left-0 top-full mt-1 ml-[72px] sm:ml-[90px] text-[10px] sm:text-[11px] tracking-[0.25em] text-[#7C3AED] uppercase font-semibold leading-none whitespace-nowrap">
                 by BAD Labs
               </p>
             </div>
