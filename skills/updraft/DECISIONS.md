@@ -290,3 +290,73 @@ When a decision is reversed, append a new entry referencing the old one — neve
 **Rationale:** the dashboard already has a staging-slot pattern; adding UpDraft is one motion.div block of code. Matches the existing visual language (green terminal, monospace, `>` prefix). User clicks intentionally, not by accident. `[BETA]` color (purple) distinguishes from `[ADMIN]` (yellow) so the user understands this is user-facing, not gated to Beau.
 
 **Invalidated by:** the dashboard pattern changing (e.g., a future redesign that does explicit unlock celebrations), or telemetry showing Pi-solvers don't click through (would push us to a more prominent reveal).
+
+---
+
+## 2026-05-07 — Centralized retry policy, not per-call ad-hoc
+
+**Decision:** Single `lib/updraft/retry.ts` exports `withRetry` (throw-based) + `withRetryResult` ({ ok: bool } shape) helpers, two policies (`PDF_RETRY` 3-attempt 600/1200/2400ms+jitter, `GEMINI_RETRY` 3-attempt 400/800/1600ms+jitter), and two transient-error classifiers (`isTransientDriveError`, `isTransientGeminiError`). Drive PDF and Gemini API are wrapped at their lowest level — `pdf.ts` exports `renderPdfWithRetry()` for callers, `gemini.ts` wraps `postOnce` → `postWithRetry` so every consumer (resume parser, match analyzer, summary generator, cover letter drafter) inherits retry transparently.
+
+**Alternatives considered:**
+- **Per-call ad-hoc retries.** Distributed boilerplate; the failure model drifts apart over time as different callers settle on different attempt counts / backoff curves.
+- **Queue-based retries (write to a retry queue, process out-of-band).** Heavy infrastructure for the volume we're at. Real solution if scale demands durable retries across function instances; out of scope for v0.5.
+- **Retry only at the route handler level.** Caller has to remember to wrap. Easy to miss on new endpoints.
+
+**Rationale:** centralized = one definition of "what counts as transient" and "how aggressive to retry." Beau's framing — *"I dont want to ever worry about transient errors, if it fails, we need to know and it should auto retry"* — makes the policy a first-class concern, not a feature each caller adds piecemeal. Visibility is half the value: every retry that took >1 attempt logs `*_retry_recovered` (success) or `*_retry_exhausted` (still failed) to `updraft_events`, and `/api/updraft/status` aggregates 24h failure counts so a single curl tells you the pipeline's health profile.
+
+**Transient classifier scope:** retry on 5xx / 429 / network throws / token-mint blips. Don't retry on 400 / 403 / 404 / block reasons / malformed-JSON (Gemini already does its own one-shot JSON-shape retry; transport retry is orthogonal).
+
+**`GeminiResult` carries `attempts: number`** — surfaces the count up to consumers for opt-in event logging, even though the diagnostic is already capturing the aggregate via `pdf_retry_*` events.
+
+**Invalidated by:** sustained retry-storm telemetry (would push us to circuit-breaker semantics, or out-of-band queue), or transient-classifier false negatives (an error we should be retrying that we're bailing on — adjust the classifier).
+
+---
+
+## 2026-05-07 — Stage 04: per-deliverable + per-format picker, with Regenerate ↻ flow
+
+**Decision:** Stage 04's "About to generate" static preview is replaced with an interactive checkbox grid — DOCX + PDF checkboxes per available deliverable (MOD / Resume / Cover Letter), with All / None shortcuts. Backend accepts an optional `selection: UpdraftExportKind[]` body param scoping the round; absent / empty falls back to the v0.1.5 default (every kind valid for stage_02 deliverables). `DoneView` gains a `Regenerate ↻` button that flips into a "defaults all unchecked" picker so the user actively picks what to refresh. Cover Letter DOCX + PDF are tied as a unit (re-drafting just one format would diverge them since the model is non-deterministic).
+
+**Alternatives considered:**
+- **Status quo: Stage 02 deliverables list locks in what gets generated.** Forced full re-runs even when the user just wanted the CL PDF refreshed. Beau's testing flagged this directly: *"what if I only want to generate a pdf of the cover letter at this time? or I come back and only want to get the MOD file in docx format??"*
+- **Deliverable-level picker only (no per-format).** Loses the case where user has a good DOCX and just wants to refresh the PDF after a Drive hiccup. Per-format granularity is cheap to add and matches the user's mental model.
+- **Coupled DOCX + PDF per deliverable (you can't pick one without the other).** Simpler but loses real flexibility. Accepted the small added complexity for the better UX.
+
+**Rationale:** the user's mental model is per-file regeneration, not per-deliverable. Backend is naturally additive (new optional body param, default unchanged) so existing API consumers don't break. Persistence semantics use `recordExport`'s upsert (overwrites prior export of same kind) so partial regen doesn't fragment the export history. The DOCX-in-memory-but-only-persist-PDF case (user picks PDF without DOCX) is honest about the compute being identical, just with selective persistence.
+
+**CL coupling exception** is the one place this isn't fully orthogonal — the model is non-deterministic so re-drafting the CL just for a PDF-only refresh would diverge the persisted DOCX from the new PDF. Cleanest fix is to draft once whenever any CL kind is selected and emit whichever formats the user requested. Both refresh together.
+
+**Invalidated by:** users regularly hitting the "I want the SAME letter, just a fresh PDF" case (would push us to persist the CL JSON draft so we can re-render the PDF from the same source).
+
+---
+
+## 2026-05-07 — Summary review moves to Stage 04 entry, auto-drafts on transition
+
+**Decision:** Pulled the executive-summary section out of Stage 03's "Build your story" form. Stage 03 now ends with experience + skills + education + deepening; on Continue it auto-drafts the summary in the background (POST `/api/updraft/sessions/[id]/generate-summary` — non-blocking, advance proceeds even if drafting fails) and lands the user on Stage 04. Stage 04 renders a `SummaryPanel` at the top of the picker view: editable textarea bound to `mod.summary` with 800ms autosave (full-MOD PATCH to stage/03), a Regenerate ↻ button, and graceful empty/error states. Generate button refuses to fire on an empty summary.
+
+**Alternatives considered:**
+- **Keep summary inline in Stage 03 (the v0.1.5 layout).** User feedback explicitly: *"I want to pull the executive summary out of this page"* — the "Build your story" page was already overwhelming and the summary was a cognitive break in the flow.
+- **Separate "Review summary" step between 03 and 04** (own page). Adds a click without much added clarity. Folding it into the top of Stage 04 means the user reviews the summary in the same context as picking what to generate.
+- **Generate-summary on Stage 04 page-load instead of on Stage 03 advance.** Latency in the wrong place — user clicks Continue and waits, then clicks again to land. Pre-drafting on transition keeps Stage 04's first paint fast.
+- **Add `summary_approved: boolean` flag to gate progression.** Added complexity for no clear value. Approval = pressing Generate. The textarea is the review surface.
+
+**Rationale:** matches Beau's stated mental model — *"if they approve, the user presses generate - if they dont, they can edit before pressing generate."* No explicit approval step needed; pressing Generate is the implicit approval. Autosave keeps mod.summary current so backend reads the latest at generate time. Empty / error states have explicit copy ("auto-draft still running or failed — Regenerate to retry, or write your own") so the user is never blocked.
+
+**Stage 03 advance flow now:** validate (without summary check) → flush autosave → PATCH stage_03 with ready_for_generation=true → POST generate-summary if mod.summary empty (try/catch, non-blocking) → router.refresh().
+
+**Invalidated by:** user reports of the summary feeling "buried" at Stage 04 (would push back to its own step), or mod.summary autosave conflicts with concurrent edits in another tab (not currently a concern — single-flight UpDraft sessions).
+
+---
+
+## 2026-05-07 — Stage 03 phased UX: step strip + grouped blocks (not a wizard)
+
+**Decision:** "Build your story" page restructured into 3 (or 2 in lightweight mode) explicit step blocks: **Job history → Background → About you**, each with a "STEP N OF 3" badge + step title + description paragraph. Non-interactive progress strip at the top of the page shows all step numbers + labels with arrows between them. The same form sections (RolesSection / EarlierCareerSection / EducationSection / SkillsSection / Tier2Section) live inside the blocks; no functional change to editing.
+
+**Alternatives considered:**
+- **Status quo: one continuous scroll of sections.** User feedback: *"this is too much on one page without clear expectations and next steps... we need some user love here."*
+- **Wizard-style (one step per page, Next button to advance).** More guided but adds clicks, complicates autosave-flush semantics across pages, and breaks the "scroll back to fix something" affordance the long-form scroll provides.
+- **Collapsible accordion (only expanded section visible).** Hides progress; user has to remember which sections they've completed.
+- **Sticky progress strip with intersection-observer-driven highlight.** Nice but added complexity for marginal gain. Static progress strip at the page top is enough — the step numbers establish the shape.
+
+**Rationale:** smallest invasive change that meaningfully improves expectation-setting. The user keeps autosave + scroll-anywhere editing; they gain visual chunking + per-step intros that explain what each block is for. Lightweight mode adapts automatically (skips Tier 2 deepening, shows 2 steps instead of 3).
+
+**Invalidated by:** users still reporting the page feels overwhelming after the chunking (would push us toward wizard or collapsible accordion), or step boundaries that don't match the user's mental model (re-group based on observed pain points during testing).

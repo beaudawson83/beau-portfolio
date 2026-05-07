@@ -155,9 +155,11 @@ src/
 │   ├── blog-media.ts                  # Signed-upload-URL helper for blog-media bucket
 │   ├── module-telemetry.ts            # Reads Conflict + Blog stats for the homepage MODULES section
 │   ├── pi-challenge/                  # HMAC token + challenges
-│   └── updraft/                       # 15 files — auth, store, storage, gemini, parser,
-│                                       # tier, match-analyzer, summary-generator, lint,
-│                                       # docx-builder, pdf (Drive API), filename, quotas,
+│   └── updraft/                       # 17 files — auth, store, storage, gemini, parser,
+│                                       # tier, match-analyzer, summary-generator,
+│                                       # cover-letter-generator, lint, docx-builder,
+│                                       # pdf (Drive API), retry (transient backoff
+│                                       # for Drive + Gemini), filename, quotas,
 │                                       # data-export, skill-files. See skills/updraft/PLAN.md §3.4
 ├── hooks/useTrackSection.ts
 ├── types/index.ts                     # All portfolio types
@@ -208,11 +210,11 @@ src/
 | `/api/updraft/sessions/[id]/parse-upload` | POST | Stage 01 — multipart upload, parse via Gemini, persist | cookie + ownership + AI quota |
 | `/api/updraft/sessions/[id]/match-analyze` | POST | Stage 02 — `SYS_MATCH_ANALYZER` + target metadata | cookie + ownership + AI quota |
 | `/api/updraft/sessions/[id]/generate-summary` | POST | Stage 03 — `SYS_SUMMARY_GENERATOR` | cookie + ownership + AI quota |
-| `/api/updraft/sessions/[id]/generate-files` | POST | Stage 04 — render DOCX + PDF, lint, persist exports | cookie + ownership + AI quota |
+| `/api/updraft/sessions/[id]/generate-files` | POST | Stage 04 — render selected DOCX/PDF kinds (optional `selection: UpdraftExportKind[]` body scopes the round; default = all from stage_02 deliverables), draft CL via `SYS_COVER_LETTER_DRAFTER` if any CL kind selected, lint MOD, persist exports. PDFs auto-retry on transient Drive errors (3 attempts, exponential backoff). | cookie + ownership + AI quota |
 | `/api/updraft/sessions/[id]/exports/[exportId]` | GET | 302-redirect to 10-min signed Storage URL | cookie + ownership |
 | `/api/updraft/sessions/[id]/stage/[n]` | PATCH | Merge-patch stage_outputs.{stage_NN} | cookie + ownership |
 | `/api/updraft/sessions/[id]/keep` | PATCH | Toggle keep-indefinitely flag | cookie + ownership |
-| `/api/updraft/status`       | GET    | Diagnostic — today's quota burn + env presence map | `Bearer $CRON_SECRET` |
+| `/api/updraft/status`       | GET    | Diagnostic — today's quota burn + env presence map + 24h failure counts (`pdf_failed`, `pdf_retry_recovered`, `pdf_retry_exhausted`, `cover_letter_failed`, `summary_failed`, `export_failed`) aggregated from `updraft_events` | `Bearer $CRON_SECRET` |
 | `/api/updraft/cron/purge`   | GET/POST | 30-day inactivity purge | `Bearer $CRON_SECRET` (Vercel Cron supplies) |
 
 ---
@@ -395,7 +397,7 @@ Phase 2: cross-prompt audit. Phase 3: ACLED/UCDP/SIPRI reconciliation. Phase 4: 
 
 A resume + cover-letter generation tool operated by an AI character named **Audit**. 4-stage flow (intake → target → interview → generate) producing three deliverables in any combination: Master Overview Document (MOD), JD-tailored Resume, Cover Letter. Outputs DOCX + PDF (Markdown for MOD ships v0.5+). ATS-safe single-column templates.
 
-**Status:** v0.1.5 SHIPPED end-to-end as of 2026-05-06 — verified with two test accounts (Beau + Ian) walking the full path from magic-link sign-in through downloading both DOCX and PDF deliverables, plus exercising the privacy controls. Lives at unlinked `/updraft` URL. Pi-egg reveal landed (Operator Dashboard slot) and Cover Letter ships in the same v0.5 slice — `/updraft` is now discoverable to Pi-challenge solvers, and selecting "Cover Letter" in Stage 02 produces a 4-paragraph CL DOCX + PDF alongside MOD + Resume via `SYS_COVER_LETTER_DRAFTER`. MODULES card promotion still gated to v1.0.
+**Status:** v0.1.5 + first wave of v0.5 polish — SHIPPED. v0.1.5 verified end-to-end on 2026-05-06 with two test accounts. v0.5 wave landed 2026-05-06 → 2026-05-07: Pi-egg reveal in the Operator Dashboard, Cover Letter generation via `SYS_COVER_LETTER_DRAFTER`, casing rules in the resume parser, spaces-bug fix in the interview-objections textarea, **centralized retry + 24h failure visibility** at the Drive + Gemini boundaries, **per-deliverable + per-format picker** in Stage 04 (with Regenerate ↻), **summary review at the top of Stage 04** (auto-drafts on Stage 03 advance, autosave + regenerate before Generate), and a **phased Stage 03 UX** with a step-strip + 3 grouped blocks. Lives at unlinked `/updraft` URL. MODULES card promotion still gated to v1.0.
 
 **Architecture is "skill-as-orchestrator":** the host program (this Next.js app) owns UI, state, file generation, and the regex anti-pattern lint pass. The AI model (Gemini 2.0 Flash) owns parsing, voice, bullet rewriting, scoring, and CL drafting. Backend is the source of truth — conversation history is intentionally not preserved across stages; only structured stage outputs persist.
 
@@ -419,7 +421,7 @@ A resume + cover-letter generation tool operated by an AI character named **Audi
 - [`scripts/setup-supabase-updraft-rpc.sql`](scripts/setup-supabase-updraft-rpc.sql) — atomic UPSERT-increment helper (`updraft_increment_quota`) + today-snapshot read (`updraft_today_quota`). Drives the kill-switch counters.
 - [`scripts/setup-supabase-updraft-storage.sql`](scripts/setup-supabase-updraft-storage.sql) — private `updraft-exports` bucket (signed-URL reads only, 5 MB cap, docx/pdf/md MIME allowlist). Output-only — raw uploaded resumes are parsed in-memory and discarded, never persisted.
 
-**Data flow (v0.1.5 LIVE):** browser → `/updraft/login` (magic link via Brevo) → `/updraft` dashboard → `/updraft/[sessionId]` runs the 4 stages (each stage's structured JSON persists to `updraft_sessions.stage_outputs` on completion). Stage 01 PDF reading is via Gemini direct (handles image PDFs via OCR); DOCX reading is via mammoth. Stage 04 generates DOCX via the `docx` npm package, then converts to PDF via Google Drive API (DOCX → temp Google Doc → PDF export). Both files write to Supabase Storage and download via 10-min signed URLs. PDF generation is non-blocking — DOCX always ships, PDF surfaces a "PDF unavailable" banner if Drive API hiccups. Daily 30-day inactivity purge runs at 09:00 UTC via Vercel Cron.
+**Data flow (v0.1.5 + v0.5 polish):** browser → `/updraft/login` (magic link via Brevo) → `/updraft` dashboard → `/updraft/[sessionId]` runs the 4 stages (each stage's structured JSON persists to `updraft_sessions.stage_outputs` on completion). Stage 01 PDF reading is via Gemini direct (handles image PDFs via OCR, casing rules normalize all-caps banners); DOCX reading is via mammoth. **Stage 03** is a phased "Build your story" page (step-of-N strip + grouped blocks for Job history / Background / About you); on Continue it auto-drafts the executive summary in the background and advances. **Stage 04** lands on a Review-and-generate page — summary at the top (editable, autosave, regenerate ↻), then a per-deliverable + per-format checkbox grid (MOD / Resume / Cover Letter × DOCX / PDF). User picks any subset and clicks Generate; on first time defaults all-checked, on Regenerate ↻ defaults all-unchecked. Cover Letter draft (`SYS_COVER_LETTER_DRAFTER`) runs in the same call when any CL kind is selected. DOCX renders via `docx` npm package; PDF converts via Google Drive API. **Auto-retry** at the Drive + Gemini boundaries (3 attempts, exponential backoff + jitter, transient-only — `pdf_retry_recovered` / `pdf_retry_exhausted` log to events for visibility). Both files write to Supabase Storage and download via 10-min signed URLs. PDF generation is non-blocking — DOCX always ships, PDF surfaces a banner if Drive fails after retries. Daily 30-day inactivity purge runs at 09:00 UTC via Vercel Cron.
 
 ---
 

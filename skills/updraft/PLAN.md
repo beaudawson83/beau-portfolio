@@ -1,7 +1,7 @@
 # UpDraft — Master Build Plan
 
-**Status:** v0.1.5 shipped end-to-end (auth · 4 stages · DOCX + PDF · account · purge cron). Real-traffic verified 2026-05-06 with husband as second test account.
-**Last updated:** 2026-05-06.
+**Status:** v0.1.5 + first wave of v0.5 polish shipped (auth · 4 stages · DOCX + PDF · account · purge cron · Pi-egg reveal · cover letter · casing rules · centralized retry · Stage 04 picker · summary auto-gen · phased Stage 03 UX). v0.1.5 happy path real-traffic verified 2026-05-06 with husband as second test account.
+**Last updated:** 2026-05-07.
 
 The skill spec itself lives in `SKILL.md` and `references/`. This file is the durable design + integration record for the host program build-out on beaudawson.com. `DECISIONS.md` is the append-only decision log (alternatives considered, rationale, what would invalidate each call).
 
@@ -106,10 +106,12 @@ Login (magic link) → Create session → Stage 01 (Intake)
 | `resume-parser.ts` | Resume → structured JSON. PDF: Gemini direct (handles image PDFs via OCR). DOCX: mammoth → text → Gemini. |
 | `tier.ts` | Pure deterministic tier classifier (years/role-level/reports → tier 1-4) + auto-classify-from-parsed-resume |
 | `match-analyzer.ts` | SYS_MATCH_ANALYZER call + target-metadata extraction in the same Gemini round-trip (Stage 02) |
-| `summary-generator.ts` | SYS_SUMMARY_GENERATOR call (Stage 03 closing phase) |
-| `lint.ts` | Phase 1 regex anti-pattern detection (8 categories). Phase 2 AI rewrite deferred to v0.5. |
-| `docx-builder.ts` | DOCX builder using `docx` npm — Classic template / Regular density. `renderModDocx` + `renderResumeDocx`. |
-| `pdf.ts` | Google Drive API DOCX→PDF behind a provider-agnostic `renderPdf()` interface (swappable to Sandbox/LibreOffice in v1.0). JWT auth via google-auth-library, access-token cached in module scope. |
+| `summary-generator.ts` | SYS_SUMMARY_GENERATOR call. Auto-runs on Stage 03 → 04 transition; user reviews/edits/regenerates the result at the top of Stage 04 before clicking Generate. |
+| `cover-letter-generator.ts` | SYS_COVER_LETTER_DRAFTER call (Stage 04). One Gemini hop returns greeting + paragraphs[4] + signoff + structured metadata (`hook_type`, `p3_branch`, `close_type`, `word_count`) used downstream for v0.5 tuning. |
+| `lint.ts` | Phase 1 regex anti-pattern detection (8 categories). Phase 2 AI rewrite deferred. |
+| `docx-builder.ts` | DOCX builder using `docx` npm — Classic template / Regular density. `renderModDocx` + `renderResumeDocx` + `renderCoverLetterDocx`. |
+| `pdf.ts` | Google Drive API DOCX→PDF behind a provider-agnostic `renderPdf()` interface (swappable to Sandbox/LibreOffice in v1.0). Exposes `renderPdfWithRetry()` (3 attempts, transient-only). JWT auth via google-auth-library, access-token cached in module scope. |
+| `retry.ts` | Centralized retry policy at the two transient-prone external boundaries (Drive API + Gemini API). `withRetry` (throw-based) + `withRetryResult` ({ ok: bool } shape) + `PDF_RETRY` / `GEMINI_RETRY` policies + `isTransientDriveError` / `isTransientGeminiError` classifiers. Retries log `*_retry_recovered` / `*_retry_exhausted` events for the diagnostic endpoint. |
 | `filename.ts` | Spec-compliant export filename builder (`Lastname_Type_Role_Company_MonYYYY.ext`) |
 | `data-export.ts` | GDPR/CCPA archive builder — user + sessions + events + exports w/ signed URLs |
 
@@ -120,7 +122,17 @@ Purge logic lives in the `/api/updraft/cron/purge` route directly rather than a 
 
 ### 3.5 Components (under `src/components/Updraft/`)
 
-`Login.tsx` · `PrivacyCallout.tsx` (slot for Beau's verbiage) · `Stages/{Intake,Target,Interview,Generate}.tsx` · `AuditTurn.tsx` · `PromptForm.tsx` · `ConfirmGrid.tsx` · `Templates/` · `ExportPanel.tsx` · `QuotaBanner.tsx` · `BYOKModal.tsx` (v1.0) · `Account/{Sessions,DeleteMyData,DataExport}.tsx`.
+Actual layout as shipped:
+
+- `LoginForm.tsx` · `PrivacyCallout.tsx` (login page Beau-edited verbiage)
+- `Dashboard.tsx` (session list)
+- `Stage01/Stage01Runner.tsx` (path picker · upload · identity · tier confirmation)
+- `Stage02/Stage02Runner.tsx` (deliverables picker · target form · match-analyze · briefing)
+- `Stage03/Stage03Runner.tsx` (phased UX with `StepProgress` + `StepBlock` wrappers around Roles, EarlierCareer, Education, Skills, Tier2 sections)
+- `Stage04/Stage04Runner.tsx` (Review-and-generate page: `SummaryPanel` at top → `GenerateView` deliverable+format checkbox grid → `DoneView` after generation w/ Regenerate ↻ button + lint warnings panel; internal `FormatCheck` checkbox primitive)
+- `Account/AccountPanel.tsx` (sessions list · keep flag · data export · delete-my-data)
+
+`Login.tsx`, `Stages/{Intake,Target,Interview,Generate}.tsx`, `AuditTurn.tsx`, `PromptForm.tsx`, `ConfirmGrid.tsx`, `Templates/`, `ExportPanel.tsx`, `QuotaBanner.tsx`, `BYOKModal.tsx` from the original sketch never landed — the actual flow consolidated into per-stage Runner components instead.
 
 ### 3.6 Supabase schema (additive, all in existing project `ygvhoocbvraiplzmgufa`)
 
@@ -388,13 +400,21 @@ Implementation files (`src/app/updraft/*`, `src/lib/updraft/*`, `src/components/
 
 ## 11. State of play
 
-**v0.1.5 has shipped** + **Pi-egg reveal** + **Cover Letter generation** landed 2026-05-06 in the same session.
+**v0.1.5 + first wave of v0.5 polish — SHIPPED.** v0.1.5 happy path verified end-to-end on 2026-05-06 (magic-link sign-in → MOD/Resume DOCX + PDF → privacy controls). The v0.5 wave landed across two sessions on 2026-05-06 → 2026-05-07:
 
-- v0.1.5 happy path verified with two test accounts (Beau + Ian) on 2026-05-06 — magic-link sign-in → MOD/Resume DOCX + PDF download → privacy controls exercised (keep flag, data export, delete-my-account cascade).
 - **Pi-egg reveal** — Operator Dashboard now exposes `OPEN_UPDRAFT [BETA]` alongside `OPEN_BLOG_EDITOR [ADMIN]`, so anyone who solves the Pi challenge gets a path to UpDraft. Tracked via `trackCTAClick('updraft_open', 'pi_dashboard')`.
-- **Cover Letter** — Stage 02 picker now accepts `cover_letter`; Stage 04 drafts a 4-paragraph CL via `SYS_COVER_LETTER_DRAFTER` (one Gemini hop), renders DOCX through the same Classic primitives, converts to PDF via Drive API. Failure to draft is non-blocking — other deliverables still ship and the user sees a banner. Structured metadata (`hook_type`, `p3_branch`, `close_type`, `word_count`) persists to `stage_04.cover_letter_meta` for future tuning.
+- **Cover Letter generation** — Stage 02 picker accepts `cover_letter`; Stage 04 drafts a 4-paragraph CL via `SYS_COVER_LETTER_DRAFTER` (one Gemini hop), renders DOCX through the same Classic primitives, converts to PDF via Drive API. Failure to draft is non-blocking. Structured metadata (`hook_type`, `p3_branch`, `close_type`, `word_count`) persists to `stage_04.cover_letter_meta`.
+- **Casing normalization** — `SYS_RESUME_PARSER` rules 8-11 normalize identity / company / title / location / institution / degree to natural casing while preserving acronyms + brand names. Skills + bullets explicitly excluded. Watch list in `CALIBRATION.md`.
+- **Spaces preservation** — interview-objections textarea no longer trims/filters on every keystroke; consumers (cover-letter-generator, docx-builder, generate-summary seed) filter empties at consumption time.
+- **Centralized retry + 24h failure visibility** — `lib/updraft/retry.ts` wraps Drive + Gemini calls with exponential backoff + jitter (3 attempts). Retries log `*_retry_recovered` / `*_retry_exhausted` events. `/api/updraft/status` aggregates `failures` over the last 24h so a single curl tells you the failure profile.
+- **Stage 04 deliverable + format picker** — backend accepts optional `selection: UpdraftExportKind[]` body param; default behavior unchanged when absent. Frontend picker has DOCX + PDF checkboxes per available deliverable, All / None shortcuts, and a Regenerate ↻ button on DoneView that switches to a "defaults all unchecked" picker for partial regeneration.
+- **Summary review at the top of Stage 04** — Stage 03 advance auto-drafts the executive summary in the background and lands the user on a Review-and-generate page; the summary is editable with autosave (800ms debounce, full-MOD PATCH) and a Regenerate ↻ button. Empty / failed-draft state is graceful — user can write or regenerate. Generate button refuses to fire on an empty summary.
+- **Phased Stage 03 UX** — "Build your story" page split into 3 (or 2 in lightweight mode) explicit step blocks: Job history → Background → About you, each with a "STEP N OF 3" badge + step title + intro paragraph. Non-interactive progress strip at the top shows the full shape of the page.
 
-The remaining v0.5 slice (pick by appetite — both are independent):
+The remaining v0.5 slice (pick by appetite — independent of each other):
 
-1. **`SYS_MATCH_ANALYZER` prompt tuning** — see `CALIBRATION.md`. Beau is collecting a calibration corpus.
-2. **Conversational Stage 03** — bigger build, but it's where Audit's voice actually shows up properly. Currently Stage 03 is "edit a form"; the spec calls for a Phase A-D conversation. Parked deliverables in `CALIBRATION.md` § 'Stage 03 deferred features' (AI bullet rewriter, Phase C/D prompts, STAR extraction, tier branches) get folded into this slice.
+1. **`SYS_MATCH_ANALYZER` prompt tuning** — see `CALIBRATION.md`. Beau is collecting a calibration corpus through real test runs. The new casing watch list lives in the same file — capture casing misses + match-score misses in the same corpus.
+2. **Conversational Stage 03** — biggest remaining build. The spec calls for a Phase A-D conversation; current Stage 03 is form-editing with phased UX over the top. Parked deliverables in `CALIBRATION.md` § 'Stage 03 deferred features' (AI bullet rewriter, Phase C/D prompts, STAR extraction, tier branches) fold into this slice when picked up.
+
+**Parked design changes:**
+- **Target-JD seniority can downshift Audit voice** — for the case of someone senior in industry A pivoting to industry B at a junior level. Tier system computes seniority-only by design; today the user override is the escape valve, but a smarter version would let target-JD seniority pull voice down a notch independently. Real design change, deserves its own session.
