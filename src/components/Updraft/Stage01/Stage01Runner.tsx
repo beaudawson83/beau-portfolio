@@ -155,19 +155,15 @@ function PathPicker({ sessionId }: { sessionId: string }) {
 
       <div className="grid sm:grid-cols-2 gap-4">
         <PathCard
-          label="PATH A"
-          title="Upload your resume"
-          body="PDF or DOCX. I'll parse it server-side and we'll iterate from there."
-          eta="~12 min total"
+          title="UPLOAD YOUR RESUME"
+          body="I'll take it from there."
           disabled={busy !== null}
           loading={busy === 'upload'}
           onClick={() => choose('upload')}
         />
         <PathCard
-          label="PATH B"
           title="Talk it through"
           body="No resume? Starting fresh? We'll build it from scratch in conversation."
-          eta="~18 min total"
           disabled={busy !== null}
           loading={busy === 'talk'}
           onClick={() => choose('talk')}
@@ -181,19 +177,15 @@ function PathPicker({ sessionId }: { sessionId: string }) {
 }
 
 function PathCard({
-  label,
   title,
   body,
-  eta,
   disabled,
   loading,
   onClick,
   comingSoonNote,
 }: {
-  label: string;
   title: string;
   body: string;
-  eta: string;
   disabled: boolean;
   loading: boolean;
   onClick: () => void;
@@ -206,12 +198,8 @@ function PathCard({
       disabled={disabled}
       className="text-left bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-5 hover:border-[#7C3AED] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono">
-        {label}
-      </p>
-      <h3 className="mt-2 text-base font-semibold text-white">{title}</h3>
+      <h3 className="text-base font-semibold text-white">{title}</h3>
       <p className="mt-2 text-sm text-[#cbd5e1] leading-relaxed">{body}</p>
-      <p className="mt-3 text-xs text-[#94A3B8]">{eta}</p>
       {comingSoonNote && (
         <p className="mt-3 text-[11px] text-[#94A3B8] italic">{comingSoonNote}</p>
       )}
