@@ -51,7 +51,7 @@ export default async function UpdraftLoginPage({
               >
                 UpDraft
               </h1>
-              <p className="mt-1 text-[10px] sm:text-[11px] tracking-[0.25em] text-[#7C3AED] uppercase font-semibold leading-none">
+              <p className="mt-1 ml-[72px] sm:ml-[90px] text-[10px] sm:text-[11px] tracking-[0.25em] text-[#7C3AED] uppercase font-semibold leading-none">
                 by BAD Labs
               </p>
             </div>
