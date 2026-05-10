@@ -106,9 +106,38 @@ Final score maps to a band, which drives downstream decisions:
 = 85.5%
 ```
 
-**Band:** TRANSFERABLE (75-89%) → light reframing recommended.
+**Band:** DIRECT (90-100%) → minimal reframing needed.
 
 **Reframing direction:** Emphasis-shift to lead with greenfield-build framing rather than the acquisition context. Use `lib-bullet-engineer.md` Strategy 2.
+
+## Worked Example — DIRECT-band match
+
+The example above is a clean DIRECT case to anchor what 90%+ scoring looks like. DIRECT is reachable and *should* fire whenever the candidate is genuinely already doing the work the JD describes. Another example:
+
+**JD requires:** "Customer Support Specialist with 3+ years in a SaaS environment, multi-channel ticket handling (email/chat/phone), CSAT and SLA-driven environments, HubSpot or similar CRM experience."
+
+**Candidate bullets:**
+- "Delivered multi-channel technical support (phone, SMS, email) for POS software across 1,500 merchants using HubSpot CRM, consistently exceeding SLA targets."
+- "Maintained 90-92% CSAT score across 4 years in B2B SaaS support roles."
+- "Documented incidents and resolutions in HubSpot, building internal knowledge base."
+
+**Scoring:**
+
+- **Direct: 95%** — Same role (CS Specialist in SaaS), same channels (email/chat/phone), same tooling (HubSpot CRM), same metrics (CSAT/SLA).
+- **Transferable: 95%** — Capability is identical to what the JD wants; no translation needed. (For same-context cases like this, Transferable should be high — the capability transfers because it IS the same capability.)
+- **Adjacent: 90%** — Adjacent skills (documentation, knowledge base management) are demonstrated.
+- **Impact: 90%** — Quantified CSAT (90-92%) and SLA-exceedance metrics directly align with what the JD values.
+
+**Calculation (Tier 2 candidate, default weights):**
+```
+(95 × 0.4) + (95 × 0.3) + (90 × 0.2) + (90 × 0.1)
+= 38 + 28.5 + 18 + 9
+= 93.5%
+```
+
+**Band:** DIRECT (90-100%) → "apply with confidence; no reframing needed."
+
+**Anti-conservatism note:** Models scoring this rubric frequently under-rate Transferable for same-domain pairs ("Why would I score 95% transferable when it's already Direct?"). Don't fall into that trap. **For same-context cases, the capability transfers because it IS the same capability — score Transferable high.** The 4 dimensions are independent; same-domain experience can legitimately max out Direct AND Transferable AND Adjacent simultaneously.
 
 ## Gap Handling
 
