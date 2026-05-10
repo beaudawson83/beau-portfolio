@@ -170,13 +170,11 @@ That said, Impact does the work of distinguishing two candidates with similar sk
 
 ## When the Rubric Returns NULL
 
-Stage 02's match analyzer can return `overall_match_pct = null` when:
+`overall_match_pct = null` (and `confidence_band = null`) is valid **only** when `resume_parsed` is null (Path B / no upload). Stage 04 re-runs scoring after Stage 03 builds the MOD, so the null can be filled in later.
 
-- `resume_parsed` is null (Path B / no upload)
-- The JD is too thin to extract requirements (under 200 words)
-- The JD doesn't follow standard structure (no Requirements/Responsibilities sections)
+If `resume_parsed` is provided, the rubric **must** produce a numerical score even when the JD is sparse or non-standard. Use whatever requirements can be extracted; if none can be extracted, score the match as `GAP` with `overall_match_pct = 0` and document the reason in `red_flags` (type `"thin-jd"`).
 
-Null is a valid result. Stage 04 re-runs scoring after Stage 03 builds the MOD, so the null can be filled in later. Don't fake a score to fill the slot.
+This is a contract change from earlier versions, which allowed null for thin/non-standard JDs. The downstream Stage 02 UI renders a "no resume yet — score comes after MOD" message when band is null, so nulling band on a Path A call (resume present) misleads the user into thinking their upload didn't register. Pick GAP/0% instead.
 
 ## Integration With Stage 04 Tailoring
 

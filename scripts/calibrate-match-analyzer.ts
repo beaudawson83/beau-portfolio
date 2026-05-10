@@ -92,6 +92,10 @@ interface RunResult {
   tokensIn?: number;
   tokensOut?: number;
   hadAssertions: boolean;
+  /** True when match-analyzer.ts synthesized band/pct from coverage after
+   * the model nulled them despite resume_parsed being present. Should be
+   * rare (~1/50) post-prompt-fix; high incidence = prompt regressed. */
+  bandSynthesized?: boolean;
 }
 
 function expectedHasAssertions(e: ExpectedShape | undefined): boolean {
@@ -286,6 +290,7 @@ async function runOne(c: Case): Promise<RunResult> {
     tokensIn: result.tokensIn,
     tokensOut: result.tokensOut,
     hadAssertions,
+    bandSynthesized: result.bandSynthesized,
   };
 }
 
@@ -321,12 +326,20 @@ function renderMarkdownReport(results: RunResult[]): string {
     (r) => r.verdict.startsWith('✗') || r.verdict.startsWith('✗'),
   ).length;
 
+  const synthCount = results.filter((r) => r.bandSynthesized).length;
+
   const lines: string[] = [];
   lines.push(`# Match-analyzer calibration run — ${ts}`);
   lines.push('');
   lines.push(
     `${results.length} pair${results.length === 1 ? '' : 's'}, ${failed} failed/erred. Total tokens in/out: ${totalTokIn}/${totalTokOut}.`,
   );
+  if (synthCount > 0) {
+    lines.push('');
+    lines.push(
+      `⚠ ${synthCount} band${synthCount === 1 ? '' : 's'} synthesized by the analyzer fallback (model returned null despite resume_parsed being present). Rows marked with ⚠ in the table below.`,
+    );
+  }
   lines.push('');
   lines.push('## Summary table');
   lines.push('');
@@ -350,7 +363,7 @@ function renderMarkdownReport(results: RunResult[]): string {
     const tokens = r.tokensIn != null ? `${r.tokensIn}/${r.tokensOut}` : '-';
     const critCount = r.criticalGaps?.length ?? 0;
     lines.push(
-      `| ${r.name} | ${r.verdict} | ${r.band ?? '-'} | ${pct} | ${reqd} | ${pref} | ${critCount} | ${tier} | ${tokens} |`,
+      `| ${r.name} | ${r.verdict} | ${(r.band ?? '-') + (r.bandSynthesized ? ' ⚠' : '')} | ${pct} | ${reqd} | ${pref} | ${critCount} | ${tier} | ${tokens} |`,
     );
   }
   lines.push('');
@@ -365,7 +378,9 @@ function renderMarkdownReport(results: RunResult[]): string {
       );
     }
     lines.push(`- **Tier (auto):** ${r.tier ?? '—'}`);
-    lines.push(`- **Band:** ${r.band ?? '—'} (${r.pct ?? '—'}%)`);
+    lines.push(
+      `- **Band:** ${r.band ?? '—'} (${r.pct ?? '—'}%)${r.bandSynthesized ? ' ⚠ synthesized from coverage (model nulled)' : ''}`,
+    );
     if (r.requiredTotal != null) {
       lines.push(
         `- **Required skills matched:** ${r.requiredMatched ?? 0}/${r.requiredTotal}`,
@@ -484,9 +499,10 @@ async function main() {
     try {
       const r = await runOne(c);
       results.push(r);
+      const synth = r.bandSynthesized ? ' ⚠synth' : '';
       const tail =
         r.band && r.pct != null
-          ? `${r.verdict}  (${r.band} ${r.pct}%)`
+          ? `${r.verdict}  (${r.band} ${r.pct}%${synth})`
           : r.verdict;
       console.log(tail);
     } catch (e) {
@@ -509,8 +525,9 @@ async function main() {
   const passed = results.filter((r) => r.verdict.startsWith('✓')).length;
   const failed = results.filter((r) => r.verdict.startsWith('✗')).length;
   const review = results.filter((r) => r.verdict.startsWith('○')).length;
+  const synth = results.filter((r) => r.bandSynthesized).length;
   console.log(
-    `\n${passed} pass · ${failed} fail · ${review} review · ${results.length} total.`,
+    `\n${passed} pass · ${failed} fail · ${review} review · ${results.length} total.${synth > 0 ? ` ⚠ ${synth} band(s) synthesized by fallback (model nulled).` : ''}`,
   );
   for (const r of results) {
     if (r.verdict.startsWith('✗') && r.detail) {

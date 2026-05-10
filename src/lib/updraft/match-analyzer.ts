@@ -146,6 +146,14 @@ export interface AnalyzeMatchSuccess {
   tokensIn: number;
   tokensOut: number;
   retried: boolean;
+  /**
+   * True when the model returned null overall_match_pct / confidence_band
+   * despite resume_parsed being non-null (a prompt-contract violation), and
+   * the analyzer synthesized the band/pct from the coverage data the model
+   * did return. Callers should log this to `updraft_events` for monitoring —
+   * frequent occurrence means the prompt needs another tightening pass.
+   */
+  bandSynthesized: boolean;
 }
 
 export interface AnalyzeMatchFailure {
@@ -204,11 +212,70 @@ export async function analyzeMatch(
     };
   }
 
+  // Contract-violation salvage: SYS_MATCH_ANALYZER is required to emit non-null
+  // overall_match_pct and confidence_band whenever resume_parsed is non-null
+  // (Path A). Calibration shows it occasionally violates this — once per ~50
+  // calls — leaving the Stage 02 UI to render the Path B "no resume yet" copy
+  // to a user who did upload a resume. When that happens, synthesize the band
+  // from the coverage data the model did return so the briefing is renderable.
+  const analysis = result.json;
+  let bandSynthesized = false;
+  if (
+    args.resumeParsed !== null &&
+    (analysis.overall_match_pct === null || analysis.confidence_band === null)
+  ) {
+    const { pct, band } = synthesizeBand(analysis);
+    analysis.overall_match_pct = pct;
+    analysis.confidence_band = band;
+    bandSynthesized = true;
+  }
+
   return {
     ok: true,
-    analysis: result.json,
+    analysis,
     tokensIn: result.tokensIn,
     tokensOut: result.tokensOut,
     retried: result.retried,
+    bandSynthesized,
   };
+}
+
+/**
+ * Synthesize an approximate match score + band from the coverage data the
+ * analyzer returned. Used only when the model violates its contract by
+ * nulling band/pct on a Path A call. Formula matches the prompt's documented
+ * weighting (70% required-skill coverage, 30% preferred-skill coverage),
+ * mapped to band thresholds from the Confidence Rubric. Less nuanced than
+ * the rubric's 4-dimension scoring — it's a salvage path, not a substitute.
+ */
+function synthesizeBand(
+  analysis: UpdraftMatchAnalysis,
+): { pct: number; band: import('@/types').UpdraftConfidenceBand } {
+  const reqs = analysis.required_skills ?? [];
+  const prefs = analysis.preferred_skills ?? [];
+  const reqMatched = reqs.filter((s) => s.match).length;
+  const prefMatched = prefs.filter((s) => s.match).length;
+
+  const reqPct = reqs.length > 0 ? (reqMatched / reqs.length) * 100 : 0;
+  const prefPct = prefs.length > 0 ? (prefMatched / prefs.length) * 100 : 0;
+
+  // No requirements extracted at all → GAP/0 (matches prompt's thin-jd guidance)
+  if (reqs.length === 0 && prefs.length === 0) {
+    return { pct: 0, band: 'GAP' };
+  }
+
+  // Weight preferred only when there are preferreds to score; otherwise the
+  // required-coverage carries the full signal (avoids penalizing JDs that
+  // happen not to list any nice-to-haves).
+  const pct = prefs.length > 0 ? reqPct * 0.7 + prefPct * 0.3 : reqPct;
+  const rounded = Math.round(pct * 10) / 10;
+
+  let band: import('@/types').UpdraftConfidenceBand;
+  if (rounded >= 90) band = 'DIRECT';
+  else if (rounded >= 75) band = 'TRANSFERABLE';
+  else if (rounded >= 60) band = 'ADJACENT';
+  else if (rounded >= 45) band = 'WEAK';
+  else band = 'GAP';
+
+  return { pct: rounded, band };
 }

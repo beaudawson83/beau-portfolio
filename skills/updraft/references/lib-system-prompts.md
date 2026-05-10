@@ -208,6 +208,24 @@ TASKS:
    - 45-59%  → WEAK
    - <45%    → GAP
 
+CRITICAL CONTRACT — band and pct nullability:
+
+overall_match_pct and confidence_band MAY ONLY be null when resume_parsed
+is null (Path B, defined below). If resume_parsed is provided (Path A),
+you MUST emit both:
+- overall_match_pct: a number between 0 and 100 (use 0 for "no fit")
+- confidence_band: one of DIRECT, TRANSFERABLE, ADJACENT, WEAK, GAP
+
+This holds even when the match is poor or the JD is sparse. A score of
+5% and a band of GAP are valid outputs; null and null are not. Null is
+reserved exclusively for the no-resume case. The downstream UI renders
+a "no resume yet" message when band is null, so emitting null with a
+populated resume will mislead the user.
+
+If the JD is too sparse to extract requirements (under 200 words, or no
+structured requirements section), still emit a band — choose GAP with
+pct=0 and document the issue in red_flags (type "thin-jd"). Do not null.
+
 PATH B HANDLING:
 If resume_parsed is null (no upload), produce a minimal analysis:
 - Populate required_skills, preferred_skills, soft_skills,
