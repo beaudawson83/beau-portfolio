@@ -1,0 +1,30 @@
+# Example calibration case — illustrates the schema. Replace expected
+# values with your own ground-truth judgment before running.
+#
+# This is intentionally written as a placeholder — the harness expects
+# real expected outcomes per pair. See cases/README.md.
+
+name: example-marketing-vs-growth-mktg
+resume: marketing
+jd: 06-3search-growth-marketing
+tier: 2
+expected:
+  # Fill in based on your judgment after reading both files.
+  # Example placeholder values — DO NOT trust without review:
+  # band: WEAK
+  # max_pct: 60
+  # critical_gap_keywords:
+  #   - performance marketing
+  band: # TODO
+notes: |
+  Resume: 6-yr Marketing Specialist + Exec Support at Abbott (medical devices).
+  JD: Growth Marketing Manager at a B2C ecommerce/payments scale-up,
+  Austin, $120-150K. Wants 5+ yrs performance/growth marketing,
+  eCommerce/B2C/payments background, multi-channel acquisition,
+  paid-media + CRM + AI-tools fluency.
+
+  Hypothesis: this is a TRANSFERABLE-at-best pairing — both are marketing,
+  but the role-shape and industry are quite different (B2B medical-device
+  brand-mktg + exec-support vs B2C growth-acquisition with paid funnels).
+  Worth scoring to see whether the analyzer over-credits the marketing
+  keyword overlap.

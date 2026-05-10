@@ -1,0 +1,155 @@
+Contact
+www.linkedin.com/in/miraquinn (LinkedIn)
+
+Top Skills
+Customer Support
+HubSpot
+Sonarqube
+
+Languages
+English (Native or Bilingual)
+
+Certifications
+Balancing Work and Life
+Communication Tips
+Bystander Training: From Bystander to Upstander
+Sales: Customer Success
+Leading with Kindness and Strength
+
+Honors-Awards
+Presenter at 2013 CUR Posters on the Hill
+Community Developer
+Complex of the Year
+
+Mira Quinn
+Customer Support Engineer
+Portland, Oregon, United States
+
+Summary
+Well-rounded engineer with an unorthodox path who blends empathy, analytical thinking, and creative problem-solving to understand complex systems & help customers win.
+- 4 years Software Development
+- 2 years Customer Service
+- 1 year Sales
+- Currently focused on Technical/Product Support roles
+
+Experience
+
+Union
+Technical Customer Support
+July 2024 - November 2024 (5 months)
+Portland, OR
+
+Remote & Onsite Technical Customer Support
+
+- Delivered multi-channel technical support (phone, SMS, email) for POS software, hardware, and network connectivity using Zoom Contact Center and HubSpot, consistently exceeding customer support SLAs.
+- Performed advanced triage of POS incidents including terminal connectivity issues, device configuration, and account access problems, restoring venue operations through remote troubleshooting or coordinated onsite support.
+- Investigated system behavior and application logs to identify root causes of POS errors and transaction failures using New Relic and Unifi.
+- Troubleshot POS hardware integrations including terminals, payment devices, and network connections.
+- Escalated complex technical issues to engineering teams while maintaining clear communication with affected users.
+- Documented incidents, root causes, and resolution steps in HubSpot CRM, building internal knowledge resources and improving future response times.
+
+Extensis
+2 years 11 months
+
+Software Engineer
+November 2018 - March 2021 (2 years 5 months)
+SaaS Development utilizing Modern Web Technologies
+
+- Developed full-stack, web-based SaaS products utilizing TypeScript, React, Node.js, PostgreSQL running on AWS cloud infrastructure, built with a robust CI/CD pipeline (Jenkins, Docker) leveraging several layers of automated testing (Jest, Cypress).
+- Became AWS Certified and was a key contributor in driving the successful migration from Solr to ElasticSearch, demonstrating continuous learning/adoption of new tech.
+- Ensured high-quality code by practicing TDD and achieving 80% coverage.
+- Collaborated within cross-functional Agile teams: Provided technical assistance to peers during code reviews and facilitated daily stand-up/retrospective meetings.
+
+Customer Service
+September 2018 - October 2018 (2 months)
+Portland, Oregon Metropolitan Area
+
+Customer Service Excellence and CRM Data Management
+
+Maintained a perfect 100% customer satisfaction rating by providing efficient, effective customer support via Zendesk, resolving >90% of cases on first contact.
+
+Sales Development
+May 2018 - August 2018 (4 months)
+Portland, Oregon Metropolitan Area
+
+Strategic Tech-Driven Outreach to Drive Revenue Growth
+
+- Identified and generated B2B leads via cold calls, email for account executives.
+- Automated sales/marketing email campaigns using Hubspot.
+- Maintained detailed records of interactions within Microsoft Dynamics CRM.
+
+Resultli
+Sales Rep
+May 2017 - August 2017 (4 months)
+Fast-paced Sales and Rapid Deal Closure
+
+- Conducted 250+ cold calls per day.
+- Secured client commitments within a single interaction in <15 minutes on average.
+- Rapidly surpassed performance expectations, achieving sales quota within two weeks.
+
+Clinton Foundation
+Catering Server
+November 2015 - March 2016 (5 months)
+Little Rock, AR
+
+Served food, drinks at high-profile, fast-paced events, ensuring smooth guest experiences.
+
+Aramark
+Starbucks Barista
+August 2015 - December 2015 (5 months)
+Conway, AR
+
+Customer Service in High-Volume Environment
+
+- Operated POS and fulfilled a large volume of orders at Arkansas's 2nd busiest location.
+- Prioritized guest satisfaction, anticipated needs, and offered tailored recommendations.
+- Ensured the retail environment was clean, organized, and well-stocked.
+
+Acxiom
+Associate Software Engineer
+June 2013 - May 2015 (2 years)
+Conway, AR
+
+Key Contributor to Consumer Empowerment Project
+
+- Full-stack development of AboutTheData.com, a Java/Tomcat/MySQL web application.
+- Migrated, modernized the entire tech stack to JavaScript/Node.js/Cassandra.
+- Led development of the Admin Center, a separate RESTful web app for the Support team, enhancing productivity by streamlining user account issue resolution.
+
+SONGS UNLIMITED INC
+Database Administrator
+August 2012 - December 2012 (5 months)
+Conway, AR
+
+Managed Database Operations for Nonprofit Organization
+
+- Oversaw the maintenance of a Microsoft Access database encompassing 10,000+ records.
+- Implemented efficient data management strategies to optimize performance, usability.
+- Collaborated with internal stakeholders to identify database requirements and enhancements, effectively tailoring solutions to meet organizational needs.
+
+University of Central Arkansas
+1 year 3 months
+
+Resident Assistant
+August 2011 - October 2012 (1 year 3 months)
+Conway, AR
+
+Community Development and Student Mentorship
+
+- Mentored and facilitated the transition of 30+ freshmen students, providing essential guidance and support to enhance their college experience and foster academic success.
+- Coordinated 20+ social and academic events, promoting student engagement, retention, and personal growth within the campus community.
+- Recognized with the "Community Developer" award for outstanding contributions to student welfare and community building initiatives, while achieving notable team accolades such as "Complex of the Year" and "Battle of the Halls Champions".
+
+Research Assistant
+May 2012 - July 2012 (3 months)
+Conway, AR
+
+National Science Foundation-funded Healthcare System Interoperability Research
+
+- Contributed research and development of an object-oriented approach for interoperability within healthcare software systems.
+- Selected within the top 7% of nationwide undergraduate researchers to present findings to Members of Congress, policymakers at the 2013 CUR Posters on the Hill event.
+
+Education
+
+University of Central Arkansas
+BS, Computer Science · (2010 - 2013)
