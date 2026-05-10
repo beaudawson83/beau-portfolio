@@ -191,23 +191,48 @@ and runs against the corpus at
 ### Usage
 
 ```bash
-# Score every case in cases/*.yaml against the production prompt.
-npm run calibrate:match
+# Discovery / "run-then-judge" mode — score every resume × every JD with
+# no expected scores asserted. Verdicts read REVIEW; the markdown report
+# at calibration-fixtures/last-run.md gives you per-pair detail to
+# eyeball and decide which pairs are scored right vs wrong.
+npm run calibrate:match -- --all-pairs
 
-# Score one case (substring match on case name).
-npm run calibrate:match -- --case vaughan
+# Smoke-test on a few pairs first (avoids burning a full 49-pair sweep
+# while iterating on harness changes).
+npm run calibrate:match -- --all-pairs --limit 3
+
+# Once you've written real expected outcomes in cases/*.yaml, score those.
+npm run calibrate:match
+npm run calibrate:match -- --case vaughan       # filter by name substring
 
 # (Re)parse all corpus resumes — cached as resumes/{name}.parsed.json.
 # Run once on first use, again only after the parser changes.
 npm run calibrate:parse
+npm run calibrate:parse -- --resume marketing   # one resume
 
-# Re-parse one resume.
-npm run calibrate:parse -- --resume marketing
+# Skip the markdown report (stdout-only).
+npm run calibrate:match -- --all-pairs --no-report
+
+# Custom report path (e.g., to keep a baseline snapshot).
+npm run calibrate:match -- --all-pairs --out skills/updraft/calibration-fixtures/runs/2026-05-10-baseline.md
 ```
 
 Requires `GEMINI_API_KEY` in `.env.local` (loaded via dotenv). The harness
 skips quota counters / kill switches — calibration is owner-only work,
 not user traffic.
+
+### Verdict states
+
+| Verdict | Meaning |
+|---|---|
+| `✓ PASS` | Case has assertions in `expected`; all met. |
+| `✗ FAIL` | Case has assertions; one or more failed. Detail listed in stdout + report. |
+| `○ REVIEW` | No assertions. Output is the artifact to judge. |
+| `✗ ANALYZE-FAIL` | Gemini call returned an error. |
+| `✗ ERROR` | Exception thrown during the run (file missing, parse error, etc.). |
+
+The markdown report always renders all verdicts. Exit code is non-zero
+only when there's an actual failure — REVIEW-only runs exit 0.
 
 ### Layout + schema
 
@@ -238,34 +263,59 @@ not user traffic.
     Why this case matters: ...
   ```
 
-### Workflow
+### Workflow — Phase 1: discovery (run-then-judge)
 
-1. **Pick a resume + JD pair** from the corpus (or add a new pair per
-   the rules in `calibration-fixtures/README.md`).
-2. **Write the case** in `cases/{name}.yaml` with your ground-truth
-   expected outcome. Use the confidence rubric at
-   `references/lib-confidence-rubric.md` to set band cutoffs.
-3. **Run the harness** — `npm run calibrate:match -- --case {name}` —
-   to see the current prompt's verdict.
-4. **Repeat** for every benchmark you care about. The harness prints a
-   summary table + per-case detail; aim for an "N/N passing" baseline
-   before editing prompts.
-5. **When tuning** — make one prompt change at a time, re-run the full
-   set, compare deltas. A good change moves bad cases right without
-   regressing good ones. Log the delta in this file as you go.
+The 7-resume × 7-JD corpus produces 49 pairings. Most of them won't
+have an obvious "right answer" until you see what the analyzer says
+and react to it.
+
+1. **`npm run calibrate:parse`** once — generates the cached
+   `resumes/*.parsed.json` files. Costs ~7 SYS_RESUME_PARSER calls.
+2. **`npm run calibrate:match -- --all-pairs`** — runs all 49 pairs,
+   writes a markdown report to `calibration-fixtures/last-run.md`.
+   Costs ~49 SYS_MATCH_ANALYZER calls. ~$0.05–0.10 on Flash.
+3. **Read the report.** For each pair, decide: does the analyzer's
+   verdict (band + pct + critical gaps + strengths) match what *you*
+   would tell that candidate? Or is it over-generous / over-harsh / off
+   on the wrong axis?
+4. **For each pair that's clearly wrong**, write a real case file in
+   `cases/{name}.yaml` with your judgment of the right answer. That
+   becomes a regression test for the prompt-tuning pass.
+5. **For pairs that are clearly right**, optionally write an
+   "anti-regression" case to lock in the current behavior.
+
+The point of this phase isn't to score pass/fail — it's to convert
+analyzer output into your asserted ground truth, one pair at a time.
+
+### Workflow — Phase 2: prompt tuning
+
+1. **Run the asserted cases** — `npm run calibrate:match` — establish
+   the baseline. Note how many pass / fail and which.
+2. **Make one prompt change** in
+   `references/lib-system-prompts.md`'s SYS_MATCH_ANALYZER section, or
+   in the `TARGET_EXTRACTION_INSTRUCTION` runtime addendum at
+   `src/lib/updraft/match-analyzer.ts`.
+3. **Re-run the full set.** Compare deltas. A good change moves
+   previously-failing cases to PASS without regressing passing ones.
+4. **Log the delta in this file** as you go — what you changed, how
+   each case moved. Treat it as a running lab notebook so the next
+   round benefits from prior attempts.
+5. **Acceptance:** all asserted cases pass within their expected band
+   with reasonable margin (a `GAP` benchmark scores comfortably <40%,
+   not 44.9%). When that holds, ship as `feat(updraft): tune
+   SYS_MATCH_ANALYZER` and add a DECISIONS.md entry pointing here.
 
 ### Corpus state — 2026-05-10
 
-7 anonymized resumes + 7 anonymized JDs staged. **Cases are not yet
-written** — the harness ships with `cases/example.yaml` as a schema
-reference but no asserted expected outcomes. Beau is collecting cases
-per the prose benchmarks above; the first round of tuning will need at
-least 4–6 cases (mix of obvious-DIRECT, obvious-GAP, and at least one
-pivot case where the analyzer is known to over-generously score).
+7 anonymized resumes + 7 anonymized JDs staged → 49 pairings available
+via `--all-pairs`. **No cases are asserted yet** — the harness ships
+with `cases/example.yaml` as a schema reference. Phase 1 (discovery)
+hasn't run yet; Phase 2 (tuning) is gated on Phase 1 producing a real
+ground-truth case set.
 
 The first benchmark in this file (Beau vs. Vaughan Director of
-Operations) is **not yet** in the corpus — Beau was the candidate, and
-the JD wasn't captured. When that case lands, fixture name
+Operations) is **not** in the corpus — Beau was the candidate, and the
+JD wasn't captured. When that case lands, fixture name
 `vaughan-director-ops` is reserved.
 
 ### Cost guard

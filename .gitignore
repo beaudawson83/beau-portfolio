@@ -44,3 +44,4 @@ next-env.d.ts
 # Leave room for future shareable config (.claude/settings.json, .claude/commands/).
 /.claude/worktrees/
 /.claude/settings.local.json
+skills/updraft/calibration-fixtures/last-run.md
