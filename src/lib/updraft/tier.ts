@@ -28,10 +28,21 @@ export interface TierClassifierInputs {
 // Pure mapping
 // ---------------------------------------------------------------------------
 
+// Years floor (per spec § 1.4) — lifts tier toward the years-implied level.
+// '8-15' was originally 3 (auto-T3 for 8+ years), but calibration surfaced
+// that this over-tiers career changers: someone with 11 years total work
+// (e.g. 8 in hospitality + 3 in tech, recent Team Lead title for 1 year)
+// would force T3 purely on tenure. T3 expects "leadership with depth" and
+// drives Stage 03 to ask leadership-brand questions the candidate isn't
+// ready to answer. Dropped to 2 so that 8-15 years now relies on role
+// level + explicit reports signal to reach T3 — matching the spec's
+// philosophy ("under-detect and let the user override up"). Long-tenured
+// managers with vague bullets will see T2 and can override → T3 in one
+// click, which is the right friction direction for an ambiguous case.
 const YEARS_FLOOR: Record<YearsBand, number> = {
   '0-2':  1,
   '3-7':  2,
-  '8-15': 3,
+  '8-15': 2,
   '15+':  4,
 };
 

@@ -187,7 +187,10 @@ function classifyTier(years, roleLevel, reportsPeak):
     yearsFloor = {
         '0-2':   1,
         '3-7':   2,
-        '8-15':  3,
+        '8-15':  2,    # was 3; calibration showed this over-tiered career
+                       # changers (e.g. 8 years hospitality + 3 years tech,
+                       # recent Team Lead). Now the role + reports signals
+                       # decide T3 for the 8-15 band rather than tenure alone.
         '15+':   4
     }[years]
 
@@ -217,6 +220,7 @@ This handles the edge cases cleanly:
 - 4-year manager with 12 reports → years says 2, reports floor pushes to 3 → **Tier 3**
 - 6-year director (skipped levels) with 8 reports → years says 2, reports says 3, ceiling allows up to 3 → **Tier 3**
 - 20-year C-suite → years says 4, ceiling allows 4, reports irrelevant → **Tier 4**
+- 11-year career changer (8 years hospitality + 3 years tech, recent Team Lead, no explicit reports number in bullets) → years says 2 (post-fix), ceiling allows 3, reports 0 → **Tier 2** (user can override to T3 if leadership scope is real)
 
 Host sets `tier_confidence = "auto"` and persists `years_experience` along with the classifier inputs to session state for diagnostic purposes.
 
