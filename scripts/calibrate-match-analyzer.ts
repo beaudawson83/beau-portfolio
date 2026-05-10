@@ -10,6 +10,7 @@
 //   npm run calibrate:match -- --case vaughan     # filter cases by substring
 //   npm run calibrate:match -- --all-pairs        # run every resume × every JD (no cases needed)
 //   npm run calibrate:match -- --all-pairs --limit 5    # smoke-test with 5 pairs
+//   npm run calibrate:match -- --all-pairs --pair marketing  # filter all-pairs to a substring of "resume × jd"
 //   npm run calibrate:parse                       # (re)parse all corpus resumes
 //   npm run calibrate:parse -- --resume marketing
 //
@@ -86,6 +87,11 @@ interface RunResult {
   criticalGaps?: string[];
   majorGaps?: string[];
   strengths?: string[];
+  /** Full per-skill arrays from the analyzer, for audit of evidence
+   * thresholds and internal consistency (e.g. strengths_to_emphasize
+   * naming a skill that the analyzer marked match=false). */
+  requiredSkills?: { skill: string; match: boolean; evidence: string | null }[];
+  preferredSkills?: { skill: string; match: boolean; evidence: string | null }[];
   extractedRole?: string | null;
   extractedCompany?: string | null;
   detail?: string;
@@ -284,6 +290,16 @@ async function runOne(c: Case): Promise<RunResult> {
     criticalGaps,
     majorGaps,
     strengths,
+    requiredSkills: required.map((s) => ({
+      skill: s.skill,
+      match: s.match,
+      evidence: s.evidence ?? null,
+    })),
+    preferredSkills: preferred.map((s) => ({
+      skill: s.skill,
+      match: s.match,
+      evidence: s.evidence ?? null,
+    })),
     extractedRole: a.extracted_target?.role_title ?? null,
     extractedCompany: a.extracted_target?.company ?? null,
     detail,
@@ -391,6 +407,22 @@ function renderMarkdownReport(results: RunResult[]): string {
         `- **Preferred skills matched:** ${r.preferredMatched ?? 0}/${r.preferredTotal}`,
       );
     }
+    if (r.requiredSkills?.length) {
+      lines.push(`- **Required skills (per-skill):**`);
+      for (const s of r.requiredSkills) {
+        const mark = s.match ? '✓' : '✗';
+        const ev = s.evidence ? ` — _${s.evidence}_` : '';
+        lines.push(`  - ${mark} ${s.skill}${ev}`);
+      }
+    }
+    if (r.preferredSkills?.length) {
+      lines.push(`- **Preferred skills (per-skill):**`);
+      for (const s of r.preferredSkills) {
+        const mark = s.match ? '✓' : '✗';
+        const ev = s.evidence ? ` — _${s.evidence}_` : '';
+        lines.push(`  - ${mark} ${s.skill}${ev}`);
+      }
+    }
     if (r.criticalGaps?.length) {
       lines.push(`- **Critical gaps (${r.criticalGaps.length}):**`);
       for (const g of r.criticalGaps) lines.push(`  - ${g}`);
@@ -420,6 +452,7 @@ function parseArgs(argv: string[]) {
     parseOnly: boolean;
     resume?: string;
     allPairs: boolean;
+    pair?: string;
     limit?: number;
     out?: string;
     noReport: boolean;
@@ -430,6 +463,7 @@ function parseArgs(argv: string[]) {
     else if (a === '--parse-only') out.parseOnly = true;
     else if (a === '--resume') out.resume = argv[++i];
     else if (a === '--all-pairs') out.allPairs = true;
+    else if (a === '--pair') out.pair = argv[++i];
     else if (a === '--limit') out.limit = parseInt(argv[++i], 10);
     else if (a === '--out') out.out = argv[++i];
     else if (a === '--no-report') out.noReport = true;
@@ -467,11 +501,15 @@ async function main() {
   let cases: Case[];
   if (args.allPairs) {
     cases = await buildAllPairsCases();
+    if (args.pair) {
+      const needle = args.pair.toLowerCase();
+      cases = cases.filter((c) => c.name.toLowerCase().includes(needle));
+    }
     if (args.limit && cases.length > args.limit) {
       cases = cases.slice(0, args.limit);
     }
     console.log(
-      `\n--all-pairs mode: ${cases.length} pair${cases.length === 1 ? '' : 's'} (no expected scores asserted; verdicts will read REVIEW).`,
+      `\n--all-pairs mode: ${cases.length} pair${cases.length === 1 ? '' : 's'}${args.pair ? ` filtered by "${args.pair}"` : ''} (no expected scores asserted; verdicts will read REVIEW).`,
     );
     console.log(
       `Estimate: ~${cases.length} analyzer calls (Gemini Flash, ~$0.001-0.002 each).\n`,

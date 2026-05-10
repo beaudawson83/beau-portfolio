@@ -170,9 +170,29 @@ TASKS:
    - Industry terms: domain-specific terminology
 
 2. FOR EACH REQUIRED AND PREFERRED SKILL, determine match:
-   - Set match=true if resume_parsed contains evidence
-   - Cite specific evidence (1 sentence pulled from resume)
-   - Set match=false if no evidence; cite null
+   - Set match=true if resume_parsed contains evidence — direct OR
+     transferable per the Confidence Rubric. "Transferable" means the
+     same capability in a different domain. Examples:
+     * JD requires "multi-channel marketing campaigns" and resume says
+       "developing and implementing marketing campaigns for electrophysiology
+       products" → match=true (transferable, cross-domain)
+     * JD requires "data-led decision-making" and resume says "using data-
+       driven insights to support growth objectives" → match=true
+     * JD requires "stakeholder management" and resume says "customer
+       escalations across enterprise accounts" → match=true (transferable)
+   - Cite specific evidence (1 sentence pulled from resume) when match=true.
+   - Set match=false only when the resume shows no related work — no direct,
+     no transferable, no adjacent evidence. Cite evidence=null.
+   - The match boolean is binary: "is there evidence at all?" Do NOT use
+     match=false to express weak quality — that's the rubric's job. Use
+     the 4-dimension scoring (Direct/Transferable/Adjacent/Impact) to
+     compute overall_match_pct, which captures match quality.
+   - INTERNAL CONSISTENCY: every capability you list in
+     strengths_to_emphasize must trace back to at least one required or
+     preferred skill marked match=true. If "Market Trend Analysis" is a
+     strength, the corresponding analytical-skills requirement must be
+     match=true. Otherwise you're promising the candidate has something
+     the coverage table denies.
 
 3. COMPUTE overall_match_pct using the Confidence Rubric:
    - Default weights: Direct 40%, Transferable 30%, Adjacent 20%,
