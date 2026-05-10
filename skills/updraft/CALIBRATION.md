@@ -176,7 +176,7 @@ matches and examples he knows are bad. Add each case here as it lands,
 with the same structure: Resume profile, JD summary, Result returned,
 Expected result, Why this case matters.
 
-## Test harness for the tuning pass
+## Test harness for the tuning pass — SHIPPED 2026-05-10
 
 Iterating on the prompt by clicking through the full Stage 01 → Stage 02 UI
 on prod (or even local dev) is too slow. Each round needs: log in, start a
@@ -184,36 +184,96 @@ session, upload a resume, confirm identity, classify tier, pick deliverables,
 paste a JD, click Analyze, screenshot the briefing. Five minutes per
 attempt. Tuning needs *dozens* of attempts.
 
-When the tuning pass starts, the first build step is a CLI harness that
-calls `analyzeMatch()` directly against fixture inputs, skipping the UI
-entirely. Rough shape:
+The harness lives at [`scripts/calibrate-match-analyzer.ts`](../../scripts/calibrate-match-analyzer.ts)
+and runs against the corpus at
+[`skills/updraft/calibration-fixtures/`](calibration-fixtures/).
 
-- **`scripts/calibrate-match-analyzer.ts`** — Node script invoked via
-  `tsx scripts/calibrate-match-analyzer.ts` (or similar). Reads benchmark
-  cases from a JSON/YAML fixture file, calls `analyzeMatch()` for each,
-  prints a comparison table: case name, returned score + band, expected
-  range, ✓/✗ verdict, plus a summary line at the bottom (e.g., "4/6
-  benchmarks passing").
-- **`scripts/fixtures/match-analyzer/`** — one file per benchmark case,
-  with `resume_parsed` (a stringified `ParsedResume`), `jd_text`, `tier`,
-  and `expected: { band: 'GAP', max_pct: 45 }` plus optional
-  `expected_critical_gaps: ['category-mismatch']`.
-- Optional v2 — a diff mode that re-runs benchmarks against the prompt
-  before *and* after a change, prints the deltas. Lets us see at a
-  glance whether a tweak moved the right cases without regressing
-  others.
-- Reuses the existing `callGemini` wrapper — no parallel implementation,
-  same `withAuditVoice=false` + same schema. The harness is just a CLI
-  shell around the same lib code that production uses.
-- **Cost guard:** the harness should call `recordQuotaUsage` like the
-  real route does, OR run with the `UPDRAFT_OWNER_SECRET` bypass header.
-  Either way, calibration runs shouldn't blow the daily caps that real
-  visitors share.
+### Usage
 
-Output the corpus in `skills/updraft/calibration-fixtures/` as machine-
-readable companion to the prose benchmarks above. When Beau adds a new
-calibration case, both the prose entry in this doc AND the fixture file
-should land in the same commit.
+```bash
+# Score every case in cases/*.yaml against the production prompt.
+npm run calibrate:match
+
+# Score one case (substring match on case name).
+npm run calibrate:match -- --case vaughan
+
+# (Re)parse all corpus resumes — cached as resumes/{name}.parsed.json.
+# Run once on first use, again only after the parser changes.
+npm run calibrate:parse
+
+# Re-parse one resume.
+npm run calibrate:parse -- --resume marketing
+```
+
+Requires `GEMINI_API_KEY` in `.env.local` (loaded via dotenv). The harness
+skips quota counters / kill switches — calibration is owner-only work,
+not user traffic.
+
+### Layout + schema
+
+- **`calibration-fixtures/resumes/{name}.txt`** — anonymized raw resume
+  text. Identity-only swaps (name / email / phone / address / LinkedIn
+  slug); companies + dates + bullet content preserved verbatim.
+- **`calibration-fixtures/resumes/{name}.parsed.json`** — cached
+  SYS_RESUME_PARSER output. Created on first run; commit alongside the
+  .txt so future harness runs don't re-burn parser tokens.
+- **`calibration-fixtures/jds/{NN-name}.txt`** — anonymized JD text.
+  LinkedIn UI chrome stripped; recruiter / hiring-team person names
+  swapped.
+- **`calibration-fixtures/cases/{name}.yaml`** — case files. One case
+  per file or an array per file. Schema:
+
+  ```yaml
+  name: short-kebab-name           # required
+  resume: marketing                # required — basename in resumes/
+  jd: 06-3search-growth-marketing  # required — basename in jds/
+  tier: 2                          # optional — 1|2|3|4. Auto-classified if omitted.
+  expected:                        # required — at least one assertion
+    band: GAP                      # DIRECT|TRANSFERABLE|ADJACENT|WEAK|GAP
+    min_pct: 0
+    max_pct: 45
+    critical_gap_keywords:
+      - category mismatch
+  notes: |                         # optional — context, not asserted
+    Why this case matters: ...
+  ```
+
+### Workflow
+
+1. **Pick a resume + JD pair** from the corpus (or add a new pair per
+   the rules in `calibration-fixtures/README.md`).
+2. **Write the case** in `cases/{name}.yaml` with your ground-truth
+   expected outcome. Use the confidence rubric at
+   `references/lib-confidence-rubric.md` to set band cutoffs.
+3. **Run the harness** — `npm run calibrate:match -- --case {name}` —
+   to see the current prompt's verdict.
+4. **Repeat** for every benchmark you care about. The harness prints a
+   summary table + per-case detail; aim for an "N/N passing" baseline
+   before editing prompts.
+5. **When tuning** — make one prompt change at a time, re-run the full
+   set, compare deltas. A good change moves bad cases right without
+   regressing good ones. Log the delta in this file as you go.
+
+### Corpus state — 2026-05-10
+
+7 anonymized resumes + 7 anonymized JDs staged. **Cases are not yet
+written** — the harness ships with `cases/example.yaml` as a schema
+reference but no asserted expected outcomes. Beau is collecting cases
+per the prose benchmarks above; the first round of tuning will need at
+least 4–6 cases (mix of obvious-DIRECT, obvious-GAP, and at least one
+pivot case where the analyzer is known to over-generously score).
+
+The first benchmark in this file (Beau vs. Vaughan Director of
+Operations) is **not yet** in the corpus — Beau was the candidate, and
+the JD wasn't captured. When that case lands, fixture name
+`vaughan-director-ops` is reserved.
+
+### Cost guard
+
+The harness skips the production quota counters — calibration runs are
+owner-only and shouldn't pollute the daily-cap counters that real
+visitors share. Watch the `tokens (in/out)` column in the result table
+to track real spend per round.
 
 ## Tuning workflow when we pick this up
 

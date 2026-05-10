@@ -247,3 +247,47 @@ export async function parseResumeFromUpload(buffer: Buffer): Promise<ParseResult
     message: 'Only PDF and DOCX files are supported.',
   };
 }
+
+// ---------------------------------------------------------------------------
+// Text-input variant
+// ---------------------------------------------------------------------------
+//
+// Same SYS_RESUME_PARSER + RESUME_PARSE_SCHEMA path as the DOCX branch
+// above, just skipping the mammoth extraction step. Used by the calibration
+// harness (scripts/calibrate-match-analyzer.ts) to feed pre-extracted resume
+// text from skills/updraft/calibration-fixtures/resumes/*.txt without
+// needing the original PDF/DOCX bytes. Production routes still go through
+// parseResumeFromUpload — this helper has no caller outside calibration.
+
+export async function parseResumeFromText(text: string): Promise<ParseResult> {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) {
+    return { ok: false, error: 'empty', message: 'The provided text is empty.' };
+  }
+
+  const result = await callGemini<ParsedResume>({
+    systemPrompt: 'SYS_RESUME_PARSER',
+    withAuditVoice: false,
+    userPrompt: trimmed,
+    responseSchema: RESUME_PARSE_SCHEMA,
+    temperature: 0,
+  });
+
+  if (!result.ok || !result.json) {
+    return {
+      ok: false,
+      error: 'ai-parse-failed',
+      message: "Couldn't parse resume text.",
+      tokensIn: result.tokensIn,
+      tokensOut: result.tokensOut,
+    };
+  }
+  return {
+    ok: true,
+    parsed: result.json,
+    fileType: 'docx', // closest match — text path mirrors the DOCX branch
+    tokensIn: result.tokensIn,
+    tokensOut: result.tokensOut,
+    retried: result.retried,
+  };
+}
