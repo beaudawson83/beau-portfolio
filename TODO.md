@@ -30,17 +30,18 @@
 
 ## Blog (Terminal Notebook) — v2 items
 
-- Write + publish the first posts. Drafted backlog (carried from prior planning):
+- **2 posts published** (2026-05-02/03): "And." (NOTE, intro) and "Why Your New Hire
+  Onboarding Is a System, Not Just a 'Vibe'" (OPS — was backlog item #3). Remaining
+  drafted backlog:
   1. "Operations Is the Most Underleveraged Function in Your Company" — OPS
   2. "The Million-Dollar Billing Error Nobody Was Looking For" — OPS (Expedia story)
-  3. "Onboarding Is a System, Not a Vibe" — LEADERSHIP (50%→90% Union)
-  4. "The Case for Fractional Ops Leadership" — FRACTIONAL
-  5. "What Happens When Your AI Actually Works" — AI (Console + clients)
-  6. "31 Promotions: How I Think About Growing People" — LEADERSHIP
-  7. "I Automated 90% of CRM Admin. Here's What's Left." — AUTOMATION
-  8. "Why I Built a CRM From Scratch" — CRM (Console origin)
+  3. "The Case for Fractional Ops Leadership" — FRACTIONAL
+  4. "What Happens When Your AI Actually Works" — AI (Console + clients)
+  5. "31 Promotions: How I Think About Growing People" — LEADERSHIP
+  6. "I Automated 90% of CRM Admin. Here's What's Left." — AUTOMATION
+  7. "Why I Built a CRM From Scratch" — CRM (Console origin)
 - Flip `robots: noindex` → `index: true` in `src/app/blog/layout.tsx` once the index +
-  article pages are SEO-tuned (and ideally once a few posts exist).
+  article pages are SEO-tuned — posts exist now, so SEO tuning is the only blocker.
 - Edit modals for table / chart / embed block data (v1 renders sample content).
 - OG-image generation per post.
 - Audio/video direct upload (URL-only today; deferred for cost/storage reasons).

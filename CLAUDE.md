@@ -95,7 +95,6 @@ src/
 │   │       └── [slug]/page.tsx        # The editor
 │   ├── updraft/                       # UpDraft v0.1.5 — auth-gated, unlinked
 │   │   ├── login/page.tsx             # Magic-link request + privacy callout
-│   │   ├── auth/callback/route.ts     # (also under api/)
 │   │   ├── account/page.tsx           # Sessions · keep flags · data export · delete
 │   │   ├── page.tsx                   # Auth-gated dashboard (session list)
 │   │   └── [sessionId]/page.tsx       # Stage runner (dispatches Stage 01/02/03/04)
@@ -126,7 +125,7 @@ src/
 │   ├── GlobalConflict/                # Map, stats, journal UI
 │   ├── PiEasterEgg/                   # Hidden interactive feature
 │   ├── Blog/                          # Terminal Notebook reader + builder
-│   │   ├── Topbar.tsx, ThemeToggle.tsx
+│   │   ├── Topbar.tsx, ThemeToggle.tsx, CoverBand.tsx
 │   │   ├── blocks/Blocks.tsx          # All 17 read-mode blocks + TOC + ReadingProgress
 │   │   ├── Reader/{IndexView,ArticleView}.tsx
 │   │   └── Builder/                   # Editor + slash menu + cmd+K + sidebar + modals
