@@ -18,7 +18,8 @@ import { GEMINI_RETRY, withRetryResult } from './retry';
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-export type UpdraftModel = 'gemini-2.0-flash' | 'gemini-2.5-flash' | 'gemini-2.5-pro';
+// gemini-2.0-flash was retired by Google on 2026-06-01 and removed here.
+export type UpdraftModel = 'gemini-3.5-flash' | 'gemini-2.5-flash' | 'gemini-2.5-pro';
 
 export interface InlineFile {
   /** MIME type Gemini should treat the data as. e.g. 'application/pdf'. */
@@ -50,7 +51,7 @@ export interface CallGeminiArgs {
    * the response is returned as plain text in `.text`.
    */
   responseSchema?: object;
-  /** Defaults to gemini-2.0-flash. */
+  /** Defaults to gemini-3.5-flash. */
   model?: UpdraftModel;
   /** Optional generation config overrides. */
   temperature?: number;
@@ -216,7 +217,7 @@ export async function callGemini<T = unknown>(
     };
   }
 
-  const model = args.model ?? 'gemini-2.0-flash';
+  const model = args.model ?? 'gemini-3.5-flash';
   const url = `${GEMINI_BASE}/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   const systemText = await buildSystemInstruction(
