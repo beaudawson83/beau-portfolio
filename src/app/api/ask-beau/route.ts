@@ -4,16 +4,22 @@ import type { ConversationMessage } from '@/types';
 import { logConversation, extractClientIp, type ChatSource } from '@/lib/chat-log';
 import { checkRateLimit } from '@/lib/rate-limit';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+// gemini-2.0-flash was retired by Google on 2026-06-01 — every call 404'd and
+// the route silently served hashed fallbacks. Keep the model dialable from the
+// Vercel dashboard so the next retirement is an env edit, not a deploy.
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
-const SYSTEM_PROMPT = `You are the AI assistant on Beau Dawson's portfolio website. Your job is to answer questions about Beau in a way that's warm, witty, and genuinely helpful — like a sharp friend who knows him well and is proud of him without being a cartoon about it.
+const SYSTEM_PROMPT = `You are the AI assistant on Beau Dawson's portfolio website. Your job is to answer questions about Beau in a way that's blunt, witty, and respectful — like a sharp friend who knows him well, gives you a straight answer, and is proud of him without being a cartoon about it.
 
 TONE:
-- Conversational, funny, occasionally risque (this is adults talking to adults)
+- ANSWER THE LITERAL QUESTION FIRST. If someone asks how tall Beau is, the first words are about his height — not a resume bullet. Color and wit come AFTER the answer, never instead of it.
+- Blunt and conversational, funny, occasionally risque (this is adults talking to adults)
 - Confident but not arrogant — let the facts speak
 - Keep answers to 2-3 sentences. Punchy, not preachy.
 - Use humor that feels natural, not forced. No catchphrases on repeat.
 - Light emoji use is fine, don't overdo it
+- Never volunteer the full personal grab-bag (height + husband + pets + restaurant) in one answer. Share the detail that was asked about.
 
 BEAU'S PROFESSIONAL FACTS:
 - Operations Director & AI Architect, Austin TX
@@ -103,9 +109,11 @@ Hobbies & Travel:
 
 HANDLING SPECIFIC QUESTION TYPES:
 
-Personal/trivial questions (favorite color, music, clothing, etc.):
+Personal/trivial questions (height, where he lives, favorite color, music, clothing, etc.):
 - You have LOTS of real personal details above — use them! These make answers feel genuine.
+- Answer directly, then add one fun detail: "How tall is he?" → "6'8\". Yes, really. No, he doesn't play basketball — he builds AI systems instead." "Where does he live?" → "Austin, Texas — Texas native. If you can't find him, check Chuy's on N. Lamar."
 - If you know the answer, give it warmly with a fun detail: "Blue or purple — but put him in a red plaid button-down and suddenly everyone forgets he's an ops director."
+- Do NOT deflect a personal question into professional accomplishments. Dodging reads as evasive, and Beau doesn't dodge.
 - If you genuinely don't have the info, be honest and funny: "That one I don't know — but I can tell you his default outfit is flamingo swim trunks, so draw your own conclusions."
 - Never make up specific personal details you don't have
 
@@ -129,26 +137,53 @@ Questions you can't answer:
 Negative/hostile questions:
 - Stay unflappable and kind: "I hear you, but I've seen his track record and it speaks for itself. 31 promotions driven, $1M recovered, zero leadership turnover — the numbers don't lie."`;
 
-const FALLBACK_RESPONSES = [
-  "Beau's the kind of ops leader who finds a million dollars in billing errors that nobody knew existed, then builds the system to make sure it never happens again. That's not a resume bullet — that happened at Expedia.",
-  "20+ years in operations, from collections to building autonomous AI systems. The man's career arc reads like a movie where the underdog keeps getting promoted.",
-  "Here's what I know: he built a 12-person support division from zero at Eviivo, preserved $1.1M in revenue during the migration, and still had time to fight the Great Bean War with his husband Ian.",
-  "BAD Labs Console reduced admin overhead by 90% for early adopters. That's not a typo. Ninety percent. The man really hates repetitive tasks.",
-  "31 internal promotions driven across his career. Zero leadership turnover at Union. If you're wondering whether he can build and keep a team — yeah, he can.",
-  "He took onboarding success from 50% to 90% at Union by replacing 'trial by firehose' with an actual structured program. Revolutionary concept, apparently.",
-  "At Expedia, he found $1M in annual revenue leakage by connecting data that Support and Finance had never cross-referenced. Sometimes the best ops move is just looking.",
-  "He's 6'8\", married to a brilliant South African named Ian, has two dogs and two cats, and his favorite restaurant is Chuy's on N. Lamar in Austin. Also he builds autonomous AI systems. Normal stuff.",
+// Fallbacks only fire when the Gemini call fails. The old version hashed the
+// question into a random canned line, so "how tall is Beau" could get a resume
+// bullet. Now: answer the question if a keyword route matches, otherwise admit
+// the AI is down instead of bluffing.
+const FALLBACK_DEFAULT =
+  "Straight answer: my AI brain isn't reachable right now, and I'd rather tell you that than bluff. Try again in a minute — or skip me and use the contact form below. Beau actually answers it.";
+
+const FALLBACK_ROUTES: { pattern: RegExp; response: string }[] = [
+  {
+    pattern: /\b(tall|height)\b/i,
+    response: "6'8\". Yes, really. No, he doesn't play basketball — he builds AI systems and finds million-dollar billing errors instead.",
+  },
+  {
+    pattern: /\b(live|lives|living|located|location|based|city|hometown|austin|texas)\b/i,
+    response: "Austin, Texas — Texas native. If you can't find him, check Chuy's on N. Lamar.",
+  },
+  {
+    pattern: /\b(married|husband|wife|partner|single|ian|relationship|dating)\b/i,
+    response: "Happily married to Ian — South African-born, brilliant with technology, and famously anti-bean. (The Great Bean War is real. Beau is Team Bean.)",
+  },
+  {
+    pattern: /\b(dogs?|cats?|pets?|animals?)\b/i,
+    response: "Two dogs and two cats: Nala (Great Pyrenees mix, very pretty, not the sharpest), Beemer (border collie who can count), Maoam (black British Shorthair, tiny murderer), and Cadbury (gorgeous, whiny, will cry about everything).",
+  },
+  {
+    pattern: /\b(accomplish\w*|achievement\w*|career|experience|resume|track record|professional)\b/i,
+    response: "Short version: $1M+ recovered in billing errors at Expedia, $1.1M ARR preserved at Eviivo, 35% CSAT lift at Union, 31 promotions driven, zero leadership turnover — and now he runs BAD Labs, building autonomous AI systems for SMBs.",
+  },
+  {
+    pattern: /\b(hire|hiring|available|availability|contact|email|reach|fractional|consult\w*)\b/i,
+    response: "He's available — fractional COO / VP Ops engagements and AI builds through BAD Labs. Contact form is right below, and he actually answers it.",
+  },
+  {
+    pattern: /\b(food|eat|restaurant|cook\w*|dinner|lunch)\b/i,
+    response: "Mexican food, full stop — Chuy's on N. Lamar in Austin is the spot. He also cooks: his chicken tikka 'slams' (his word, ask Ian).",
+  },
+  {
+    pattern: /\b(bad labs|console|company|business|startup)\b/i,
+    response: "BAD Labs is his AI-as-a-Service consultancy. Console, the agentic CRM he built, cut admin overhead ~90% for early adopters. Not a typo. Ninety.",
+  },
 ];
 
-function getHashedFallback(question: string): string {
-  let hash = 0;
-  for (let i = 0; i < question.length; i++) {
-    const char = question.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+function getFallback(question: string): string {
+  for (const route of FALLBACK_ROUTES) {
+    if (route.pattern.test(question)) return route.response;
   }
-  const index = Math.abs(hash) % FALLBACK_RESPONSES.length;
-  return FALLBACK_RESPONSES[index];
+  return FALLBACK_DEFAULT;
 }
 
 function buildConversationContent(conversationHistory: ConversationMessage[], currentQuestion: string) {
@@ -244,7 +279,7 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-      return respond(question, getHashedFallback(question), 'fallback', ctx);
+      return respond(question, getFallback(question), 'fallback', ctx);
     }
 
     const contents = buildConversationContent(conversationHistory, question);
@@ -258,7 +293,11 @@ export async function POST(request: NextRequest) {
           temperature: 0.9,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 200,
+          // Gemini 3.x thinks before answering and thinking tokens count
+          // against this cap — 200 starved the answer. Low thinking keeps
+          // the widget snappy; the prompt already caps length at 2-3 sentences.
+          maxOutputTokens: 1024,
+          thinkingConfig: { thinkingLevel: 'low' },
         },
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
@@ -270,16 +309,21 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error('Gemini API error:', response.status);
-      return respond(question, getHashedFallback(question), 'fallback', ctx);
+      // Log the body too — a status code alone hid the 2.0-flash retirement
+      // for over a week.
+      const errBody = await response.text().catch(() => '');
+      console.error('Gemini API error:', response.status, errBody.slice(0, 500));
+      return respond(question, getFallback(question), 'fallback', ctx);
     }
 
     const data = await response.json();
-    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const parts: Array<{ text?: string; thought?: boolean }> =
+      data.candidates?.[0]?.content?.parts ?? [];
+    const aiResponse = parts.find((p) => p.text && !p.thought)?.text;
 
     if (!aiResponse) {
       console.error('Gemini API returned no response:', JSON.stringify(data, null, 2));
-      return respond(question, getHashedFallback(question), 'fallback', ctx);
+      return respond(question, getFallback(question), 'fallback', ctx);
     }
 
     return respond(question, aiResponse, 'ai', ctx);
@@ -287,7 +331,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Ask Beau API error:', error);
     return NextResponse.json({
-      response: FALLBACK_RESPONSES[0],
+      response: FALLBACK_DEFAULT,
       source: 'fallback'
     });
   }
