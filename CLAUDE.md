@@ -247,7 +247,7 @@ Vercel marks all env vars as Sensitive on creation, so values are never visible 
 
 ## Ask Beau AI Chatbot
 
-`/api/ask-beau` uses Gemini 3.5 Flash (default — override with `GEMINI_MODEL`) with a detailed system prompt containing professional + personal facts, conversation handling rules, and deterministic fallbacks. Gemini 2.0 Flash was retired by Google on 2026-06-01 — when a model dies, every call fails and the route serves keyword-routed fallbacks; bump `GEMINI_MODEL` in Vercel to recover without a deploy. The system prompt is the single source of truth for chatbot personality — edit in [`src/app/api/ask-beau/route.ts`](src/app/api/ask-beau/route.ts).
+`/api/ask-beau` uses Gemini 3.5 Flash (default — override with `GEMINI_MODEL`) with a detailed system prompt containing professional + personal facts, conversation handling rules, and deterministic fallbacks. Gemini 2.0 Flash was retired by Google on 2026-06-01 — when a model dies, every call fails and the route serves keyword-routed fallbacks; bump `GEMINI_MODEL` in Vercel to recover without a deploy. The system prompt is the single source of truth for chatbot personality — edit in [`src/app/api/ask-beau/route.ts`](src/app/api/ask-beau/route.ts). Two intentional behaviors (2026-06-10, per Beau): answer the *literal* question first (no deflecting personal questions into resume material), and a **hard scope lock** — the bot never answers non-Beau questions (math, trivia, code, current events), not even approximately; it spins the topic back to Beau and points at the contact form.
 
 Conversations are logged to Supabase (`chat_conversations`) via [`src/lib/chat-log.ts`](src/lib/chat-log.ts). To view them, use the Supabase dashboard's table editor (no in-app admin UI).
 
