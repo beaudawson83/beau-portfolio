@@ -1,7 +1,7 @@
 # UpDraft — Master Build Plan
 
 **Status:** v0.1.5 + first wave of v0.5 polish shipped (auth · 4 stages · DOCX + PDF · account · purge cron · Pi-egg reveal · cover letter · casing rules · centralized retry · Stage 04 picker · summary auto-gen · phased Stage 03 UX). v0.1.5 happy path real-traffic verified 2026-05-06 with husband as second test account.
-**Last updated:** 2026-05-07.
+**Last updated:** 2026-06-10 (Gemini default migrated to `gemini-3.5-flash` after Google's 2026-06-01 retirement of `gemini-2.0-flash`).
 
 The skill spec itself lives in `SKILL.md` and `references/`. This file is the durable design + integration record for the host program build-out on beaudawson.com. `DECISIONS.md` is the append-only decision log (alternatives considered, rationale, what would invalidate each call).
 
@@ -24,7 +24,7 @@ Architecture is "skill-as-orchestrator": the host program (this Next.js app) own
 | # | Decision | One-line rationale |
 |---|---|---|
 | 1 | Entry phasing: unlinked URL (v0.1) → Pi-egg reveal (v0.5) → MODULES card (v1.0) | Smallest blast radius first |
-| 2 | AI provider: Gemini (`gemini-2.0-flash` default) | Matches existing AskBeau infra |
+| 2 | AI provider: Gemini (`gemini-3.5-flash` default — was `gemini-2.0-flash` until Google retired it 2026-06-01; see DECISIONS.md 2026-06-10) | Matches existing AskBeau infra |
 | 3 | PDF generation: Google Drive API (DOCX → Google Doc → PDF export). Sandbox + LibreOffice deferred to v1.0 if self-hosted scale demands it. | Free within Google's quotas, text-layer preserving, leverages existing Workspace |
 | 3a | PDF reading: Gemini's native PDF input on `generateContent`. Replaces pdf-parse. | Handles image-based PDFs (OCR), removes lib API churn risk, single round-trip |
 | 4 | Storage: Supabase only (single source of truth across the site) | Reuses existing patterns + RLS |
@@ -289,8 +289,8 @@ Bring-your-own Gemini key. Held in `sessionStorage` only, sent per-request as `X
 
 ## 6. Gemini strategy
 
-- **Default model:** `gemini-2.0-flash` (matches AskBeau).
-- **Premium model:** `gemini-2.5-pro` reserved for cover-letter draft only if quality demands after testing (CL ships v0.5).
+- **Default model:** `gemini-3.5-flash` (matches AskBeau). Was `gemini-2.0-flash` until Google retired it 2026-06-01 — every UpDraft AI call failed for 9 days until the 2026-06-10 migration (see DECISIONS.md). Next retirement is a one-line change in `src/lib/updraft/gemini.ts`.
+- **Premium model:** `gemini-2.5-pro` reserved for cover-letter draft only if quality demands after testing (CL shipped in the v0.5 wave; still on the default model). Note: `gemini-2.5-*` retire 2026-10-16 — pick from the 3.x pro tier if this option is ever exercised.
 - **Structured output:** every `[AI]` step uses `response_mime_type: application/json` + `response_schema` matching the spec's per-stage JSON contract. Schema-enforced output reduces parse-retry churn.
 - **Multimodal input:** PDF resume uploads go to Gemini directly via `inline_data` parts on `generateContent` (mime: `application/pdf`). Removes the deterministic text-extraction step entirely. Handles image-based PDFs via Gemini's internal OCR.
 - **Voice:** every user-facing AI call gets `lib-audit-voice.md` as system addendum + active `SYS_*` prompt. Silent extraction calls (parse, score, lint rewrite) skip the voice file per spec.
