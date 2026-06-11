@@ -95,7 +95,6 @@ src/
 │   │       └── [slug]/page.tsx        # The editor
 │   ├── updraft/                       # UpDraft v0.1.5 — auth-gated, unlinked
 │   │   ├── login/page.tsx             # Magic-link request + privacy callout
-│   │   ├── auth/callback/route.ts     # (also under api/)
 │   │   ├── account/page.tsx           # Sessions · keep flags · data export · delete
 │   │   ├── page.tsx                   # Auth-gated dashboard (session list)
 │   │   └── [sessionId]/page.tsx       # Stage runner (dispatches Stage 01/02/03/04)
@@ -126,7 +125,7 @@ src/
 │   ├── GlobalConflict/                # Map, stats, journal UI
 │   ├── PiEasterEgg/                   # Hidden interactive feature
 │   ├── Blog/                          # Terminal Notebook reader + builder
-│   │   ├── Topbar.tsx, ThemeToggle.tsx
+│   │   ├── Topbar.tsx, ThemeToggle.tsx, CoverBand.tsx
 │   │   ├── blocks/Blocks.tsx          # All 17 read-mode blocks + TOC + ReadingProgress
 │   │   ├── Reader/{IndexView,ArticleView}.tsx
 │   │   └── Builder/                   # Editor + slash menu + cmd+K + sidebar + modals
@@ -247,7 +246,7 @@ Vercel marks all env vars as Sensitive on creation, so values are never visible 
 
 ## Ask Beau AI Chatbot
 
-`/api/ask-beau` uses Gemini 3.5 Flash (default — override with `GEMINI_MODEL`) with a detailed system prompt containing professional + personal facts, conversation handling rules, and deterministic fallbacks. Gemini 2.0 Flash was retired by Google on 2026-06-01 — when a model dies, every call fails and the route serves keyword-routed fallbacks; bump `GEMINI_MODEL` in Vercel to recover without a deploy. The system prompt is the single source of truth for chatbot personality — edit in [`src/app/api/ask-beau/route.ts`](src/app/api/ask-beau/route.ts).
+`/api/ask-beau` uses Gemini 3.5 Flash (default — override with `GEMINI_MODEL`) with a detailed system prompt containing professional + personal facts, conversation handling rules, and deterministic fallbacks. Gemini 2.0 Flash was retired by Google on 2026-06-01 — when a model dies, every call fails and the route serves keyword-routed fallbacks; bump `GEMINI_MODEL` in Vercel to recover without a deploy. The system prompt is the single source of truth for chatbot personality — edit in [`src/app/api/ask-beau/route.ts`](src/app/api/ask-beau/route.ts). Two intentional behaviors (2026-06-10, per Beau): answer the *literal* question first (no deflecting personal questions into resume material), and a **hard scope lock** — the bot never answers non-Beau questions (math, trivia, code, current events), not even approximately; it spins the topic back to Beau and points at the contact form.
 
 Conversations are logged to Supabase (`chat_conversations`) via [`src/lib/chat-log.ts`](src/lib/chat-log.ts). To view them, use the Supabase dashboard's table editor (no in-app admin UI).
 

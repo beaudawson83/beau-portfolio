@@ -360,3 +360,24 @@ When a decision is reversed, append a new entry referencing the old one — neve
 **Rationale:** smallest invasive change that meaningfully improves expectation-setting. The user keeps autosave + scroll-anywhere editing; they gain visual chunking + per-step intros that explain what each block is for. Lightweight mode adapts automatically (skips Tier 2 deepening, shows 2 steps instead of 3).
 
 **Invalidated by:** users still reporting the page feels overwhelming after the chunking (would push us toward wizard or collapsible accordion), or step boundaries that don't match the user's mental model (re-group based on observed pain points during testing).
+
+---
+
+## 2026-06-10 — Forced model migration: gemini-2.0-flash → gemini-3.5-flash
+
+**Decision:** Default model for every UpDraft Gemini call moves from `gemini-2.0-flash` to `gemini-3.5-flash` (one line in `src/lib/updraft/gemini.ts`; the `UpdraftModel` union drops the dead ID). AskBeau migrated in the same PR (#3) and additionally gained a `GEMINI_MODEL` env override.
+
+**Context:** Google shut down `gemini-2.0-flash` on 2026-06-01. Every UpDraft AI call (parse, match-analyze, summary, cover letter) and every AskBeau call failed for 9 days; AskBeau masked it by serving canned fallbacks, and UpDraft surfaced it as generic stage errors. Nobody noticed until the AskBeau fallback answers got visibly mismatched.
+
+**Alternatives considered:**
+- **`gemini-2.5-flash`** — the official migration target, but it retires 2026-10-16; would force a second migration in ~4 months. Rejected.
+- **`gemini-3.5-flash`** — GA 2026-05-19, stable, same v1beta `generateContent` surface (structured output, `inline_data` PDF input, system instructions all work unchanged). Chosen.
+- **Env-var default for UpDraft too** (mirror AskBeau's `GEMINI_MODEL`) — deferred; UpDraft's typed `UpdraftModel` union keeps model choice explicit per call-site, and a one-line default change is cheap. Revisit if model churn becomes frequent.
+
+**Verified:** AskBeau end-to-end on production 2026-06-10. UpDraft structured-output calls compile + typecheck; spot-check the full 4-stage flow on next real session.
+
+**Follow-up flagged:** the May match-analyzer calibration (unmerged branch `claude/review-updraft-launch-qMznh`) was tuned against `gemini-2.0-flash`. Re-run the 49-pair sweep on `gemini-3.5-flash` before trusting band thresholds.
+
+**Invalidated by:** `gemini-3.5-flash` retirement announcement (repeat this migration), or observed quality regressions in parsing/scoring vs 2.0-era outputs (would justify pinning a specific dated snapshot or moving match-analyze to a pro-tier model).
+
+**Lesson captured:** a dead model fails *silently* behind graceful fallbacks. The fix PR added error-body logging to AskBeau; `/api/updraft/status` already aggregates 24h failure counts — check it after any Google model-lifecycle email.
