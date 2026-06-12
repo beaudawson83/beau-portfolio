@@ -46,3 +46,7 @@ next-env.d.ts
 /.claude/settings.local.json
 skills/updraft/calibration-fixtures/last-run.md
 skills/updraft/calibration-fixtures/resumes/*.parsed.json
+.constellation/*
+!.constellation/descriptions.json
+!.constellation/descriptions.yaml
+!.constellation/descriptions.yml

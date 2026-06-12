@@ -6,22 +6,46 @@ Clean dark theme, substance-first design, no theatrical effects.
 **Live:** [beaudawson.com](https://beaudawson.com)
 **Author:** Beau Dawson — Founder, BAD Labs
 
+> Full engineering context (conventions, every API route, env-var details, module
+> deep-dives) lives in [CLAUDE.md](./CLAUDE.md) — that file is the source of truth
+> for anyone (human or AI) working on this codebase. This README is the orientation pass.
+
 ---
 
 ## Tech Stack
 
-| Layer       | Tool                                  |
-|-------------|---------------------------------------|
-| Framework   | Next.js 16 (App Router) + React 19    |
-| Language    | TypeScript 5                          |
-| Styling     | Tailwind CSS 4                        |
-| Animation   | Framer Motion 12                      |
-| Icons       | Lucide React                          |
-| Database    | Supabase (Postgres)                   |
-| Email       | Resend (contact form)                 |
-| AI          | Google Gemini 2.0 Flash (Ask Beau)    |
-| Analytics   | Google Analytics 4                    |
-| Hosting     | Vercel (auto-deploy on push to main)  |
+| Layer       | Tool                                            |
+|-------------|-------------------------------------------------|
+| Framework   | Next.js 16 (App Router) + React 19              |
+| Language    | TypeScript 5                                    |
+| Styling     | Tailwind CSS 4                                  |
+| Animation   | Framer Motion 12                                |
+| Icons       | Lucide React                                    |
+| Database    | Supabase (Postgres + Storage)                   |
+| Email       | Brevo (contact form + UpDraft magic links)      |
+| AI          | Google Gemini 3.5 Flash (Ask Beau + UpDraft); override via `GEMINI_MODEL` |
+| PDF export  | Google Drive API (UpDraft DOCX → PDF)           |
+| Analytics   | Google Analytics 4                              |
+| Hosting     | Vercel (auto-deploy on push to main)            |
+
+---
+
+## What's in here
+
+Four user-facing surfaces share this codebase:
+
+1. **The portfolio** (`/`) — hero, metrics, case studies, BAD Labs showcase, owned-systems
+   MODULES panel, tools grid, career timeline, contact form. Plus the hidden Pi easter egg
+   (click π in the footer corner).
+2. **Blog — "Terminal Notebook"** (`/blog`) — live, surfaced via the homepage MODULES
+   section. 17-block-type reader + Notion-style editor at `/blog/edit` (gated by
+   `BLOG_EDITOR_SECRET`). Supabase-backed, ISR 15m.
+3. **Global Conflict Index** (`/global-conflict`) — live, surfaced via MODULES. World map +
+   journal of armed conflicts, refreshed daily by a Claude Code Routine that writes
+   directly to Supabase.
+4. **UpDraft** (`/updraft`) — v0.1.5, live at an unlinked URL. Resume + cover-letter
+   generation tool: magic-link auth, 4-stage flow, DOCX/PDF exports, 30-day auto-purge.
+   Spec + decision log in [`skills/updraft/`](./skills/updraft/).
 
 ---
 
@@ -43,7 +67,7 @@ npm run dev                     # http://localhost:3000
 
 ---
 
-## Project Structure
+## Project Structure (abridged)
 
 ```
 src/
@@ -51,42 +75,40 @@ src/
 │   ├── page.tsx                # Main page composition
 │   ├── layout.tsx              # Fonts, metadata, GA bootstrap
 │   ├── globals.css             # Theme tokens, animations
-│   ├── global-conflict/        # Hidden /global-conflict page (Pi-egg-only)
+│   ├── blog/                   # Terminal Notebook: index, [slug], edit/ (editor)
+│   ├── global-conflict/        # Conflict data-journalism page
+│   ├── updraft/                # UpDraft: login, dashboard, [sessionId], account
 │   └── api/
-│       ├── ask-beau/           # Gemini-backed chatbot
-│       ├── contact/            # Contact form → Resend → inbox
+│       ├── ask-beau/           # Gemini-backed chatbot (rate-limited)
+│       ├── contact/            # Contact form → Brevo → inbox
+│       ├── blog/               # posts CRUD + media signing (Bearer-gated writes)
 │       ├── global-conflict/    # Public payload + per-conflict news timeline
 │       ├── conflict/status/    # Diagnostic heartbeat (CRON_SECRET-gated)
+│       ├── updraft/            # Auth, sessions, stages, exports, account, cron
 │       └── pi-challenge/       # Easter-egg challenge issue + validate
 ├── components/
-│   ├── Header.tsx              # Fixed nav bar
-│   ├── Hero.tsx                # Headline + headshot + AskBeau widget
-│   ├── AskBeau.tsx             # AI chatbot
-│   ├── TelemetryGrid.tsx       # Animated metrics grid
-│   ├── CaseStudies.tsx         # Expandable case-study cards
-│   ├── BadLabsShowcase.tsx     # Current venture
-│   ├── SystemKernel.tsx        # Tools & platforms grid
-│   ├── Timeline.tsx            # Career history (CSS-only collapse)
-│   ├── Footer.tsx              # Contact form + social links
+│   ├── Header / Hero / AskBeau / TelemetryGrid / CaseStudies
+│   ├── BadLabsShowcase / SystemKernel / Timeline / Footer
+│   ├── Modules/                # Owned-systems control panel (homepage MODULES)
+│   ├── Blog/                   # Reader (blocks, TOC) + Builder (block editor)
 │   ├── GlobalConflict/         # Map + stats + journal UI
+│   ├── Updraft/                # Login, dashboard, Stage 01–04 runners, account
 │   ├── PiEasterEgg/            # Hidden interactive feature
 │   └── ui/                     # Reusable button + skeleton
 ├── lib/
 │   ├── data.ts                 # All portfolio content (single source of truth)
-│   ├── analytics.ts            # GA4 helpers + event taxonomy
-│   ├── supabase.ts             # Shared Supabase client factory + env resolution
-│   ├── chat-log.ts             # AI-chat conversation logging (server-only)
-│   ├── rate-limit.ts           # Per-IP rate-limit RPC wrapper
-│   ├── conflict-data.ts        # Conflict types + read entry point
-│   ├── conflict-store.ts       # Conflict Supabase read layer
-│   ├── cron-auth.ts            # Bearer-token verifier (CRON_SECRET)
-│   └── pi-challenge/           # HMAC token + Star Trek + sort-code challenges
-├── hooks/
-│   └── useTrackSection.ts      # IntersectionObserver wrapper
-├── types/
-│   └── index.ts                # Portfolio interfaces
+│   ├── supabase.ts             # Shared client factory + env resolution
+│   ├── email.ts                # Brevo transactional email
+│   ├── blog-*.ts               # Blog data/store/auth/utils/media
+│   ├── conflict-*.ts           # Conflict types + Supabase read layer
+│   ├── updraft/                # 17 files: auth, store, gemini, parser, docx, pdf, …
+│   └── analytics / chat-log / rate-limit / cron-auth / module-telemetry
+├── hooks/useTrackSection.ts
+├── types/index.ts              # Portfolio interfaces
 └── proxy.ts                    # Next 16 middleware: security headers + CSP
 ```
+
+Full annotated tree: [CLAUDE.md → File Structure](./CLAUDE.md#file-structure).
 
 ---
 
@@ -105,6 +127,8 @@ src/
 | Success              | `#10B981` | Status pulse                   |
 
 Fonts: **Inter** (body) + **JetBrains Mono** (terminal/monospace), loaded via `next/font`.
+The blog ships its own scoped palette (`.tn-shell`, dark-purple + optional light theme);
+UpDraft uses a warm-black variant — neither leaks into the main site.
 
 ---
 
@@ -115,58 +139,64 @@ Fonts: **Inter** (body) + **JetBrains Mono** (terminal/monospace), loaded via `n
 3. **TelemetryGrid** — 8 metrics, animated count-up
 4. **CaseStudies** — Expedia, Union, BAD Labs (problem → built → results)
 5. **BadLabsShowcase** — Console CRM, custom AI tooling, fractional leadership
-6. **SystemKernel** — 4-column tools grid
-7. **Timeline** — Collapsible full career history
-8. **Footer** — Contact form + social links
-9. **PiEasterEgg** — hidden, click π in footer corner
+6. **Modules** — owned-systems control panel: Conflict + Notes cards w/ live telemetry
+7. **SystemKernel** — 4-column tools grid
+8. **Timeline** — Collapsible full career history
+9. **Footer** — Contact form + social links
+10. **PiEasterEgg** — hidden, click π in footer corner
 
 ---
 
 ## API Routes
 
+The complete table (≈30 routes incl. all blog + UpDraft endpoints, auth, and rate
+limits) lives in [CLAUDE.md → API Routes](./CLAUDE.md#api-routes). Highlights:
+
 | Route                          | Method | Purpose                           | Notes                          |
 |--------------------------------|--------|-----------------------------------|--------------------------------|
-| `/api/ask-beau`                | POST   | AI chatbot                        | Rate-limited (20/hr per IP)    |
+| `/api/ask-beau`                | POST   | AI chatbot (Beau questions only)  | Rate-limited (20/hr per IP)    |
 | `/api/contact`                 | POST   | Contact form → email              | Rate-limited (5/hr per IP)     |
-| `/api/global-conflict`         | GET    | Conflict payload (hotspots, stats)| ISR 15m                        |
-| `/api/global-conflict/news`    | GET    | Per-conflict news timeline        | Cursor pagination              |
-| `/api/conflict/status`         | GET    | Diagnostic heartbeat              | `Authorization: Bearer $CRON_SECRET` |
-| `/api/pi-challenge/issue`      | POST   | Issue HMAC challenge token        | Easter egg                     |
-| `/api/pi-challenge/validate`   | POST   | Validate challenge response       | Easter egg                     |
+| `/api/blog/posts[…]`           | CRUD   | Blog posts + media signing        | Writes need `BLOG_EDITOR_SECRET` |
+| `/api/global-conflict[…]`      | GET    | Conflict payload + news timeline  | ISR 15m / cursor pagination    |
+| `/api/conflict/status`         | GET    | Diagnostic heartbeat              | `Bearer $CRON_SECRET`          |
+| `/api/updraft/[…]`             | *      | Auth, sessions, stages, exports   | Session cookie + quotas        |
+| `/api/pi-challenge/[…]`        | POST   | Easter-egg challenge + validate   | —                              |
 
 ---
 
 ## Environment Variables
 
-See [.env.example](./.env.example) for the complete list with generation commands.
+See [.env.example](./.env.example) for the complete list with generation commands, and
+[CLAUDE.md → Environment Variables](./CLAUDE.md#environment-variables) for full notes.
 
 | Variable                          | Required | Used by                         |
 |-----------------------------------|----------|---------------------------------|
-| `GEMINI_API_KEY`                  | Yes      | Ask Beau chatbot                |
-| `RESEND_API_KEY`                  | Yes      | Contact form                    |
+| `GEMINI_API_KEY`                  | Yes      | Ask Beau chatbot + UpDraft      |
+| `GEMINI_MODEL`                    | No       | Ask Beau model override (default `gemini-3.5-flash`) |
+| `BREVO_API_KEY`                   | Yes      | All transactional email         |
+| `MAIL_FROM_ADDRESS`               | Yes      | From-address (Brevo-verified domain) |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID`   | Yes      | Google Analytics 4              |
 | `SUPABASE_URL`                    | Yes      | All Supabase reads/writes       |
 | `SUPABASE_ANON_KEY`               | Yes      | Supabase client                 |
 | `SUPABASE_SERVICE_ROLE_KEY`       | Yes      | Server-only Supabase ops        |
+| `BLOG_EDITOR_SECRET`              | Yes      | Blog editor UI + write API      |
 | `PI_CHALLENGE_SECRET`             | Yes      | Pi easter egg HMAC tokens       |
 | `CHAT_IP_SALT`                    | Yes      | Hashing IPs for chat + rate-limit |
-| `CRON_SECRET`                     | Yes      | Gates `/api/conflict/status`    |
+| `CRON_SECRET`                     | Yes      | Diagnostic + cron endpoints     |
+| `UPDRAFT_*`                       | Mixed    | UpDraft auth secrets, quotas, Drive SA — see `.env.example` |
 
-The Supabase env names support three families: `BEAU_SUPABASE_*` → `SUPABASE_*` → legacy `NEXT_PUBLIC_SUPABASE_*`. See [`src/lib/supabase.ts`](./src/lib/supabase.ts) for resolution order. Use `BEAU_*` if the Vercel Marketplace ever gets reattached and starts overwriting the unprefixed names.
-
----
-
-## Hidden Features
-
-The Pi easter egg lives in the footer corner. Click π to enter. The dashboard exposes:
-
-- `> ACCESS_GLOBAL_CONFLICT [LIVE]` — sober data-journalism module: live world map of armed conflicts, journal-style news feed per conflict, daily refresh from a Claude Code Routine. `robots: noindex`.
+The Supabase env names support three families: `BEAU_SUPABASE_*` → `SUPABASE_*` → legacy
+`NEXT_PUBLIC_SUPABASE_*`. See [`src/lib/supabase.ts`](./src/lib/supabase.ts) for resolution
+order. Use `BEAU_*` if the Vercel Marketplace ever gets reattached and starts overwriting
+the unprefixed names.
 
 ---
 
 ## Deployment
 
-Connected to GitHub for automatic deploys on push to `main`. Preview URLs on every PR. All env vars set in Vercel project settings.
+Connected to GitHub for automatic deploys on push to `main`. Preview URLs on every PR.
+All env vars set in Vercel project settings. A Vercel Cron hits
+`/api/updraft/cron/purge` daily at 09:00 UTC (30-day inactivity purge).
 
 ```bash
 npx vercel             # Preview

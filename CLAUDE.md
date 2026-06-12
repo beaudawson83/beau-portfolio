@@ -95,7 +95,6 @@ src/
 │   │       └── [slug]/page.tsx        # The editor
 │   ├── updraft/                       # UpDraft v0.1.5 — auth-gated, unlinked
 │   │   ├── login/page.tsx             # Magic-link request + privacy callout
-│   │   ├── auth/callback/route.ts     # (also under api/)
 │   │   ├── account/page.tsx           # Sessions · keep flags · data export · delete
 │   │   ├── page.tsx                   # Auth-gated dashboard (session list)
 │   │   └── [sessionId]/page.tsx       # Stage runner (dispatches Stage 01/02/03/04)
@@ -126,7 +125,7 @@ src/
 │   ├── GlobalConflict/                # Map, stats, journal UI
 │   ├── PiEasterEgg/                   # Hidden interactive feature
 │   ├── Blog/                          # Terminal Notebook reader + builder
-│   │   ├── Topbar.tsx, ThemeToggle.tsx
+│   │   ├── Topbar.tsx, ThemeToggle.tsx, CoverBand.tsx
 │   │   ├── blocks/Blocks.tsx          # All 17 read-mode blocks + TOC + ReadingProgress
 │   │   ├── Reader/{IndexView,ArticleView}.tsx
 │   │   └── Builder/                   # Editor + slash menu + cmd+K + sidebar + modals
@@ -183,7 +182,7 @@ src/
 
 | Route                       | Method | Purpose                  | Auth / Rate                    |
 |-----------------------------|--------|--------------------------|--------------------------------|
-| `/api/ask-beau`             | POST   | AI chatbot (Gemini 2.0)  | Rate: 20/hr per IP             |
+| `/api/ask-beau`             | POST   | AI chatbot (Gemini 3.5)  | Rate: 20/hr per IP             |
 | `/api/contact`              | POST   | Contact form (Brevo)     | Rate: 5/hr per IP, HTML-escaped|
 | `/api/global-conflict`      | GET    | Conflict payload         | ISR 15m                        |
 | `/api/global-conflict/news` | GET    | Per-conflict timeline    | Cursor pagination              |
@@ -223,7 +222,8 @@ src/
 
 | Variable                          | Required | Purpose                                |
 |-----------------------------------|----------|----------------------------------------|
-| `GEMINI_API_KEY`                  | Yes      | AskBeau chatbot                        |
+| `GEMINI_API_KEY`                  | Yes      | AskBeau chatbot + UpDraft              |
+| `GEMINI_MODEL`                    | No       | AskBeau model override. Defaults to `gemini-3.5-flash`. Bump here when Google retires the default — no deploy needed. |
 | `BREVO_API_KEY`                   | Yes      | Transactional email (contact form + UpDraft magic links). Replaced `RESEND_API_KEY` on 2026-05-04 — Resend's free tier sandboxed `onboarding@resend.dev` to the account-owner inbox only, which broke magic-link sends to anyone but Beau. Brevo's free tier supports domain verification at 300 sends/day. |
 | `MAIL_FROM_ADDRESS`               | Yes      | From-address for transactional email. Format: `"UpDraft <noreply@mail.beaudawson.com>"` or just the email. Domain must be verified on Brevo (one-time DNS work — SPF + DKIM TXT records). |
 | `UPDRAFT_GOOGLE_SA_JSON_B64`      | No       | Base64-encoded service-account JSON for the dedicated `Updraft` (id `updraft0526`) GCP project. Drive API converts DOCX→PDF for Stage 04 exports via Google Docs as the intermediate format (text-layer preserving). When unset, Stage 04 still ships the DOCX and surfaces a "PDF unavailable" banner per spec § 4.5 graceful degradation. Service account scope: `drive.file` (per-file access only). See `skills/updraft/DECISIONS.md` 2026-05-04 entry for setup. |
@@ -246,7 +246,7 @@ Vercel marks all env vars as Sensitive on creation, so values are never visible 
 
 ## Ask Beau AI Chatbot
 
-`/api/ask-beau` uses Gemini 2.0 Flash with a detailed system prompt containing professional + personal facts, conversation handling rules, and deterministic fallbacks. The system prompt is the single source of truth for chatbot personality — edit in [`src/app/api/ask-beau/route.ts`](src/app/api/ask-beau/route.ts).
+`/api/ask-beau` uses Gemini 3.5 Flash (default — override with `GEMINI_MODEL`) with a detailed system prompt containing professional + personal facts, conversation handling rules, and deterministic fallbacks. Gemini 2.0 Flash was retired by Google on 2026-06-01 — when a model dies, every call fails and the route serves keyword-routed fallbacks; bump `GEMINI_MODEL` in Vercel to recover without a deploy. The system prompt is the single source of truth for chatbot personality — edit in [`src/app/api/ask-beau/route.ts`](src/app/api/ask-beau/route.ts). Two intentional behaviors (2026-06-10, per Beau): answer the *literal* question first (no deflecting personal questions into resume material), and a **hard scope lock** — the bot never answers non-Beau questions (math, trivia, code, current events), not even approximately; it spins the topic back to Beau and points at the contact form.
 
 Conversations are logged to Supabase (`chat_conversations`) via [`src/lib/chat-log.ts`](src/lib/chat-log.ts). To view them, use the Supabase dashboard's table editor (no in-app admin UI).
 
@@ -399,7 +399,7 @@ A resume + cover-letter generation tool operated by an AI character named **Audi
 
 **Status:** v0.1.5 + first wave of v0.5 polish — SHIPPED. v0.1.5 verified end-to-end on 2026-05-06 with two test accounts. v0.5 wave landed 2026-05-06 → 2026-05-07: Pi-egg reveal in the Operator Dashboard, Cover Letter generation via `SYS_COVER_LETTER_DRAFTER`, casing rules in the resume parser, spaces-bug fix in the interview-objections textarea, **centralized retry + 24h failure visibility** at the Drive + Gemini boundaries, **per-deliverable + per-format picker** in Stage 04 (with Regenerate ↻), **summary review at the top of Stage 04** (auto-drafts on Stage 03 advance, autosave + regenerate before Generate), and a **phased Stage 03 UX** with a step-strip + 3 grouped blocks. Lives at unlinked `/updraft` URL. MODULES card promotion still gated to v1.0.
 
-**Architecture is "skill-as-orchestrator":** the host program (this Next.js app) owns UI, state, file generation, and the regex anti-pattern lint pass. The AI model (Gemini 2.0 Flash) owns parsing, voice, bullet rewriting, scoring, and CL drafting. Backend is the source of truth — conversation history is intentionally not preserved across stages; only structured stage outputs persist.
+**Architecture is "skill-as-orchestrator":** the host program (this Next.js app) owns UI, state, file generation, and the regex anti-pattern lint pass. The AI model (Gemini 3.5 Flash) owns parsing, voice, bullet rewriting, scoring, and CL drafting. Backend is the source of truth — conversation history is intentionally not preserved across stages; only structured stage outputs persist.
 
 **Auth + privacy:** magic-link login (Brevo delivery — originally Resend, pivoted 2026-05-04 because Resend's free tier sandboxes the from-address). Authenticated identity for accountability + 30-day automated session purge by `last_activity_at` for liability cap + user-controlled "Delete my data" + per-session keep flag + self-serve JSON data export. Login page reserves a `<PrivacyCallout>` slot **below** the email input rendering the verbiage at [`skills/updraft/PRIVACY-COPY.md`](skills/updraft/PRIVACY-COPY.md).
 
