@@ -4,6 +4,54 @@ Durable home for prompt-tuning notes and live-test calibration cases for
 `SYS_MATCH_ANALYZER` (Stage 02.3). Maintained as we discover quality issues
 and gather user-validated examples for benchmarking.
 
+---
+
+## 2026-06-12 — gemini-3.5-flash re-validation sweep
+
+**Why:** the four scoring fixes on `claude/review-updraft-launch-qMznh`
+(tier softening, DIRECT-band worked-example anchor, transferable-evidence
+match boolean, band/pct contract + fallback) were all tuned against
+`gemini-2.0-flash`, which Google retired 2026-06-01. `DECISIONS.md`
+(2026-06-10) flagged: re-run the 49-pair sweep on `gemini-3.5-flash`
+before trusting band thresholds. This is that re-run (V1-GATE §1.1).
+
+**Verdict: thresholds hold on 3.5. All four fixes transfer. No re-tuning
+required before merge.** 3.5 runs ~0–5 pts more generous than post-fix 2.0
+on strong/transferable pairs; GAP/WEAK pairs unchanged.
+
+**Fix-by-fix (post-fix 2.0 → 3.5):**
+
+| Fix | 2.0 baseline (from commit bodies) | 3.5 result | Holds? |
+|---|---|---|---|
+| Band/pct contract + fallback (`71151de`) | null-band 9/49→1/49, 0/49 with fallback | **0/49 null, 0 fallback-synthesized** (no ⚠ rows) | ✓ better |
+| Transferable-evidence boolean (`522725a`) | marketing×marketing GAP 31%, cse×gigsmart TRANSFERABLE 80.5% | marketing×marketing GAP 36%, cse×gigsmart TRANSFERABLE 84% | ✓ |
+| DIRECT worked-example anchor (`acaed74`) | strong same-domain pairs 82.5–85.5%, DIRECT never fired | same pairs 84–89%, DIRECT still never fires (max 89%) | ✓ (see note) |
+| Tier softening for career-changers (`d7b7ff9`) | operations-engineer → T2; op-eng×easyllama ADJACENT 65% | operations-engineer **T2 on all 7 JDs**; op-eng×easyllama TRANSFERABLE 81% | ✓ |
+
+**Two behavioral shifts worth knowing (neither blocks merge):**
+
+1. **3.5 extracts fewer required skills per JD than 2.0** — it consolidates
+   into broader buckets (e.g. gigsmart 8/8 on 2.0 → 5/5 on 3.5; responsive
+   19/22 → 8/8). Bands and ratios are consistent, but any future `cases/*.yaml`
+   assertions written against absolute req-counts must target 3.5's counts.
+2. **Transferable-domain pairs land ~1 band higher on 3.5** (op-eng×easyllama
+   ADJACENT 65% → TRANSFERABLE 81%). Defensible — 4/4 reqs matched on a
+   genuine capability transfer — but it's 3.5 being less conservative.
+
+**DIRECT note (unchanged from 2.0):** DIRECT (90–100%) still never fires in
+this corpus. By design — no pair is a literal same-role-same-stack-same-metrics
+match; each crosses at least one of company/scale/sub-specialty. The rubric's
+second worked example proves DIRECT is reachable (93.5%). **Open follow-up:**
+to actually *observe* DIRECT fire on 3.5 rather than trust rubric math, add one
+literal same-role/same-stack pair to the corpus.
+
+**Full 49-pair table:** the harness writes it to
+`calibration-fixtures/last-run.md` (gitignored). Run `npm run calibrate:match
+-- --all-pairs` to regenerate. Cost on 3.5: ~$0.05–0.10 (49 analyze + up to 7
+parse calls). Requires `GEMINI_API_KEY` in `.env.local`.
+
+---
+
 ## Status
 
 **v0.1:** ships with the canonical `SYS_MATCH_ANALYZER` prompt from
