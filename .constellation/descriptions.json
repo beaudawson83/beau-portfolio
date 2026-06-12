@@ -133,5 +133,6 @@
   "src/proxy.ts": "This is the security layer that attaches protective headers — including a strict Content Security Policy — to every page response before it reaches the visitor's browser.",
   "src/types/index.ts": "This is the single file that defines every named data shape the project uses: metrics, job history, blog posts, conflict data, chatbot messages, contact forms, and more.",
   "TODO.md": "A running list of future improvements, parked ideas, and open questions for the project.",
-  "tsconfig.json": "Wiring — connects other pieces together but doesn't really do anything on its own."
+  "tsconfig.json": "Wiring — connects other pieces together but doesn't really do anything on its own.",
+  "skills/updraft/V1-GATE.md": "The checklist of everything that must be finished before the UpDraft resume tool can be promoted from its hidden test URL to a public feature on the homepage — first proving the job-match scoring is trustworthy after a forced AI-model change, then completing the remaining features."
 }
