@@ -34,7 +34,11 @@
 // The harness skips quota counters / kill switches — calibration is
 // owner-only work, not user traffic.
 
-import 'dotenv/config';
+import { config } from 'dotenv';
+// Load .env.local first (Next-style local secrets), then .env. dotenv keeps
+// the first occurrence of each key, so .env.local wins. Plain `dotenv/config`
+// only reads .env, which is why GEMINI_API_KEY in .env.local was invisible.
+config({ path: ['.env.local', '.env'] });
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import yaml from 'js-yaml';
