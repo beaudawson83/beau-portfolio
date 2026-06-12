@@ -1,0 +1,98 @@
+Contact
+tb.brennan@me.com
+www.linkedin.com/in/theobrennan8214 (LinkedIn)
+www.theworkshopmakerspace.com/ (Company)
+marshfab.design/ (Company)
+
+Top Skills
+Process Automation
+Workflow Management
+Hubspot api
+
+Theo Brennan
+Operations Engineer
+Austin, Texas, United States
+
+Summary
+Support Team Lead with an engineering focus - building automation, integrations, and data pipelines that make support and operations more scalable and less dependent on manual work.
+
+I design and ship event-driven systems that connect contact-center activity, CRM records, and commerce/inventory data into consistent workflows. That includes webhook services, API integrations, structured data modeling, and reliability work like idempotency, retries, and observability. I'm comfortable working close to the business logic - translating messy real-world processes into software that's maintainable, testable, and measurable.
+
+Strengths: Python and SQL, REST/GraphQL APIs, serverless deployments, and documentation that teams can actually use.
+
+Experience
+
+Union
+2 years 10 months
+
+Support Operations Engineer
+May 2025 - Present (1 year 1 month)
+
+Technical Support Team Lead
+October 2024 - Present (1 year 8 months)
+Austin, Texas, United States
+
+Data and Security SME
+February 2024 - October 2024 (9 months)
+Austin, Texas, United States
+
+Support Specialist
+August 2023 - February 2024 (7 months)
+Austin, Texas, United States
+
+Uptown Sports Club
+Bar Lead
+March 2023 - December 2023 (10 months)
+
+Otto's German Bistro
+Bartender
+September 2021 - December 2022 (1 year 4 months)
+Fredericksburg, Texas, United States
+
+Maison de la Luz
+Bar Manager
+March 2019 - November 2019 (9 months)
+New Orleans, Louisiana, United States
+
+Ace Hotel / Atelier Ace
+Lead Bartender
+September 2016 - April 2019 (2 years 8 months)
+New Orleans, Louisiana, United States
+
+Catahoula Hotel
+Director of Food And Beverage
+May 2016 - November 2017 (1 year 7 months)
+New Orleans, LA
+
+Marcello's Restaurant and Wine Bar
+Head Bartender
+November 2015 - May 2016 (7 months)
+New Orleans, LA
+
+Cafe Colette
+Bartender
+June 2015 - October 2015 (5 months)
+Brooklyn, NY
+
+St. Bernard Project
+Site Supervisor
+January 2013 - November 2013 (11 months)
+Lead non-skilled volunteers in building houses for New Orleanians still displaced by Hurricane Katrina.
+
+AmeriCorps NCCC
+Corps Member
+February 2012 - January 2013 (1 year)
+
+Education
+
+Austin Community College
+Associate of Arts and Sciences - AAS, Computer Programming · (May 2023 - May 2025)
+
+Austin Community College
+Certificate, Data Science · (May 2023 - November 2024)
+
+Louisiana State University
+Mass Communication/Media Studies · (2008 - 2009)
+
+Delgado Community College
+Interior Design · (2013)

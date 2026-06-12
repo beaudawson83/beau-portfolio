@@ -4,6 +4,54 @@ Durable home for prompt-tuning notes and live-test calibration cases for
 `SYS_MATCH_ANALYZER` (Stage 02.3). Maintained as we discover quality issues
 and gather user-validated examples for benchmarking.
 
+---
+
+## 2026-06-12 — gemini-3.5-flash re-validation sweep
+
+**Why:** the four scoring fixes on `claude/review-updraft-launch-qMznh`
+(tier softening, DIRECT-band worked-example anchor, transferable-evidence
+match boolean, band/pct contract + fallback) were all tuned against
+`gemini-2.0-flash`, which Google retired 2026-06-01. `DECISIONS.md`
+(2026-06-10) flagged: re-run the 49-pair sweep on `gemini-3.5-flash`
+before trusting band thresholds. This is that re-run (V1-GATE §1.1).
+
+**Verdict: thresholds hold on 3.5. All four fixes transfer. No re-tuning
+required before merge.** 3.5 runs ~0–5 pts more generous than post-fix 2.0
+on strong/transferable pairs; GAP/WEAK pairs unchanged.
+
+**Fix-by-fix (post-fix 2.0 → 3.5):**
+
+| Fix | 2.0 baseline (from commit bodies) | 3.5 result | Holds? |
+|---|---|---|---|
+| Band/pct contract + fallback (`71151de`) | null-band 9/49→1/49, 0/49 with fallback | **0/49 null, 0 fallback-synthesized** (no ⚠ rows) | ✓ better |
+| Transferable-evidence boolean (`522725a`) | marketing×marketing GAP 31%, cse×gigsmart TRANSFERABLE 80.5% | marketing×marketing GAP 36%, cse×gigsmart TRANSFERABLE 84% | ✓ |
+| DIRECT worked-example anchor (`acaed74`) | strong same-domain pairs 82.5–85.5%, DIRECT never fired | same pairs 84–89%, DIRECT still never fires (max 89%) | ✓ (see note) |
+| Tier softening for career-changers (`d7b7ff9`) | operations-engineer → T2; op-eng×easyllama ADJACENT 65% | operations-engineer **T2 on all 7 JDs**; op-eng×easyllama TRANSFERABLE 81% | ✓ |
+
+**Two behavioral shifts worth knowing (neither blocks merge):**
+
+1. **3.5 extracts fewer required skills per JD than 2.0** — it consolidates
+   into broader buckets (e.g. gigsmart 8/8 on 2.0 → 5/5 on 3.5; responsive
+   19/22 → 8/8). Bands and ratios are consistent, but any future `cases/*.yaml`
+   assertions written against absolute req-counts must target 3.5's counts.
+2. **Transferable-domain pairs land ~1 band higher on 3.5** (op-eng×easyllama
+   ADJACENT 65% → TRANSFERABLE 81%). Defensible — 4/4 reqs matched on a
+   genuine capability transfer — but it's 3.5 being less conservative.
+
+**DIRECT note (unchanged from 2.0):** DIRECT (90–100%) still never fires in
+this corpus. By design — no pair is a literal same-role-same-stack-same-metrics
+match; each crosses at least one of company/scale/sub-specialty. The rubric's
+second worked example proves DIRECT is reachable (93.5%). **Open follow-up:**
+to actually *observe* DIRECT fire on 3.5 rather than trust rubric math, add one
+literal same-role/same-stack pair to the corpus.
+
+**Full 49-pair table:** the harness writes it to
+`calibration-fixtures/last-run.md` (gitignored). Run `npm run calibrate:match
+-- --all-pairs` to regenerate. Cost on 3.5: ~$0.05–0.10 (49 analyze + up to 7
+parse calls). Requires `GEMINI_API_KEY` in `.env.local`.
+
+---
+
 ## Status
 
 **v0.1:** ships with the canonical `SYS_MATCH_ANALYZER` prompt from
@@ -176,7 +224,7 @@ matches and examples he knows are bad. Add each case here as it lands,
 with the same structure: Resume profile, JD summary, Result returned,
 Expected result, Why this case matters.
 
-## Test harness for the tuning pass
+## Test harness for the tuning pass — SHIPPED 2026-05-10
 
 Iterating on the prompt by clicking through the full Stage 01 → Stage 02 UI
 on prod (or even local dev) is too slow. Each round needs: log in, start a
@@ -184,36 +232,146 @@ session, upload a resume, confirm identity, classify tier, pick deliverables,
 paste a JD, click Analyze, screenshot the briefing. Five minutes per
 attempt. Tuning needs *dozens* of attempts.
 
-When the tuning pass starts, the first build step is a CLI harness that
-calls `analyzeMatch()` directly against fixture inputs, skipping the UI
-entirely. Rough shape:
+The harness lives at [`scripts/calibrate-match-analyzer.ts`](../../scripts/calibrate-match-analyzer.ts)
+and runs against the corpus at
+[`skills/updraft/calibration-fixtures/`](calibration-fixtures/).
 
-- **`scripts/calibrate-match-analyzer.ts`** — Node script invoked via
-  `tsx scripts/calibrate-match-analyzer.ts` (or similar). Reads benchmark
-  cases from a JSON/YAML fixture file, calls `analyzeMatch()` for each,
-  prints a comparison table: case name, returned score + band, expected
-  range, ✓/✗ verdict, plus a summary line at the bottom (e.g., "4/6
-  benchmarks passing").
-- **`scripts/fixtures/match-analyzer/`** — one file per benchmark case,
-  with `resume_parsed` (a stringified `ParsedResume`), `jd_text`, `tier`,
-  and `expected: { band: 'GAP', max_pct: 45 }` plus optional
-  `expected_critical_gaps: ['category-mismatch']`.
-- Optional v2 — a diff mode that re-runs benchmarks against the prompt
-  before *and* after a change, prints the deltas. Lets us see at a
-  glance whether a tweak moved the right cases without regressing
-  others.
-- Reuses the existing `callGemini` wrapper — no parallel implementation,
-  same `withAuditVoice=false` + same schema. The harness is just a CLI
-  shell around the same lib code that production uses.
-- **Cost guard:** the harness should call `recordQuotaUsage` like the
-  real route does, OR run with the `UPDRAFT_OWNER_SECRET` bypass header.
-  Either way, calibration runs shouldn't blow the daily caps that real
-  visitors share.
+### Usage
 
-Output the corpus in `skills/updraft/calibration-fixtures/` as machine-
-readable companion to the prose benchmarks above. When Beau adds a new
-calibration case, both the prose entry in this doc AND the fixture file
-should land in the same commit.
+```bash
+# Discovery / "run-then-judge" mode — score every resume × every JD with
+# no expected scores asserted. Verdicts read REVIEW; the markdown report
+# at calibration-fixtures/last-run.md gives you per-pair detail to
+# eyeball and decide which pairs are scored right vs wrong.
+npm run calibrate:match -- --all-pairs
+
+# Smoke-test on a few pairs first (avoids burning a full 49-pair sweep
+# while iterating on harness changes).
+npm run calibrate:match -- --all-pairs --limit 3
+
+# Once you've written real expected outcomes in cases/*.yaml, score those.
+npm run calibrate:match
+npm run calibrate:match -- --case vaughan       # filter by name substring
+
+# (Re)parse all corpus resumes — cached as resumes/{name}.parsed.json.
+# Run once on first use, again only after the parser changes.
+npm run calibrate:parse
+npm run calibrate:parse -- --resume marketing   # one resume
+
+# Skip the markdown report (stdout-only).
+npm run calibrate:match -- --all-pairs --no-report
+
+# Custom report path (e.g., to keep a baseline snapshot).
+npm run calibrate:match -- --all-pairs --out skills/updraft/calibration-fixtures/runs/2026-05-10-baseline.md
+```
+
+Requires `GEMINI_API_KEY` in `.env.local` (loaded via dotenv). The harness
+skips quota counters / kill switches — calibration is owner-only work,
+not user traffic.
+
+### Verdict states
+
+| Verdict | Meaning |
+|---|---|
+| `✓ PASS` | Case has assertions in `expected`; all met. |
+| `✗ FAIL` | Case has assertions; one or more failed. Detail listed in stdout + report. |
+| `○ REVIEW` | No assertions. Output is the artifact to judge. |
+| `✗ ANALYZE-FAIL` | Gemini call returned an error. |
+| `✗ ERROR` | Exception thrown during the run (file missing, parse error, etc.). |
+
+The markdown report always renders all verdicts. Exit code is non-zero
+only when there's an actual failure — REVIEW-only runs exit 0.
+
+### Layout + schema
+
+- **`calibration-fixtures/resumes/{name}.txt`** — anonymized raw resume
+  text. Identity-only swaps (name / email / phone / address / LinkedIn
+  slug); companies + dates + bullet content preserved verbatim.
+- **`calibration-fixtures/resumes/{name}.parsed.json`** — cached
+  SYS_RESUME_PARSER output. Created on first run; commit alongside the
+  .txt so future harness runs don't re-burn parser tokens.
+- **`calibration-fixtures/jds/{NN-name}.txt`** — anonymized JD text.
+  LinkedIn UI chrome stripped; recruiter / hiring-team person names
+  swapped.
+- **`calibration-fixtures/cases/{name}.yaml`** — case files. One case
+  per file or an array per file. Schema:
+
+  ```yaml
+  name: short-kebab-name           # required
+  resume: marketing                # required — basename in resumes/
+  jd: 06-3search-growth-marketing  # required — basename in jds/
+  tier: 2                          # optional — 1|2|3|4. Auto-classified if omitted.
+  expected:                        # required — at least one assertion
+    band: GAP                      # DIRECT|TRANSFERABLE|ADJACENT|WEAK|GAP
+    min_pct: 0
+    max_pct: 45
+    critical_gap_keywords:
+      - category mismatch
+  notes: |                         # optional — context, not asserted
+    Why this case matters: ...
+  ```
+
+### Workflow — Phase 1: discovery (run-then-judge)
+
+The 7-resume × 7-JD corpus produces 49 pairings. Most of them won't
+have an obvious "right answer" until you see what the analyzer says
+and react to it.
+
+1. **`npm run calibrate:parse`** once — generates the cached
+   `resumes/*.parsed.json` files. Costs ~7 SYS_RESUME_PARSER calls.
+2. **`npm run calibrate:match -- --all-pairs`** — runs all 49 pairs,
+   writes a markdown report to `calibration-fixtures/last-run.md`.
+   Costs ~49 SYS_MATCH_ANALYZER calls. ~$0.05–0.10 on Flash.
+3. **Read the report.** For each pair, decide: does the analyzer's
+   verdict (band + pct + critical gaps + strengths) match what *you*
+   would tell that candidate? Or is it over-generous / over-harsh / off
+   on the wrong axis?
+4. **For each pair that's clearly wrong**, write a real case file in
+   `cases/{name}.yaml` with your judgment of the right answer. That
+   becomes a regression test for the prompt-tuning pass.
+5. **For pairs that are clearly right**, optionally write an
+   "anti-regression" case to lock in the current behavior.
+
+The point of this phase isn't to score pass/fail — it's to convert
+analyzer output into your asserted ground truth, one pair at a time.
+
+### Workflow — Phase 2: prompt tuning
+
+1. **Run the asserted cases** — `npm run calibrate:match` — establish
+   the baseline. Note how many pass / fail and which.
+2. **Make one prompt change** in
+   `references/lib-system-prompts.md`'s SYS_MATCH_ANALYZER section, or
+   in the `TARGET_EXTRACTION_INSTRUCTION` runtime addendum at
+   `src/lib/updraft/match-analyzer.ts`.
+3. **Re-run the full set.** Compare deltas. A good change moves
+   previously-failing cases to PASS without regressing passing ones.
+4. **Log the delta in this file** as you go — what you changed, how
+   each case moved. Treat it as a running lab notebook so the next
+   round benefits from prior attempts.
+5. **Acceptance:** all asserted cases pass within their expected band
+   with reasonable margin (a `GAP` benchmark scores comfortably <40%,
+   not 44.9%). When that holds, ship as `feat(updraft): tune
+   SYS_MATCH_ANALYZER` and add a DECISIONS.md entry pointing here.
+
+### Corpus state — 2026-05-10
+
+7 anonymized resumes + 7 anonymized JDs staged → 49 pairings available
+via `--all-pairs`. **No cases are asserted yet** — the harness ships
+with `cases/example.yaml` as a schema reference. Phase 1 (discovery)
+hasn't run yet; Phase 2 (tuning) is gated on Phase 1 producing a real
+ground-truth case set.
+
+The first benchmark in this file (Beau vs. Vaughan Director of
+Operations) is **not** in the corpus — Beau was the candidate, and the
+JD wasn't captured. When that case lands, fixture name
+`vaughan-director-ops` is reserved.
+
+### Cost guard
+
+The harness skips the production quota counters — calibration runs are
+owner-only and shouldn't pollute the daily-cap counters that real
+visitors share. Watch the `tokens (in/out)` column in the result table
+to track real spend per round.
 
 ## Tuning workflow when we pick this up
 

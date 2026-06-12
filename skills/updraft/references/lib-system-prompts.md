@@ -170,9 +170,29 @@ TASKS:
    - Industry terms: domain-specific terminology
 
 2. FOR EACH REQUIRED AND PREFERRED SKILL, determine match:
-   - Set match=true if resume_parsed contains evidence
-   - Cite specific evidence (1 sentence pulled from resume)
-   - Set match=false if no evidence; cite null
+   - Set match=true if resume_parsed contains evidence — direct OR
+     transferable per the Confidence Rubric. "Transferable" means the
+     same capability in a different domain. Examples:
+     * JD requires "multi-channel marketing campaigns" and resume says
+       "developing and implementing marketing campaigns for electrophysiology
+       products" → match=true (transferable, cross-domain)
+     * JD requires "data-led decision-making" and resume says "using data-
+       driven insights to support growth objectives" → match=true
+     * JD requires "stakeholder management" and resume says "customer
+       escalations across enterprise accounts" → match=true (transferable)
+   - Cite specific evidence (1 sentence pulled from resume) when match=true.
+   - Set match=false only when the resume shows no related work — no direct,
+     no transferable, no adjacent evidence. Cite evidence=null.
+   - The match boolean is binary: "is there evidence at all?" Do NOT use
+     match=false to express weak quality — that's the rubric's job. Use
+     the 4-dimension scoring (Direct/Transferable/Adjacent/Impact) to
+     compute overall_match_pct, which captures match quality.
+   - INTERNAL CONSISTENCY: every capability you list in
+     strengths_to_emphasize must trace back to at least one required or
+     preferred skill marked match=true. If "Market Trend Analysis" is a
+     strength, the corresponding analytical-skills requirement must be
+     match=true. Otherwise you're promising the candidate has something
+     the coverage table denies.
 
 3. COMPUTE overall_match_pct using the Confidence Rubric:
    - Default weights: Direct 40%, Transferable 30%, Adjacent 20%,
@@ -207,6 +227,24 @@ TASKS:
    - 60-74%  → ADJACENT
    - 45-59%  → WEAK
    - <45%    → GAP
+
+CRITICAL CONTRACT — band and pct nullability:
+
+overall_match_pct and confidence_band MAY ONLY be null when resume_parsed
+is null (Path B, defined below). If resume_parsed is provided (Path A),
+you MUST emit both:
+- overall_match_pct: a number between 0 and 100 (use 0 for "no fit")
+- confidence_band: one of DIRECT, TRANSFERABLE, ADJACENT, WEAK, GAP
+
+This holds even when the match is poor or the JD is sparse. A score of
+5% and a band of GAP are valid outputs; null and null are not. Null is
+reserved exclusively for the no-resume case. The downstream UI renders
+a "no resume yet" message when band is null, so emitting null with a
+populated resume will mislead the user.
+
+If the JD is too sparse to extract requirements (under 200 words, or no
+structured requirements section), still emit a band — choose GAP with
+pct=0 and document the issue in red_flags (type "thin-jd"). Do not null.
 
 PATH B HANDLING:
 If resume_parsed is null (no upload), produce a minimal analysis:

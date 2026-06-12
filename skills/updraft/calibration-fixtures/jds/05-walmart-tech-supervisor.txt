@@ -1,0 +1,70 @@
+(USA) Technology Support II - Supervisor
+VIZIO · Dakota Dunes, SD (On-site)
+$60K/yr - $110K/yr · On-site Full-time
+
+About the job
+
+Position Summary... What you'll do...
+
+VIZIO's Information Technology team is seeking a Technology Support II (Supervisor) to join their growing team. The successful candidate will have the ability to work with cutting edge technology that helps facilitate productivity, support, and services to VIZIO. The Technology Support II will report to the Senior Manager, Technology Support and will help lead projects, supervise employees within the Technology Support, and support other teams as needed. Additionally, this role will provide support to employees in their local office and company-wide employees via remote assistance.
+
+What you will do:
+
+Supervise the Technology Support Team within VIZIO to meet SLA's, procedures, and processes to drive effective availability for the Help Desk.
+Collaborate with embedded software and services development teams to ensure successful operations & project delivery and alignment with organizational goals.
+Oversee and manage services operations, ensuring efficient processes and practices are in place.
+Lead various project management efforts, encompassing planning, execution, monitoring, and closing of IT projects, ensuring they are completed within the specified time frame and budget.
+Facilitate issue resolution for elevated support by coordinating efforts across teams, ensuring timely responses to escalated concerns.
+Develop and maintain strong relationships with stakeholders, ensuring alignment on project goals and expectations.
+Develop growth paths for the Specialist Technician's alongside Technology Support Management team and set goals accordingly for each member.
+Successfully divide and assign tasks and projects to the Technology Support Team.
+Manage On-Call procedure to ensure there is always support coverage for weekend employees.
+Evaluate (along with the Technology Support Management team) hardware to ensure maximum productivity.
+Oversee IT assets inventory and stocking level at each location alongside the Technology Support Management team.
+Partner with HR to ensure new hire procurement is met within SLAs.
+Provide support for Video Conferencing Systems.
+Direct and coordinate the work of IT teams across multiple disciplines, including application development, operations, networking, and cybersecurity, to achieve project objectives.
+Partner with the Information Security team to deploy and maintain new technologies like Netskope, GlobalProtect, Anti-virus, etc.
+Assist Infrastructure and Client Services Teams in deployment of new technologies like Microsoft Intune, Jamf, and others.
+Serve as a liaison between IT teams and Engineering executive management, providing clear communication on project status, challenges, and resolutions.
+Learn, support and fill-in for other team members, if required.
+Maintain high morale and motivate the maintain team to go above and beyond.
+Guide staff and adhere to IT Operations policies.
+Other tasks as assigned by the Technology Support Management team.
+
+About you:
+
+Bachelor's degree in Computer Science, Information Technology, or a related field preferred.
+Experience in embedded software and services development.
+Proven project management experience, with a track record of successful project delivery across IT teams.
+Excellent communication and interpersonal skills, with the ability to work effectively with executives and stakeholders at all levels.
+Strong problem-solving skills, with experience in issue resolution and crisis management.
+Project Management Professional (PMP) certification or equivalent is a plus.
+Familiarity with Agile methodologies and tools is preferred.
+You have a deep understanding of macOS with at least 3 years of experience supporting the OS.
+You have extensive experience with Windows 10. Minimum of 3 years.
+You have 5+ years of related work experience.
+You are a self-starter that thrives in a fast-paced, yet at times, ambiguous environment.
+You are a hard-working team player, with a "no task is too small" attitude.
+You can explain technical issues to non-technical users.
+You can work with software developers when they need assistance. Providing them with correct solutions and root causes analysis.
+At least 3 years of working with ticking systems like Jira, ServiceNow, etc.
+At least 3 years of working with Office 365 Admin Center.
+Exposure or understanding of Microsoft PowerShell (Automation) and Terminal for macOS.
+Solid foundation of Windows imaging .wim, ghost, etc.
+Exposure to software packaging.
+Understanding of Active Directory tools.
+
+Minimum Qualifications...
+
+Bachelor's degree in Engineering, Information Technology, Computer Science, or related field OR 2 years' experience in technology, system management and integration, process design, or related area.
+
+Preferred Qualifications...
+
+Microsoft Office, Operations, We value candidates with a background in creating inclusive digital experiences, demonstrating knowledge in implementing Web Content Accessibility Guidelines (WCAG) 2.2 AA standards, assistive technologies, and integrating digital accessibility seamlessly. The ideal candidate would have knowledge of accessibility best practices and join us as we continue to create accessible products and services following Walmart's accessibility standards and guidelines for supporting an inclusive culture.
+
+Primary Location...
+
+DAKOTA DUNES, SD 57049-5005, United States of America
+
+The annual salary range for this position is $60,000.00 - $110,000.00. Additional compensation includes annual or quarterly performance bonuses.

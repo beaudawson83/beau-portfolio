@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "calibrate:match": "tsx --tsconfig tsconfig.calibrate.json scripts/calibrate-match-analyzer.ts",
+    "calibrate:parse": "tsx --tsconfig tsconfig.calibrate.json scripts/calibrate-match-analyzer.ts --parse-only"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.90.1",
@@ -25,13 +27,18 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/d3-geo": "^3.1.0",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/topojson-client": "^3.1.5",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "^16.2.4",
+    "js-yaml": "^4.1.1",
+    "server-only": "^0.0.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

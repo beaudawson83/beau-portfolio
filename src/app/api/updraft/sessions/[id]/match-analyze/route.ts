@@ -175,6 +175,7 @@ export async function POST(
       tokensIn: result.tokensIn,
       tokensOut: result.tokensOut,
       retried: result.retried,
+      band_synthesized: result.bandSynthesized,
       owner: isUpdraftOwner(request),
       ai_extracted_role: !userSupplied.role_title && Boolean(ai?.role_title),
       ai_extracted_company: !userSupplied.company && Boolean(ai?.company),
