@@ -23,9 +23,10 @@ export async function GET(request: NextRequest) {
   const today = supabaseConfigured ? await getTodayQuota() : null;
   const failures = supabaseConfigured ? await summarizeRecentFailures(24) : null;
 
-  // Surface env presence without leaking values. Reflects the post-Brevo
-  // post-Drive-API world — old Resend env is gone, transactional email
-  // goes through Brevo, PDF conversion needs UPDRAFT_GOOGLE_SA_JSON_B64.
+  // Surface env presence without leaking values. Transactional email goes
+  // through Brevo (old Resend env retired). PDF generation is native
+  // (pdf-builder.tsx) and needs no env var — the Drive-era
+  // UPDRAFT_GOOGLE_SA_JSON_B64 was retired 2026-06-13.
   const envPresent = {
     SUPABASE_URL: Boolean(
       process.env.BEAU_SUPABASE_URL ||
@@ -40,7 +41,6 @@ export async function GET(request: NextRequest) {
     GEMINI_API_KEY:                 Boolean(process.env.GEMINI_API_KEY),
     BREVO_API_KEY:                  Boolean(process.env.BREVO_API_KEY),
     MAIL_FROM_ADDRESS:              Boolean(process.env.MAIL_FROM_ADDRESS),
-    UPDRAFT_GOOGLE_SA_JSON_B64:     Boolean(process.env.UPDRAFT_GOOGLE_SA_JSON_B64),
     UPDRAFT_OWNER_SECRET:           Boolean(process.env.UPDRAFT_OWNER_SECRET),
     UPDRAFT_MAGIC_LINK_SECRET:      Boolean(process.env.UPDRAFT_MAGIC_LINK_SECRET),
     UPDRAFT_SESSION_COOKIE_SECRET:  Boolean(process.env.UPDRAFT_SESSION_COOKIE_SECRET),

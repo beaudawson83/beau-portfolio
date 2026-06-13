@@ -12,6 +12,7 @@
     "calibrate:parse": "tsx --tsconfig tsconfig.calibrate.json scripts/calibrate-match-analyzer.ts --parse-only"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.5.1",
     "@supabase/supabase-js": "^2.90.1",
     "d3-geo": "^3.1.1",
     "docx": "^9.6.1",

@@ -56,14 +56,14 @@ const BULLET_INDENT = 360;                         // 0.25"
 // Date formatting — YYYY-MM → MM/YYYY (ATS-consistent per spec)
 // ---------------------------------------------------------------------------
 
-function formatDate(s: string): string {
+export function formatDate(s: string): string {
   if (s === 'Present' || s === 'present') return 'Present';
   const m = /^(\d{4})-(\d{2})$/.exec(s);
   if (!m) return s;
   return `${m[2]}/${m[1]}`;
 }
 
-function formatDateRange(start: string, end: string): string {
+export function formatDateRange(start: string, end: string): string {
   return `${formatDate(start)} – ${formatDate(end)}`;
 }
 
@@ -207,13 +207,13 @@ function buildSummary(summary: string | undefined): Paragraph[] {
   ];
 }
 
-interface KeyOutcome {
+export interface KeyOutcome {
   number: string;       // e.g. "41%"
   label: string;        // e.g. "chargeback rate ↓"
   context?: string;     // e.g. "on $2.1B GMV"
 }
 
-function extractKeyOutcomesFromBullets(mod: UpdraftMod, max = 4): KeyOutcome[] {
+export function extractKeyOutcomesFromBullets(mod: UpdraftMod, max = 4): KeyOutcome[] {
   // v0.1 heuristic: find the first 4 metric-bearing bullets across roles.
   // Pull the first metric phrase out of each bullet for the number, use
   // the rest as the label. Honest but unsophisticated — full impact

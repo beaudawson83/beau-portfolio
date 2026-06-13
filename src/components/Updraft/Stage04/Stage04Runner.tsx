@@ -684,11 +684,9 @@ function DoneView({
           <p className="text-sm text-[#cbd5e1] leading-relaxed">
             Your DOCX shipped successfully — that&apos;s the source-of-truth
             ATS file and parses cleanly through every major applicant tracking
-            system. PDF conversion was retried automatically and still hit a
-            snag (Drive API rate-limit, sustained network blip, or the
-            service is degraded). You can click Generate again to retry, or
-            open the DOCX in Word / Google Docs / LibreOffice and use File →
-            Save As PDF as a backup.
+            system. The PDF didn&apos;t generate this time. You can click
+            Generate again to retry, or open the DOCX in Word / Google Docs /
+            LibreOffice and use File → Save As PDF as a backup.
           </p>
         </div>
       )}

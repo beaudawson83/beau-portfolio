@@ -1,9 +1,13 @@
 // UpDraft retry helper.
 //
-// Centralized exponential-backoff-with-jitter retry policy for the two
-// transient-prone external boundaries:
-//   - Drive API (PDF conversion)
+// Centralized exponential-backoff-with-jitter retry policy for the
+// transient-prone external boundary:
 //   - Gemini API (every AI call)
+//
+// (PDF generation used to be here too, back when it was a Google Drive API
+// call. PDF is now generated natively in-process via pdf-builder.tsx — no
+// network, no retry needed — so the Drive policy + classifier were removed
+// 2026-06-13. See DECISIONS.md.)
 //
 // Why centralized: per-call ad-hoc retries drift apart. One file means one
 // failure model: "what counts as transient", "how many tries", "how long
@@ -30,13 +34,6 @@ export interface RetryPolicy {
    *  thundering-herd retries when a downstream is rate-limited. */
   jitterMs: number;
 }
-
-export const PDF_RETRY: RetryPolicy = {
-  maxAttempts: 3,
-  baseDelayMs:  600,
-  maxDelayMs:   3000,
-  jitterMs:     250,
-};
 
 export const GEMINI_RETRY: RetryPolicy = {
   maxAttempts: 3,
@@ -126,25 +123,6 @@ export async function withRetryResult<R extends { ok: boolean }>(
 // ---------------------------------------------------------------------------
 // Transient-error classifiers
 // ---------------------------------------------------------------------------
-
-/**
- * Drive API transient classifier. Retry on:
- *   - Network errors (fetch threw)
- *   - 5xx server errors
- *   - 429 rate limit
- *   - "Could not mint Google access token" — usually a clock-skew or one-off blip
- *
- * Don't retry on 400/403/404 — those won't fix themselves.
- */
-export function isTransientDriveError(error: string | undefined): boolean {
-  if (!error) return false;
-  const e = error.toLowerCase();
-  if (e.includes('network')) return true;
-  if (e.includes(' 500') || e.includes(' 502') || e.includes(' 503') || e.includes(' 504')) return true;
-  if (e.includes(' 429')) return true;
-  if (e.includes('could not mint')) return true;
-  return false;
-}
 
 /**
  * Gemini transient classifier. Retry on:

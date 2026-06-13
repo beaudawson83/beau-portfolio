@@ -16,10 +16,14 @@ import {
   renderModDocx,
   renderResumeDocx,
 } from '@/lib/updraft/docx-builder';
+import {
+  renderCoverLetterPdf,
+  renderModPdf,
+  renderResumePdf,
+} from '@/lib/updraft/pdf-builder';
 import { draftCoverLetter } from '@/lib/updraft/cover-letter-generator';
 import { buildExportFilename } from '@/lib/updraft/filename';
 import { lintMod } from '@/lib/updraft/lint';
-import { isPdfRendererConfigured, renderPdfWithRetry } from '@/lib/updraft/pdf';
 import { buildExportPath, uploadExport } from '@/lib/updraft/storage';
 import type {
   UpdraftDeliverable,
@@ -45,8 +49,6 @@ interface GeneratedExport {
 interface PdfFailure {
   for: 'mod' | 'resume' | 'cover_letter';
   error: string;
-  /** Total attempts before giving up — 3 means we hit the policy ceiling. */
-  attempts: number;
 }
 
 interface CoverLetterMeta {
@@ -173,58 +175,35 @@ export async function POST(
   const lintFlags = lintMod(mod);
   const generated: GeneratedExport[] = [];
   const pdfFailures: PdfFailure[] = [];
-  const pdfAvailable = isPdfRendererConfigured();
   const generatedAt = new Date();
   let coverLetterMeta: CoverLetterMeta | null = null;
   let coverLetterError: string | null = null;
 
-  // Helper: PDF companion alongside each DOCX. Failures are non-blocking
-  // per spec § 4.5 — DOCX still ships; UI surfaces a banner indicating
-  // which PDFs didn't make it.
+  // Helper: render + persist a PDF natively from the structured data (NOT by
+  // converting the DOCX). renderFn produces the PDF bytes via pdf-builder.tsx.
+  // This runs in-process with no external service, so it effectively never
+  // fails — but we keep the non-blocking failure path (DOCX still ships, UI
+  // shows a banner) as a defensive net against an unexpected render error.
   const persistPdfFor = async (
-    docxBytes: Buffer,
+    renderFn: () => Promise<Buffer>,
     pdfFilename: string,
     pdfKind: 'mod_pdf' | 'resume_pdf' | 'cl_pdf',
     label: 'mod' | 'resume' | 'cover_letter',
   ): Promise<void> => {
-    if (!pdfAvailable) {
+    let pdfBytes: Buffer;
+    try {
+      pdfBytes = await renderFn();
+    } catch (err) {
       pdfFailures.push({
         for: label,
-        error: 'UPDRAFT_GOOGLE_SA_JSON_B64 not configured',
-        attempts: 0,
+        error: `render-failed: ${err instanceof Error ? err.message : 'unknown'}`,
       });
-      return;
-    }
-    const { result, attempts } = await renderPdfWithRetry({
-      docxBytes,
-      filename: pdfFilename.replace(/\.pdf$/, '.docx'),
-    });
-    // Always log attempts so we can spot retry-storm patterns even on
-    // success — a 3-attempt success is a near-miss worth knowing about.
-    if (attempts > 1) {
-      await logEvent({
-        sessionId,
-        stage: '04',
-        eventType: result.ok ? 'pdf_retry_recovered' : 'pdf_retry_exhausted',
-        data: { for: label, attempts, error: result.ok ? null : result.error },
-      });
-    }
-    if (!result.ok) {
-      pdfFailures.push({ for: label, error: result.error, attempts });
       return;
     }
     const path = buildExportPath({ userId, sessionId, filename: pdfFilename });
-    const upload = await uploadExport({
-      path,
-      bytes: result.pdfBytes,
-      mime: PDF_MIME,
-    });
+    const upload = await uploadExport({ path, bytes: pdfBytes, mime: PDF_MIME });
     if (!upload.ok) {
-      pdfFailures.push({
-        for: label,
-        error: `upload-failed: ${upload.error ?? 'unknown'}`,
-        attempts,
-      });
+      pdfFailures.push({ for: label, error: `upload-failed: ${upload.error ?? 'unknown'}` });
       return;
     }
     await recordExport({
@@ -233,14 +212,14 @@ export async function POST(
       filename: pdfFilename,
       storagePath: path,
       mime: PDF_MIME,
-      bytes: result.bytes,
+      bytes: pdfBytes.length,
     });
     generated.push({
       kind: pdfKind,
       filename: pdfFilename,
       storagePath: path,
       mime: PDF_MIME,
-      bytes: result.bytes,
+      bytes: pdfBytes.length,
     });
   };
 
@@ -279,7 +258,7 @@ export async function POST(
           date: generatedAt,
           ext: 'pdf',
         });
-        await persistPdfFor(buf, pdfName, 'mod_pdf', 'mod');
+        await persistPdfFor(() => renderModPdf({ mod }), pdfName, 'mod_pdf', 'mod');
       }
     }
 
@@ -318,7 +297,7 @@ export async function POST(
           date: generatedAt,
           ext: 'pdf',
         });
-        await persistPdfFor(buf, pdfName, 'resume_pdf', 'resume');
+        await persistPdfFor(() => renderResumePdf({ mod, target }), pdfName, 'resume_pdf', 'resume');
       }
     }
 
@@ -421,7 +400,19 @@ export async function POST(
                 date: generatedAt,
                 ext: 'pdf',
               });
-              await persistPdfFor(clBuf, clPdfName, 'cl_pdf', 'cover_letter');
+              await persistPdfFor(
+                () =>
+                  renderCoverLetterPdf({
+                    identity: mod.identity,
+                    greeting: draft.greeting,
+                    paragraphs: draft.paragraphs,
+                    signoff: draft.signoff,
+                    generatedAt,
+                  }),
+                clPdfName,
+                'cl_pdf',
+                'cover_letter',
+              );
             }
           }
         }
@@ -475,17 +466,13 @@ export async function POST(
     });
   }
   if (pdfFailures.length > 0) {
-    // PDF failure is non-blocking per spec — DOCX still ships. Log every
-    // failure so we can see how often the PDF pipeline lets us down,
-    // independent of how often DOCX itself works.
+    // PDF failure is non-blocking — DOCX still ships. Native PDF generation
+    // shouldn't fail in practice, so any entry here is worth investigating.
     await logEvent({
       sessionId,
       stage: '04',
       eventType: 'pdf_failed',
-      data: {
-        failures: pdfFailures,
-        renderer_configured: pdfAvailable,
-      },
+      data: { failures: pdfFailures },
     });
   }
   if (lintFlags.length > 0) {
