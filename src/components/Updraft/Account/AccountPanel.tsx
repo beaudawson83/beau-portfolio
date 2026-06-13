@@ -8,7 +8,7 @@
 // — every promise (30-day purge, delete-anytime, self-serve export) has
 // a real working control here.
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { UpdraftSessionSummary } from '@/types';
@@ -41,6 +41,17 @@ export default function AccountPanel({ user, sessions: initialSessions }: Props)
   const [sessions, setSessions] = useState(initialSessions);
   const [exportPhase, setExportPhase] = useState<'idle' | 'downloading'>('idle');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+
+  // Locale/timezone-formatted dates and the `Date.now()`-based purge ETA differ
+  // between the server (UTC) and the client (local tz), which mismatches on
+  // hydration (React #418) and aborts hydration of this subtree — leaving its
+  // keep/delete/export controls dead. Render those values only after mount so
+  // SSR and the first client render emit identical markup.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const setKeep = async (sessionId: string, keep: boolean) => {
     // Optimistic
@@ -125,7 +136,9 @@ export default function AccountPanel({ user, sessions: initialSessions }: Props)
             </div>
             <div className="flex justify-between text-sm">
               <dt className="text-[#94A3B8]">Account created</dt>
-              <dd className="text-white">{formatDate(user.createdAt)}</dd>
+              <dd className="text-white" suppressHydrationWarning>
+                {mounted ? formatDate(user.createdAt) : ''}
+              </dd>
             </div>
             <div className="flex justify-between text-sm">
               <dt className="text-[#94A3B8]">Sessions</dt>
@@ -151,7 +164,9 @@ export default function AccountPanel({ user, sessions: initialSessions }: Props)
           ) : (
             <ul className="divide-y divide-[#1F1F1F] border border-[#2A2A2A] rounded-lg overflow-hidden">
               {sessions.map((s) => {
-                const eta = purgeEtaDays(s.lastActivityAt, s.keepIndefinitely);
+                const eta = mounted
+                  ? purgeEtaDays(s.lastActivityAt, s.keepIndefinitely)
+                  : null;
                 return (
                   <li
                     key={s.id}
@@ -162,15 +177,18 @@ export default function AccountPanel({ user, sessions: initialSessions }: Props)
                         href={`/updraft/${s.id}`}
                         className="block text-sm text-white hover:text-[#7C3AED] transition-colors"
                       >
-                        Session started {formatDate(s.startedAt)}
+                        <span suppressHydrationWarning>
+                          Session started{' '}
+                          {mounted ? formatDate(s.startedAt) : '…'}
+                        </span>
                       </Link>
                       <p className="text-xs text-[#94A3B8] mt-1">
                         {s.status.toUpperCase()}
                         {s.tier ? ` · TIER ${s.tier}` : ''}
                         {s.path ? ` · ${s.path.toUpperCase()}` : ''}
                       </p>
-                      <p className="text-[11px] text-[#64748b] mt-1">
-                        Last activity: {formatDate(s.lastActivityAt)}
+                      <p className="text-[11px] text-[#64748b] mt-1" suppressHydrationWarning>
+                        Last activity: {mounted ? formatDate(s.lastActivityAt) : '…'}
                         {eta !== null && (
                           <span className="ml-2">
                             ·{' '}

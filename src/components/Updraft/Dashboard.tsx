@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import type { UpdraftDashboardSession } from '@/types';
 
@@ -35,10 +35,12 @@ function statusClass(status: UpdraftDashboardSession['status']): string {
 
 /** The headline label for a session row: target role when known, else a
  *  generic "started" line so every row has a stable title. */
-function sessionTitle(s: UpdraftDashboardSession): string {
+function sessionTitle(s: UpdraftDashboardSession, mounted: boolean): string {
   if (s.targetRole && s.targetCompany) return `${s.targetRole} · ${s.targetCompany}`;
   if (s.targetRole) return s.targetRole;
-  return `Session started ${formatDate(s.startedAt)}`;
+  // Fallback title carries a formatted date — only render it post-mount so the
+  // server/client markup matches (see the `mounted` note in the component).
+  return mounted ? `Session started ${formatDate(s.startedAt)}` : 'Session started…';
 }
 
 export default function Dashboard({
@@ -57,6 +59,18 @@ export default function Dashboard({
   const [activeId, setActiveId] = useState<string | null>(activeModSessionId);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Locale/timezone-formatted dates differ between the server (UTC) and the
+  // client (local tz). Rendering them during SSR makes the text mismatch on
+  // hydration (React #418), which aborts hydration of this subtree and leaves
+  // its click handlers (e.g. "Set as active MOD") dead. Gate all formatted
+  // dates behind `mounted` so SSR and the first client render emit identical
+  // markup; the real date fills in after mount.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -243,7 +257,9 @@ export default function Dashboard({
                       className="flex-1 min-w-0"
                     >
                       <p className="text-sm text-white flex items-center gap-2 flex-wrap">
-                        <span className="truncate">{sessionTitle(s)}</span>
+                        <span className="truncate" suppressHydrationWarning>
+                          {sessionTitle(s, mounted)}
+                        </span>
                         {isActive && (
                           <span className="text-[10px] tracking-widest uppercase text-[#7C3AED] border border-[#7C3AED]/40 rounded px-1.5 py-0.5">
                             Active MOD
@@ -259,8 +275,11 @@ export default function Dashboard({
                     </Link>
 
                     <div className="flex items-center gap-4 shrink-0">
-                      <span className="text-xs text-[#64748b] hidden sm:block">
-                        {formatDate(s.lastActivityAt)}
+                      <span
+                        className="text-xs text-[#64748b] hidden sm:block"
+                        suppressHydrationWarning
+                      >
+                        {mounted ? formatDate(s.lastActivityAt) : ''}
                       </span>
                       {s.hasMod &&
                         (isActive ? (
