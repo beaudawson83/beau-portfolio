@@ -158,6 +158,47 @@ export async function findUserById(id: string): Promise<UpdraftUser | null> {
   return data ? rowToUser(data) : null;
 }
 
+/**
+ * Sets (or clears, when sessionId is null) the user's active-MOD pointer —
+ * the master profile that the re-tailoring flow starts from.
+ *
+ * When setting, validates that the target session belongs to this user AND
+ * holds a generation-ready MOD (stage_03.mod + ready_for_generation). We
+ * never point the pointer at a MOD-less session, even if a caller asks us
+ * to. The FK is ON DELETE SET NULL, so a purged/deleted target session
+ * auto-clears the pointer at the DB layer — no app-side cleanup needed.
+ */
+export async function setActiveModSession(args: {
+  userId: string;
+  sessionId: string | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const sb = client();
+  if (!sb) return { ok: false, error: 'unavailable' };
+
+  if (args.sessionId !== null) {
+    const session = await readSessionForUser(args.sessionId, args.userId);
+    if (!session) return { ok: false, error: 'not-found' };
+    const stage03 = (session.stageOutputs.stage_03 ?? {}) as {
+      mod?: unknown;
+      ready_for_generation?: boolean;
+    };
+    if (!stage03.ready_for_generation || !stage03.mod) {
+      return { ok: false, error: 'no-mod' };
+    }
+  }
+
+  const { error } = await sb
+    .from('updraft_users')
+    .update({ active_mod_session_id: args.sessionId })
+    .eq('id', args.userId)
+    .is('deleted_at', null);
+  if (error) {
+    console.error('updraft.setActiveModSession:', error);
+    return { ok: false, error: 'write-failed' };
+  }
+  return { ok: true };
+}
+
 // ---------------------------------------------------------------------------
 // MAGIC-LINK TOKENS
 // ---------------------------------------------------------------------------

@@ -237,6 +237,21 @@ export interface UpdraftSessionSummary {
   keepIndefinitely: boolean;
 }
 
+/**
+ * Dashboard view-model: a session summary plus the few derived fields the
+ * workspace list needs. Computed server-side from stage_outputs so the
+ * dashboard can label rows (target role) and offer the active-MOD action
+ * (hasMod) without shipping the full stage payloads to the client.
+ */
+export interface UpdraftDashboardSession extends UpdraftSessionSummary {
+  /** True when stage_03 holds a generation-ready MOD (mod + ready_for_generation). */
+  hasMod: boolean;
+  /** Stage 02 target role title, when set. */
+  targetRole: string | null;
+  /** Stage 02 target company, when set. */
+  targetCompany: string | null;
+}
+
 /** Full session record including stage outputs. */
 export interface UpdraftSession extends UpdraftSessionSummary {
   userId: string;
