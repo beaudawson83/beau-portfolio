@@ -4,10 +4,11 @@
 //
 // Renders the chosen DOCX + PDF deliverables from the MOD Stage 03
 // produced. One template (Classic) at one density (Regular), Phase 1
-// lint pass with non-blocking warnings. PDFs come from Google Drive
-// API (Workspace-side conversion) preserving the text layer so the
-// PDF parses cleanly through ATSes. PDF generation failures are
-// non-blocking: DOCX still ships, "PDF unavailable" banner surfaces.
+// lint pass with non-blocking warnings. PDFs are generated natively
+// from the same structured data as the DOCX (pdf-builder.tsx,
+// @react-pdf/renderer) with a real selectable text layer so they parse
+// cleanly through ATSes. PDF generation failures are non-blocking:
+// DOCX still ships, "PDF unavailable" banner surfaces.
 //
 // Cover letters draft via SYS_COVER_LETTER_DRAFTER on this same call
 // (one Gemini hop), then render through the same Classic primitives.
@@ -486,10 +487,10 @@ function GenerateView({
       </div>
 
       <p className="mt-6 text-[11px] text-[#64748b] leading-relaxed">
-        Generation typically takes 5-10 seconds per deliverable — DOCX
-        renders instantly, PDF conversion runs through Google Drive (auto-
-        retried on transient errors). If PDF generation still hits a snag
-        after retries, you&apos;ll still get the DOCX.
+        Generation typically takes a few seconds per deliverable. Your DOCX
+        and PDF are both generated here from the same content, so they match.
+        In the rare case a PDF doesn&apos;t generate, you&apos;ll still get
+        the DOCX.
       </p>
     </div>
   );

@@ -285,13 +285,9 @@ Use Word's native bullet list styling with the appropriate bullet character. Do 
 
 ### PDF Generation
 
-Generate PDF from DOCX using LibreOffice headless mode:
+**Updated 2026-06-13 (see `DECISIONS.md`).** The PDF is generated **natively** from the same structured data as the DOCX, via `@react-pdf/renderer` in [`pdf-builder.tsx`](../../../src/lib/updraft/pdf-builder.tsx) — the one-to-one sibling of `docx-builder.ts` (shared key-outcome + date helpers, identical Classic/Regular layout). It carries a real selectable text layer (ATS-readable).
 
-```
-soffice --headless --convert-to pdf input.docx
-```
-
-This preserves the text layer (ATS-readable) and ensures the PDF matches the DOCX visual exactly. Do NOT generate PDF directly from a custom renderer — text layer integrity is critical.
+The original spec said *"generate PDF from DOCX via LibreOffice; do NOT generate directly — text-layer integrity is critical."* That constraint is met: `@react-pdf/renderer` emits a genuine text layer, and because UpDraft generates its own templates (never an arbitrary user DOCX) there is no DOCX to convert — so no conversion engine (LibreOffice / Drive / paid API) is needed at all. Free, runs in serverless, verifiable locally.
 
 ### Filename Conventions
 

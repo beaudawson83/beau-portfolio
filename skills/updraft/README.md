@@ -114,7 +114,7 @@ PUT    /api/users/[id]/active-mod       Set user's active MOD
 
 2. **DOCX generator** — docx-js (Node) or python-docx. Must support: single-column layouts, paragraph borders for section dividers, native bullet list styling, named font specification (no fallback fonts).
 
-3. **PDF generator** — LibreOffice headless: `soffice --headless --convert-to pdf input.docx`. Do NOT generate PDF directly from a custom renderer — text layer integrity is critical for ATS parsing.
+3. **PDF generator** — native via `@react-pdf/renderer` ([`pdf-builder.tsx`](../../src/lib/updraft/pdf-builder.tsx)), rendered directly from the same structured data as the DOCX. **Updated 2026-06-13:** the original spec said "do NOT generate PDF directly — convert from DOCX via LibreOffice for text-layer integrity." That concern is satisfied — @react-pdf produces a real selectable text layer (ATS-safe) — and because UpDraft generates its own templates (not arbitrary DOCX), direct generation needs no conversion engine at all ($0, serverless, locally verifiable). See `DECISIONS.md` 2026-06-13.
 
 4. **Anti-pattern lint** — regex engine for Phase 1 detection. Patterns are documented in `lib-anti-patterns.md` § Pattern Categories. Phase 2 uses `SYS_ANTIPATTERN_REVIEWER` (model call).
 
@@ -212,7 +212,7 @@ Every export must pass these checks. Violation = broken template, ship-blocking.
 - ✅ Standard bullet characters (• or –)
 - ✅ Consistent date format (MM/YYYY throughout)
 - ✅ No tables for layout, no text boxes, no images, no graphics
-- ✅ DOCX is primary; PDF generated FROM DOCX via LibreOffice (preserves text layer)
+- ✅ DOCX + PDF both generated natively from the same data (docx-js + @react-pdf/renderer); PDF has its own selectable text layer
 
 The 4 templates × 3 densities all comply with these rules. Don't add a 5th template without parsing-test validation against Workday, Greenhouse, Lever, Taleo, iCIMS, and SmartRecruiters.
 
@@ -304,7 +304,7 @@ A typical Tier 3 full session (resume + CL + MOD) makes ~30-50 model calls. At c
 
 - Model returns malformed JSON → retry with explicit JSON schema reminder; if 3 retries fail, surface error to user with "try again" + skip-this-stage option
 - Resume parser fails on PDF → reject with clear error, suggest Path B
-- LibreOffice PDF generation fails → fall back to DOCX-only export with note to user
+- Native PDF generation fails (rare — no network) → fall back to DOCX-only export with note to user
 - Backend persistence fails → keep session in `in_progress`, retry on next user action, surface error if persistent
 
 ### Privacy

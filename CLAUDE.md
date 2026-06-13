@@ -214,7 +214,7 @@ src/
 | `/api/updraft/sessions/[id]/exports/[exportId]` | GET | 302-redirect to 10-min signed Storage URL | cookie + ownership |
 | `/api/updraft/sessions/[id]/stage/[n]` | PATCH | Merge-patch stage_outputs.{stage_NN} | cookie + ownership |
 | `/api/updraft/sessions/[id]/keep` | PATCH | Toggle keep-indefinitely flag | cookie + ownership |
-| `/api/updraft/status`       | GET    | Diagnostic — today's quota burn + env presence map + 24h failure counts (`pdf_failed`, `pdf_retry_recovered`, `pdf_retry_exhausted`, `cover_letter_failed`, `summary_failed`, `export_failed`) aggregated from `updraft_events` | `Bearer $CRON_SECRET` |
+| `/api/updraft/status`       | GET    | Diagnostic — today's quota burn + env presence map + 24h failure counts (`pdf_failed`, `cover_letter_failed`, `summary_failed`, `export_failed`) aggregated from `updraft_events` | `Bearer $CRON_SECRET` |
 | `/api/updraft/cron/purge`   | GET/POST | 30-day inactivity purge | `Bearer $CRON_SECRET` (Vercel Cron supplies) |
 
 ---

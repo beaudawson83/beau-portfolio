@@ -336,7 +336,7 @@ DET: [Ship as-is] | [Fix first]
 **File generation pipeline** (per `lib-templates.md`):
 1. Render DOCX via docx-js using selected template + density specs
 2. Save DOCX to `/users/[user_id]/sessions/[session_id]/exports/[filename].docx`
-3. Generate PDF via LibreOffice headless: `soffice --headless --convert-to pdf input.docx`
+3. Render PDF **natively** from the same structured data via `@react-pdf/renderer` (`pdf-builder.tsx`) — no DOCX→PDF conversion (updated 2026-06-13, was LibreOffice; see `DECISIONS.md`)
 4. Save PDF to same directory
 5. For MOD only: also export markdown (already in MOD source-of-truth format)
 
@@ -476,7 +476,7 @@ Stage 04 is the most computationally expensive stage. Target performance for a t
 | 4.4 Live preview | 1-2 sec per re-render |
 | 4.5 Lint pass | 2-5 sec |
 | 4.6 Final QA | 3-6 sec |
-| 4.7 Export generation | 2-4 sec (DOCX + LibreOffice PDF) |
+| 4.7 Export generation | 2-4 sec (DOCX + native PDF) |
 | 4.8 Backend persist | <1 sec |
 | **Total Stage 04** | **20-40 sec** |
 

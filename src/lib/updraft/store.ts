@@ -506,9 +506,8 @@ export async function logEvent(args: {
 // ---------------------------------------------------------------------------
 
 export interface RecentFailureSummary {
-  /** Counts grouped by event_type for the diagnostic window. Includes both
-   *  outright failures (pdf_failed, cover_letter_failed, summary_failed,
-   *  export_failed) AND retry-recovery events (pdf_retry_recovered, etc).
+  /** Counts grouped by event_type for the diagnostic window — the failure
+   *  events (pdf_failed, cover_letter_failed, summary_failed, export_failed).
    *  Empty record means a clean window. */
   byEventType: Record<string, number>;
   /** Total number of events scanned (across all event_types of interest). */
@@ -517,10 +516,10 @@ export interface RecentFailureSummary {
   windowHours: number;
 }
 
+// pdf_retry_* are gone: native PDF generation (pdf-builder.tsx) has no network
+// boundary to retry, so those events are never emitted anymore (2026-06-13).
 const FAILURE_EVENT_TYPES = [
   'pdf_failed',
-  'pdf_retry_recovered',
-  'pdf_retry_exhausted',
   'cover_letter_failed',
   'summary_failed',
   'export_failed',

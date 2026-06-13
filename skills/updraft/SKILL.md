@@ -81,7 +81,7 @@ The host program owns:
 - Tier auto-detection logic (computed from parsed years of experience)
 - File upload handling and parsing trigger
 - Anti-pattern lint pass (regex-driven, runs before any export)
-- DOCX/PDF generation (docx-js + LibreOffice headless)
+- DOCX/PDF generation (docx-js + @react-pdf/renderer — both generated natively from structured data, no conversion)
 - State persistence between stages
 - Backend storage of structured outputs
 
@@ -143,7 +143,7 @@ For these cases, the host program should route the user to a different flow.
 
 ## ATS Compatibility — Non-Negotiable
 
-Every output template is single-column, ATS-safe-font (Times New Roman / Calibri / Arial / Lato), standard section headers ("Work Experience" / "Education" / "Skills"), contact in body not header, no tables / text boxes / graphics / icons / columns. DOCX is the primary export; PDF is generated from DOCX via LibreOffice headless to preserve text-layer integrity. Spec lives in `lib-templates.md`.
+Every output template is single-column, ATS-safe-font (Times New Roman / Calibri / Arial / Lato), standard section headers ("Work Experience" / "Education" / "Skills"), contact in body not header, no tables / text boxes / graphics / icons / columns. DOCX and PDF are both generated natively from the same structured data (docx-js + @react-pdf/renderer) — no DOCX→PDF conversion; the PDF carries its own selectable text layer. Spec lives in `lib-templates.md`. (Updated 2026-06-13 — see `DECISIONS.md`.)
 
 This is the BAD Labs guarantee: anything UpDraft produces will parse cleanly through Workday, Greenhouse, Lever, Taleo, iCIMS, and SmartRecruiters. Beau Dawson's product, his bar.
 
