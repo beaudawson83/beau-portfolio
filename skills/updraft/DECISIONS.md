@@ -400,3 +400,17 @@ When a decision is reversed, append a new entry referencing the old one — neve
 **Lesson captured:** external-boundary verification can't be desk-checked — a 4-stage flow that compiles and typechecks still had two hard prod failures (email auth, PDF export) invisible until run against the live services. The `/api/updraft/status` failure counters (`pdf_retry_exhausted`, etc.) exist precisely for this; nothing was watching them. Adding active alerting on those counters is the real durable fix.
 
 **Invalidated by:** moving PDF off Drive (Outage 2 fix #3 makes the SA-quota issue moot), or Brevo replacing the IP-restriction model.
+
+---
+
+## 2026-06-12 — PDF rendering: revert to Sandbox + LibreOffice (reverses the 2026-05-04 Drive-API pivot)
+
+**Decision:** Move PDF generation off the Google Drive API and onto **Vercel Sandbox + a custom LibreOffice image** (`soffice --headless --convert-to pdf`), behind the existing `renderPdf(docxBytes)` interface. This **reverses the 2026-05-04 decision** that pivoted from Sandbox to Drive — see that entry for the original alternatives-considered.
+
+**Why now:** the Drive path is dead in production (2026-06-12 entry above — `403 storageQuotaExceeded`, service accounts have no My Drive quota, and Google's enforcement only tightens). The two ways to keep Drive alive (Shared Drive, or domain-wide-delegation impersonation) both bolt UpDraft's reliability onto a Google Workspace account's config and storage — exactly the external-account fragility that just bit us twice in one session (Brevo IP block, Drive quota). Sandbox + LibreOffice removes the Google dependency entirely: self-contained, no per-account quota, no rotating-IP/allowlist surface.
+
+**Cost accepted:** ~6–10h build (Dockerfile with LibreOffice + Liberation/DejaVu/Carlito/Croscore/Libertine fonts, image registry pin, Sandbox driver in `pdf.ts`, validation that the DOCX text layer survives → ATS-safe), plus 5–15s cold start and Active-CPU billing. Mitigations already designed in: provider-agnostic `renderPdf()` (swap is one file), the existing retry + graceful DOCX-only degradation, and the hard daily cap (`UPDRAFT_DAILY_PDF_CAP`). The `sandbox_invocations` column in `updraft_quota_daily` (vestigial from the original Sandbox plan) gets repurposed.
+
+**Scope note:** this is a dedicated build, not a same-session fix. Until it lands, prod stays DOCX-only with the existing banner. Tracked as the lead item of V1-GATE §2.
+
+**Invalidated by:** Vercel Sandbox sunset or a pricing change that makes per-conversion cost untenable (would push back to a managed conversion vendor), or Google reversing the service-account storage policy (would make the Drive path viable again — but the dependency-removal rationale would still favor Sandbox).
