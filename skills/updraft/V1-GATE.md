@@ -56,7 +56,7 @@ The branch's fixes were anchored to 2.0's behavior. Confirm each still does what
 
 ## §2 — Feature track (the v1.0 "Complete" scope)
 
-Per `PLAN.md` §8 the v1.0 line is: *all 4 templates × 3 densities · ATS quarterly parsing tests · BYOK with safety harness · session resumption · active-MOD pointer + session-history UI · re-tailoring flow · Sandbox+LibreOffice PDF if scale demands.* Pick by appetite — these are largely independent of each other. Suggested priority for "good enough to promote":
+Per `PLAN.md` §8 the v1.0 line is: *all 4 templates × 3 densities · ATS quarterly parsing tests · BYOK with safety harness · session resumption · active-MOD pointer + session-history UI · re-tailoring flow · **Sandbox+LibreOffice PDF rebuild (now a hard blocker — Drive died in prod 2026-06-12, no longer "if scale demands")**.* Pick by appetite — most are independent, but the PDF rebuild is the gating item (see below). Suggested priority for "good enough to promote":
 
 - [ ] **Re-tailoring flow** — existing MOD + new JD → new resume, skipping Stages 1–3. High user value, leverages everything already built.
 - [ ] **Session-history UI + active-MOD pointer** — makes the dashboard a real workspace rather than a one-shot.

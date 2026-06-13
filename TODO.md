@@ -1,25 +1,24 @@
 # Portfolio TODO
 
-> **Last updated:** 2026-06-10
+> **Last updated:** 2026-06-12
 > **Live:** beaudawson.com
 > **Status:** All four surfaces shipped — portfolio, Blog (Terminal Notebook), Global
 > Conflict Index, UpDraft v0.1.5 (unlinked). AskBeau recovered from the 2026-06-01
 > `gemini-2.0-flash` retirement (now `gemini-3.5-flash`, env-dialable) and hard-scoped
-> to Beau-only answers. Docs refreshed 2026-06-10.
+> to Beau-only answers. **2026-06-12:** match-analyzer calibration merged (PR #6) +
+> re-validated on 3.5; full 4-stage flow verified live. That run found two prod
+> outages — Brevo email (IP-restriction, fixed) and **Drive PDF down (`403
+> storageQuotaExceeded`)** → PDF being rebuilt on Sandbox + LibreOffice. See
+> `skills/updraft/V1-GATE.md` + `DECISIONS.md` 2026-06-12.
 
 ---
 
 ## Needs a decision (don't delete, don't merge blindly)
 
-- **`claude/review-updraft-launch-qMznh` branch** — 8 unmerged commits from the May
-  calibration pass: anonymized 7×7 resume/JD corpus, `npm run calibrate:match` CLI
-  harness, three `SYS_MATCH_ANALYZER` prompt fixes (null-band contract, transferable-
-  evidence credit, DIRECT-band unlock), and a tier-classifier years_floor fix. This is
-  the "v0.5 match-analyzer tuning" that CALIBRATION.md parks — the work exists, it just
-  never merged. Decide: rebase onto current main and merge, or mine the prompt fixes
-  manually. Note the prompts may interact with the since-shipped v0.5 polish wave, and
-  the tuning was validated against `gemini-2.0-flash` — re-run the calibration sweep on
-  `gemini-3.5-flash` before trusting the numbers.
+- ✅ **`claude/review-updraft-launch-qMznh` branch — RESOLVED 2026-06-12.** Rebased onto
+  main, re-validated on `gemini-3.5-flash`, merged via PR #6, branch deleted. The four
+  scoring fixes hold on 3.5 (see `CALIBRATION.md` 2026-06-12). *(Kept here briefly as a
+  closure note; safe to delete on the next TODO pass.)*
 - **Stale remote branches** — `claude/add-blog-feature-nIKFK` (old Contentful blog,
   merged + later ripped out), `claude/add-landing-page-button-HSZLg`,
   `claude/global-conflict-cleanup`, `claude/great-taussig-77c15a`,
@@ -57,12 +56,17 @@
 
 ## UpDraft — road to v1.0
 
-- Merge-or-mine the calibration branch (see "Needs a decision" above), then re-run the
-  49-pair sweep against `gemini-3.5-flash`.
+- ✅ Calibration merged (PR #6) + re-validated on 3.5; full 4-stage flow verified live.
+- 🔴 **NEXT / blocker — PDF rebuild on Sandbox + LibreOffice.** Drive PDF is dead in prod
+  (`403 storageQuotaExceeded` — service accounts have no My Drive quota). Decided to
+  revert to Sandbox + LibreOffice; ~6–10h dedicated build behind the `renderPdf()`
+  interface. Lead item of `V1-GATE.md` §2. (Until done: DOCX-only with banner.)
+- Follow-up: add active alerting on `/api/updraft/status` failure counters (nothing was
+  watching them — both outages today were found by hand).
 - Remaining v0.5 parked items (see `skills/updraft/CALIBRATION.md`): per-bullet
   "✨ Rewrite with Audit" flow, Tier 3/4 deepening blocks, MOD Markdown export.
-- v1.0 gate items (see `skills/updraft/PLAN.md`): MODULES card promotion on the
-  homepage, BYOK fallback, sandbox/LibreOffice PDF path if scale demands self-hosted.
+- Other v1.0 gate items (see `skills/updraft/V1-GATE.md` §2): re-tailoring flow,
+  session-history UI, MODULES card promotion, BYOK fallback, template breadth.
 
 ## Portfolio site (no urgency)
 

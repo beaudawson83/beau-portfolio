@@ -60,7 +60,12 @@ parse calls). Requires `GEMINI_API_KEY` in `.env.local`.
 `src/lib/updraft/match-analyzer.ts`. Pipeline is correct end-to-end:
 schema validates, structured output parses, persistence + retry path
 work, briefing renders, token usage records into quotas. **Quality has
-known over-generosity issues, parked for v0.5 prompt tuning.**
+known over-generosity issues, parked for v0.5 prompt tuning.** **Update
+2026-06-12: that v0.5 tuning is DONE** — four scoring fixes landed (PR #6)
+and were re-validated on `gemini-3.5-flash` (see the 2026-06-12
+re-validation section at the top of this file). The "why parked / Beau is
+collecting examples" prose below is now historical — it describes the
+approach that was then carried out.
 
 ## Why this is parked, not fixed
 

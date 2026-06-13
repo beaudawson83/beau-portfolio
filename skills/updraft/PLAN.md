@@ -1,7 +1,7 @@
 # UpDraft — Master Build Plan
 
 **Status:** v0.1.5 + first wave of v0.5 polish shipped (auth · 4 stages · DOCX + PDF · account · purge cron · Pi-egg reveal · cover letter · casing rules · centralized retry · Stage 04 picker · summary auto-gen · phased Stage 03 UX). v0.1.5 happy path real-traffic verified 2026-05-06 with husband as second test account.
-**Last updated:** 2026-06-10 (Gemini default migrated to `gemini-3.5-flash` after Google's 2026-06-01 retirement of `gemini-2.0-flash`).
+**Last updated:** 2026-06-12 — calibration re-validated on `gemini-3.5-flash` (49-pair sweep; all four match-analyzer fixes hold; PR #6 merged) and the full 4-stage flow verified live on 3.5. That live run found two prod outages: Brevo email (IP-restriction, fixed in-session) and **Drive PDF down (`403 storageQuotaExceeded`)** → PDF is being **rebuilt on Sandbox + LibreOffice** (reverses the §4 Drive pivot). See `DECISIONS.md` 2026-06-12, `CALIBRATION.md` 2026-06-12, and `V1-GATE.md`. *(Prior: 2026-06-10, Gemini default migrated to 3.5 after Google retired 2.0-flash.)*
 
 The skill spec itself lives in `SKILL.md` and `references/`. This file is the durable design + integration record for the host program build-out on beaudawson.com. `DECISIONS.md` is the append-only decision log (alternatives considered, rationale, what would invalidate each call).
 
@@ -25,7 +25,7 @@ Architecture is "skill-as-orchestrator": the host program (this Next.js app) own
 |---|---|---|
 | 1 | Entry phasing: unlinked URL (v0.1) → Pi-egg reveal (v0.5) → MODULES card (v1.0) | Smallest blast radius first |
 | 2 | AI provider: Gemini (`gemini-3.5-flash` default — was `gemini-2.0-flash` until Google retired it 2026-06-01; see DECISIONS.md 2026-06-10) | Matches existing AskBeau infra |
-| 3 | PDF generation: Google Drive API (DOCX → Google Doc → PDF export). Sandbox + LibreOffice deferred to v1.0 if self-hosted scale demands it. | Free within Google's quotas, text-layer preserving, leverages existing Workspace |
+| 3 | PDF generation: **moving to Vercel Sandbox + LibreOffice** (decided 2026-06-12, DECISIONS.md). Was Google Drive API since 2026-05-04, but Drive is dead in prod (`403 storageQuotaExceeded` — service accounts have no My Drive quota). DOCX-only until the Sandbox build lands. | Removes the Google-account dependency that caused the outage; `renderPdf()` isolates the swap |
 | 3a | PDF reading: Gemini's native PDF input on `generateContent`. Replaces pdf-parse. | Handles image-based PDFs (OCR), removes lib API churn risk, single round-trip |
 | 4 | Storage: Supabase only (single source of truth across the site) | Reuses existing patterns + RLS |
 | 5 | Auth: magic-link from day one (Brevo). Originally planned on Resend; pivoted 2026-05-04 because Resend's free-tier sandbox sender only delivers to the account owner — broke for any other user. | No anonymous PII; no v1.5 migration |
@@ -211,9 +211,11 @@ Migration script: `scripts/setup-supabase-updraft.sql` (idempotent, follows the 
 
 ---
 
-## 4. PDF subsystem — Google Drive API
+## 4. PDF subsystem — Google Drive API (being replaced)
 
-Originally locked as Vercel Sandbox + custom LibreOffice image; pivoted 2026-05-04 to Google Drive API after weighing the work-vs-value tradeoff. The Sandbox path is preserved as the v1.0 evolution if scale demands fully-owned infrastructure. See [`DECISIONS.md`](DECISIONS.md) entry of 2026-05-04 for the full alternatives-considered.
+> **⚠️ 2026-06-12 — reverting to Sandbox + LibreOffice.** The Drive path below is **down in production**: `403 storageQuotaExceeded` (service accounts have no My Drive storage quota; Google tightened enforcement since the 2026-05-06 verification when it worked). Decision reversed — PDF moves back to Vercel Sandbox + LibreOffice. The section below documents the Drive mechanism as built (and as it'll be torn out); see `DECISIONS.md` 2026-06-12 for the reversal and the build plan, tracked in `V1-GATE.md` §2. Until then prod is DOCX-only with a banner.
+
+Originally locked as Vercel Sandbox + custom LibreOffice image; pivoted 2026-05-04 to Google Drive API after weighing the work-vs-value tradeoff. See [`DECISIONS.md`](DECISIONS.md) entry of 2026-05-04 for the full alternatives-considered, and the 2026-06-12 entry for why it's being undone.
 
 ### 4.1 Setup (one-time, on Beau's side)
 
@@ -346,7 +348,7 @@ Purge driver: `last_activity_at` column. Cron runs daily via `/api/updraft/cron/
 |---|---|---|
 | **v0.1.5** "Vertical slice — SHIPPED 2026-05-06" | Magic-link auth (Brevo) · Path A only · Tier 2 only · MOD + Resume (no CL) · 1 template × 1 density (Classic) · **DOCX + PDF export** (Drive API) · **Gemini-direct PDF reading** · Lint Phase 1 (regex) · per-IP + global kill switch · 30-day purge cron · keep flags · delete-my-data · data-export | Unlinked URL — share manually |
 | **v0.5** "Make it good" | Path B (talk-it-through) · all 4 tiers (1/3/4 deepening branches) · Cover Letter (`SYS_COVER_LETTER_DRAFTER`) · Lint Phase 2 (AI rewrite via `SYS_ANTIPATTERN_REVIEWER`) · AI bullet rewriter (`SYS_BULLET_REWRITER`) · conversational Stage 03 (Phase A-D + STAR stories + skill surfacing card) · daily caps tuned to real traffic · **`SYS_MATCH_ANALYZER` prompt tuning** (see [`CALIBRATION.md`](CALIBRATION.md)) · Gemini explicit context caching | Pi-egg reveal |
-| **v1.0** "Complete" | All 4 templates × 3 densities (12) · ATS quarterly parsing tests · BYOK with safety harness · session resumption flow · active-MOD pointer + session history UI · re-tailoring flow (existing MOD + new JD → new resume, skip Stages 1–3) · **Vercel Sandbox + LibreOffice migration** if scale demands self-hosted PDF | Promote to MODULES card as `LIVE` |
+| **v1.0** "Complete" | All 4 templates × 3 densities (12) · ATS quarterly parsing tests · BYOK with safety harness · session resumption flow · active-MOD pointer + session history UI · re-tailoring flow (existing MOD + new JD → new resume, skip Stages 1–3) · **Vercel Sandbox + LibreOffice PDF rebuild** (now a hard blocker, not "if scale demands" — Drive died in prod 2026-06-12) | Promote to MODULES card as `LIVE` |
 | **v1.5+** | Portfolio-site generator (Tier 4) · multi-language (Spanish first) · recruiter-perspective scoring | MODULES card |
 
 ---
@@ -413,7 +415,7 @@ Implementation files (`src/app/updraft/*`, `src/lib/updraft/*`, `src/components/
 
 The remaining v0.5 slice (pick by appetite — independent of each other):
 
-1. **`SYS_MATCH_ANALYZER` prompt tuning** — see `CALIBRATION.md`. Beau is collecting a calibration corpus through real test runs. The new casing watch list lives in the same file — capture casing misses + match-score misses in the same corpus.
+1. **`SYS_MATCH_ANALYZER` prompt tuning** — ✅ **DONE.** Calibration harness + 49-pair corpus built, four scoring fixes landed (PR #6), and re-validated on `gemini-3.5-flash` 2026-06-12 (all fixes hold; see `CALIBRATION.md`). Open follow-up: seed one literal same-role pair to observe the DIRECT band fire in-corpus. The casing watch list still lives in `CALIBRATION.md` for future misses.
 2. **Conversational Stage 03** — biggest remaining build. The spec calls for a Phase A-D conversation; current Stage 03 is form-editing with phased UX over the top. Parked deliverables in `CALIBRATION.md` § 'Stage 03 deferred features' (AI bullet rewriter, Phase C/D prompts, STAR extraction, tier branches) fold into this slice when picked up.
 
 **Parked design changes:**
