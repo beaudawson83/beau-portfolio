@@ -414,3 +414,23 @@ When a decision is reversed, append a new entry referencing the old one — neve
 **Scope note:** this is a dedicated build, not a same-session fix. Until it lands, prod stays DOCX-only with the existing banner. Tracked as the lead item of V1-GATE §2.
 
 **Invalidated by:** Vercel Sandbox sunset or a pricing change that makes per-conversion cost untenable (would push back to a managed conversion vendor), or Google reversing the service-account storage policy (would make the Drive path viable again — but the dependency-removal rationale would still favor Sandbox).
+
+---
+
+## 2026-06-13 — PDF generation: native (@react-pdf/renderer), NOT Drive and NOT Sandbox
+
+**Decision:** Generate Stage 04 PDFs **natively in-process** from the same structured MOD data the DOCX builder uses, via `@react-pdf/renderer` in [`pdf-builder.tsx`](../../src/lib/updraft/pdf-builder.tsx). This **supersedes both** prior PDF approaches: the Google Drive API (shipped 2026-05-04, died in prod 2026-06-12 with `403 storageQuotaExceeded`) **and** the Vercel Sandbox + LibreOffice rebuild decided 2026-06-12 — which is **abandoned before implementation.**
+
+**The reframe that made this obvious (Beau's push-back):** every DOCX→PDF approach (Drive, Sandbox+LibreOffice, paid conversion API) exists to *convert an arbitrary Word file*, which genuinely needs a heavy office rendering engine. But UpDraft **generates its own documents** from structured data (the MOD object) — it never has an arbitrary DOCX to convert. So it can render the PDF **directly** from that data, exactly as it already renders the DOCX via the `docx` package. `pdf-builder.tsx` is the one-to-one PDF sibling of `docx-builder.ts` (shared `extractKeyOutcomesFromBullets` / `formatDateRange`, same Classic/Regular layout). No conversion step, no LibreOffice, no Google, no external service, no API key, no snapshot, no infra.
+
+**Why @react-pdf/renderer over pdfkit:** built-in standard fonts (Times-Roman/Bold/Italic) match docx-builder's "Times New Roman" with zero font files to bundle — sidesteps the Next file-tracing issues pdfkit's `.afm` data can hit in serverless. Declarative layout mirrors the DOCX section structure cleanly.
+
+**Cost:** $0. Runs in the existing Node serverless function. No new env var (the Drive-era `UPDRAFT_GOOGLE_SA_JSON_B64` is retired; `UPDRAFT_DAILY_PDF_CAP` left defined but PDF is no longer separately metered — it's free local CPU).
+
+**Tradeoff accepted:** the PDF is its own clean render, not a pixel-identical photocopy of the DOCX (different engines). Since both are UpDraft's own single-column ATS templates, they're built to match (same font, margins, section order, bold/italic treatment). Both carry a real selectable text layer → ATS-safe. The DOCX stays the editable source; the PDF is the locked, distortion-proof deliverable (the reason PDF is the professional send format).
+
+**Verified (real, not desk-checked):** all three templates (MOD, Resume, Cover Letter) rendered from a realistic MOD fixture through the actual builder functions and visually inspected — correct fonts, bold/italic role headers, hanging-indent bullets, Key-Outcomes suppression rule, multi-page flow, selectable text. Crucially this verification ran **locally** — native generation needs no Vercel infra, which is exactly why it satisfies the 2026-06-12 "live run is the only real test" lesson without a deploy. `npm run build` bundles `@react-pdf/renderer` into the route with no warnings.
+
+**Why the Sandbox plan was dropped:** it was the right answer to the wrong question ("how do we run LibreOffice in serverless"). It carried a ~6–10h build, a one-time snapshot bootstrap, OIDC wiring, package-name uncertainty on Amazon Linux, cold-start latency, and Active-CPU billing — all to convert a DOCX we generate ourselves and never needed to convert. Native generation is simpler, free, and locally verifiable. (Also corrected along the way: Vercel Sandbox uses snapshots, not custom Docker images — there was never a `UPDRAFT_SANDBOX_IMAGE_TAG`. Moot now.)
+
+**Invalidated by:** a future need to convert *user-supplied arbitrary DOCX/other formats* to PDF (would reintroduce the need for a real conversion engine — a managed API would then be the simple choice, not self-hosted LibreOffice), or @react-pdf/renderer proving unable to express a future template (unlikely for single-column ATS layouts).

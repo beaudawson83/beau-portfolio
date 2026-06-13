@@ -50,20 +50,20 @@ The branch's fixes were anchored to 2.0's behavior. Confirm each still does what
 - **Finding 2 — Drive PDF export DOWN (OPEN, v1.0 blocker):** Stage 04 PDF failed all three (`updraft.pdf.upload` 403 `storageQuotaExceeded` — service accounts have no My Drive quota). Graceful degradation worked (DOCX shipped). Fix options in `DECISIONS.md` 2026-06-12; tracked under §2 PDF resilience.
 - [ ] (Follow-up) Add active alerting on `/api/updraft/status` failure counters — nothing was watching them.
 
-**Exit criteria for §1:** ✅ thresholds calibrated on live model · ✅ branch merged · ✅ full flow verified live · ⚠️ PDF export must be fixed (now a §2 blocker) before promotion.
+**Exit criteria for §1:** ✅ thresholds calibrated on live model · ✅ branch merged · ✅ full flow verified live · ✅ PDF export fixed (native generation, 2026-06-13 — see §2).
 
 ---
 
 ## §2 — Feature track (the v1.0 "Complete" scope)
 
-Per `PLAN.md` §8 the v1.0 line is: *all 4 templates × 3 densities · ATS quarterly parsing tests · BYOK with safety harness · session resumption · active-MOD pointer + session-history UI · re-tailoring flow · **Sandbox+LibreOffice PDF rebuild (now a hard blocker — Drive died in prod 2026-06-12, no longer "if scale demands")**.* Pick by appetite — most are independent, but the PDF rebuild is the gating item (see below). Suggested priority for "good enough to promote":
+Per `PLAN.md` §8 the v1.0 line is: *all 4 templates × 3 densities · ATS quarterly parsing tests · BYOK with safety harness · session resumption · active-MOD pointer + session-history UI · re-tailoring flow · ~~PDF rebuild~~ (DONE 2026-06-13 — native generation, see below).* Pick the rest by appetite — most are independent. Suggested priority for "good enough to promote":
 
 - [ ] **Re-tailoring flow** — existing MOD + new JD → new resume, skipping Stages 1–3. High user value, leverages everything already built.
 - [ ] **Session-history UI + active-MOD pointer** — makes the dashboard a real workspace rather than a one-shot.
 - [ ] **MOD Markdown export** — spec promises DOCX + PDF + **Markdown**; Markdown is the one still missing.
 - [ ] **BYOK with safety harness** — the documented escape valve when a session hits the token cap; "built carefully or not at all" (`PLAN.md` decision #8).
 - [ ] **Template breadth** — currently 1 template × 1 density (Classic); v1.0 target is 4 × 3 = 12.
-- [ ] **PDF export — BLOCKER (broken in prod; fix path chosen = Sandbox + LibreOffice).** As of 2026-06-12 Drive returns 403 `storageQuotaExceeded` (service accounts have no My Drive quota); all PDF generation is down (DOCX-only with banner until fixed). **Decided 2026-06-12: rebuild on Vercel Sandbox + LibreOffice**, reversing the 2026-05-04 Drive pivot — removes the Google dependency entirely (see `DECISIONS.md`). Dedicated ~6–10h build: Dockerfile (LibreOffice + Liberation/DejaVu/Carlito/Croscore/Libertine fonts) → Sandbox driver in `pdf.ts` behind the existing `renderPdf()` → validate DOCX text layer survives (ATS-safe). Retry + DOCX-only degradation + `UPDRAFT_DAILY_PDF_CAP` already in place.
+- [x] **PDF export — RESOLVED 2026-06-13 (native generation).** Drive died 2026-06-12 (403 `storageQuotaExceeded`). Rather than the Sandbox+LibreOffice rebuild (abandoned as over-engineering — it solved "convert an arbitrary DOCX," which UpDraft never has), PDFs are now **generated natively** from the same structured MOD data as the DOCX, via [`pdf-builder.tsx`](../../src/lib/updraft/pdf-builder.tsx) (`@react-pdf/renderer`). No conversion, no LibreOffice, no Google, no paid API, no env var, $0, runs in the existing serverless function. All three templates (MOD / Resume / CL) verified locally with a realistic fixture — correct layout, selectable ATS-safe text, builds clean. See `DECISIONS.md` 2026-06-13. (Native generation is fully verifiable without Vercel, so this didn't need a deploy to prove.)
 
 **Deferred / parked (not v1.0 blockers):**
 - Conversational Stage 03 (Phase A–D rebuild) + its folded-in pieces: AI bullet rewriter, STAR extraction, tier deepening branches — see `CALIBRATION.md` §"Stage 03 deferred features".

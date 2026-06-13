@@ -110,8 +110,8 @@ Login (magic link) → Create session → Stage 01 (Intake)
 | `cover-letter-generator.ts` | SYS_COVER_LETTER_DRAFTER call (Stage 04). One Gemini hop returns greeting + paragraphs[4] + signoff + structured metadata (`hook_type`, `p3_branch`, `close_type`, `word_count`) used downstream for v0.5 tuning. |
 | `lint.ts` | Phase 1 regex anti-pattern detection (8 categories). Phase 2 AI rewrite deferred. |
 | `docx-builder.ts` | DOCX builder using `docx` npm — Classic template / Regular density. `renderModDocx` + `renderResumeDocx` + `renderCoverLetterDocx`. |
-| `pdf.ts` | Google Drive API DOCX→PDF behind a provider-agnostic `renderPdf()` interface (swappable to Sandbox/LibreOffice in v1.0). Exposes `renderPdfWithRetry()` (3 attempts, transient-only). JWT auth via google-auth-library, access-token cached in module scope. |
-| `retry.ts` | Centralized retry policy at the two transient-prone external boundaries (Drive API + Gemini API). `withRetry` (throw-based) + `withRetryResult` ({ ok: bool } shape) + `PDF_RETRY` / `GEMINI_RETRY` policies + `isTransientDriveError` / `isTransientGeminiError` classifiers. Retries log `*_retry_recovered` / `*_retry_exhausted` events for the diagnostic endpoint. |
+| `pdf-builder.tsx` | **Native** PDF generation via `@react-pdf/renderer` — `renderModPdf` / `renderResumePdf` / `renderCoverLetterPdf`, rendered directly from the structured MOD data (the PDF sibling of `docx-builder.ts`, sharing its key-outcome + date helpers and Classic/Regular layout). No conversion engine, no external service, no env var. Replaced the Drive-API `pdf.ts` 2026-06-13 (`DECISIONS.md`). |
+| `retry.ts` | Centralized retry policy for the Gemini API boundary. `withRetry` (throw-based) + `withRetryResult` ({ ok: bool } shape) + `GEMINI_RETRY` policy + `isTransientGeminiError` classifier. (The Drive `PDF_RETRY` / `isTransientDriveError` were removed 2026-06-13 — native PDF generation has no network boundary to retry.) |
 | `filename.ts` | Spec-compliant export filename builder (`Lastname_Type_Role_Company_MonYYYY.ext`) |
 | `data-export.ts` | GDPR/CCPA archive builder — user + sessions + events + exports w/ signed URLs |
 
@@ -211,11 +211,11 @@ Migration script: `scripts/setup-supabase-updraft.sql` (idempotent, follows the 
 
 ---
 
-## 4. PDF subsystem — Google Drive API (being replaced)
+## 4. PDF subsystem — native generation (`@react-pdf/renderer`)
 
-> **⚠️ 2026-06-12 — reverting to Sandbox + LibreOffice.** The Drive path below is **down in production**: `403 storageQuotaExceeded` (service accounts have no My Drive storage quota; Google tightened enforcement since the 2026-05-06 verification when it worked). Decision reversed — PDF moves back to Vercel Sandbox + LibreOffice. The section below documents the Drive mechanism as built (and as it'll be torn out); see `DECISIONS.md` 2026-06-12 for the reversal and the build plan, tracked in `V1-GATE.md` §2. Until then prod is DOCX-only with a banner.
+> **✅ 2026-06-13 — the §4.1–4.4 Drive narrative below is HISTORICAL and was torn out.** PDF is now **generated natively** from the structured MOD data via [`pdf-builder.tsx`](../../src/lib/updraft/pdf-builder.tsx) — the PDF sibling of `docx-builder.ts`. There is **no conversion** (no Drive, no LibreOffice, no Sandbox, no paid API, no env var, $0). UpDraft owns its templates, so it never has an arbitrary DOCX to convert — it renders the PDF straight from the same data as the DOCX. Authoritative design: `DECISIONS.md` 2026-06-13. The Drive description below is retained only as the record of what was replaced.
 
-Originally locked as Vercel Sandbox + custom LibreOffice image; pivoted 2026-05-04 to Google Drive API after weighing the work-vs-value tradeoff. See [`DECISIONS.md`](DECISIONS.md) entry of 2026-05-04 for the full alternatives-considered, and the 2026-06-12 entry for why it's being undone.
+Lineage: locked 2026-05-03 as Sandbox + LibreOffice → pivoted 2026-05-04 to Google Drive API → Drive died in prod 2026-06-12 (`403 storageQuotaExceeded`) → briefly re-decided Sandbox 2026-06-12 → **abandoned Sandbox and shipped native generation 2026-06-13** (the reframe: we generate our own documents, so no conversion engine is needed at all). See `DECISIONS.md` entries 2026-05-04, 2026-06-12, and 2026-06-13.
 
 ### 4.1 Setup (one-time, on Beau's side)
 
@@ -367,8 +367,7 @@ Purge driver: `last_activity_at` column. Cron runs daily via `/api/updraft/cron/
 | `UPDRAFT_SESSION_TOKEN_CAP_IN` | v0.1 | Default 200000 |
 | `UPDRAFT_SESSION_TOKEN_CAP_OUT` | v0.1 | Default 50000 |
 | `UPDRAFT_DAILY_PDF_CAP` | v0.1.5 | Default 30 — global daily cap on PDF conversions |
-| `UPDRAFT_GOOGLE_SA_JSON_B64` | v0.1.5 | Base64-encoded Google service-account JSON for Drive API DOCX→PDF. When unset, Stage 04 still ships DOCX with a "PDF unavailable" banner (graceful degradation). |
-| `UPDRAFT_SANDBOX_IMAGE_TAG` | v1.0 (if needed) | Pinned LibreOffice image tag — only used if v1.0 swaps from Drive API to Sandbox |
+| _(PDF needs no env var)_ | 2026-06-13 | PDF generation is native (`pdf-builder.tsx`, `@react-pdf/renderer`) — in-process, no external service. The Drive-era `UPDRAFT_GOOGLE_SA_JSON_B64` is retired; there is no `UPDRAFT_SANDBOX_IMAGE_TAG` (Sandbox rebuild abandoned). See `DECISIONS.md` 2026-06-13. |
 
 Reused from existing site config: `GEMINI_API_KEY`, `BREVO_API_KEY`, `MAIL_FROM_ADDRESS`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `CHAT_IP_SALT`.
 
