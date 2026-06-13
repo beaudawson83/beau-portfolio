@@ -149,5 +149,6 @@
   "skills/updraft/RETAILOR-SCOPE.md": "The design and two-phase build plan for UpDraft's re-tailoring feature — reusing a finished master profile against a new job posting to produce a freshly tailored resume without redoing intake or the interview.",
   "src/app/api/updraft/sessions/retailor/route.ts": "Starts a re-tailoring session for a signed-in user — copies a finished session's master profile into a brand-new session so they can aim it at a new job posting without redoing intake or the interview.",
   "src/components/Updraft/Stage02/Stage02Runner.tsx": "The second step of an UpDraft session — picking which documents to make, entering the target job posting, running the match analysis, and showing the match briefing. Greets re-tailoring sessions specially since their profile already exists.",
-  "skills/updraft/README.md": "The engineering handoff for the UpDraft resume tool — explains the orchestrator pattern, what the host app owns vs. the AI, the stage flow, and the backend services and endpoints an implementer must provide."
+  "skills/updraft/README.md": "The engineering handoff for the UpDraft resume tool — explains the orchestrator pattern, what the host app owns vs. the AI, the stage flow, and the backend services and endpoints an implementer must provide.",
+  "skills/updraft/SESSION-HANDOFF.md": "A rolling handoff note passed between work sessions on the UpDraft tool — what just shipped, the exact testing to run next, and what to build after that."
 }
