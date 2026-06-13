@@ -1,7 +1,7 @@
 # UpDraft — Master Build Plan
 
 **Status:** v0.1.5 + first wave of v0.5 polish shipped (auth · 4 stages · DOCX + PDF · account · purge cron · Pi-egg reveal · cover letter · casing rules · centralized retry · Stage 04 picker · summary auto-gen · phased Stage 03 UX). v0.1.5 happy path real-traffic verified 2026-05-06 with husband as second test account.
-**Last updated:** 2026-06-12 — calibration re-validated on `gemini-3.5-flash` (49-pair sweep; all four match-analyzer fixes hold; PR #6 merged) and the full 4-stage flow verified live on 3.5. That live run found two prod outages: Brevo email (IP-restriction, fixed in-session) and **Drive PDF down (`403 storageQuotaExceeded`)** → PDF is being **rebuilt on Sandbox + LibreOffice** (reverses the §4 Drive pivot). See `DECISIONS.md` 2026-06-12, `CALIBRATION.md` 2026-06-12, and `V1-GATE.md`. *(Prior: 2026-06-10, Gemini default migrated to 3.5 after Google retired 2.0-flash.)*
+**Last updated:** 2026-06-13 — trust track (§1) closed and feature-track work begun. PDF rebuilt as **native generation** (`pdf-builder.tsx`; no Drive, no Sandbox — the 2026-06-12 Sandbox+LibreOffice plan was abandoned as over-engineering); daily **failure-alert cron** added; **active-MOD pointer** + **re-tailoring Phase 1** shipped. See `DECISIONS.md` 2026-06-13, `RETAILOR-SCOPE.md`, and `V1-GATE.md`. *(2026-06-12: calibration re-validated on `gemini-3.5-flash`, 49-pair sweep, all four match-analyzer fixes hold, PR #6 merged; full 4-stage flow verified live. 2026-06-10: Gemini default migrated to 3.5 after Google retired 2.0-flash.)*
 
 The skill spec itself lives in `SKILL.md` and `references/`. This file is the durable design + integration record for the host program build-out on beaudawson.com. `DECISIONS.md` is the append-only decision log (alternatives considered, rationale, what would invalidate each call).
 
@@ -25,7 +25,7 @@ Architecture is "skill-as-orchestrator": the host program (this Next.js app) own
 |---|---|---|
 | 1 | Entry phasing: unlinked URL (v0.1) → Pi-egg reveal (v0.5) → MODULES card (v1.0) | Smallest blast radius first |
 | 2 | AI provider: Gemini (`gemini-3.5-flash` default — was `gemini-2.0-flash` until Google retired it 2026-06-01; see DECISIONS.md 2026-06-10) | Matches existing AskBeau infra |
-| 3 | PDF generation: **moving to Vercel Sandbox + LibreOffice** (decided 2026-06-12, DECISIONS.md). Was Google Drive API since 2026-05-04, but Drive is dead in prod (`403 storageQuotaExceeded` — service accounts have no My Drive quota). DOCX-only until the Sandbox build lands. | Removes the Google-account dependency that caused the outage; `renderPdf()` isolates the swap |
+| 3 | PDF generation: **native** via `@react-pdf/renderer` (`pdf-builder.tsx`), rendered from the same structured data as the DOCX (decided 2026-06-13, DECISIONS.md). Lineage: Sandbox+LibreOffice (planned) → Google Drive API (2026-05-04) → Drive died in prod 2026-06-12 (`403 storageQuotaExceeded`) → native generation 2026-06-13 (the reframe: UpDraft generates its own docs, so no conversion engine is needed at all). | $0, in-process, no external service, no env var; locally verifiable |
 | 3a | PDF reading: Gemini's native PDF input on `generateContent`. Replaces pdf-parse. | Handles image-based PDFs (OCR), removes lib API churn risk, single round-trip |
 | 4 | Storage: Supabase only (single source of truth across the site) | Reuses existing patterns + RLS |
 | 5 | Auth: magic-link from day one (Brevo). Originally planned on Resend; pivoted 2026-05-04 because Resend's free-tier sandbox sender only delivers to the account owner — broke for any other user. | No anonymous PII; no v1.5 migration |
@@ -51,54 +51,61 @@ Login (magic link) → Create session → Stage 01 (Intake)
                                           ↓
                                       Stage 04 (Generate)
                                           ↓
-                                  DOCX builder ──→ Google Drive API
-                                          │       (DOCX → Google Doc → PDF export)
-                                          └─→ PDF writer ←──┘
-                                                 ↓
+                          structured MOD data ──┬─→ DOCX builder (docx)
+                                                └─→ PDF builder (@react-pdf, native)
+                                          ↓
                                        Supabase Storage (signed URLs)
 ```
+
+(Re-tailoring enters this pipeline at Stage 02: a session pre-seeded with a
+source MOD skips Stages 01 + 03 — see `RETAILOR-SCOPE.md`.)
 
 ### 3.2 Routes (under `src/app/`)
 
 | Path | Type | Purpose |
 |---|---|---|
-| `/updraft` | server | Auth-gated dashboard: session list + active MOD |
+| `/updraft` | server | Auth-gated dashboard: session list (target-role labels + status) · active-MOD set/unset · "Tailor to a new role" (re-tailoring) |
 | `/updraft/login` | client | Magic-link request + privacy callout |
-| `/updraft/auth/callback` | server | Magic-link verification + cookie set |
-| `/updraft/[sessionId]` | client | 4-stage runner |
-| `/updraft/[sessionId]/done` | client | Export downloads |
-| `/updraft/account` | client | Active MOD pointer · session keep-flags · delete-my-data · data-export |
+| `/updraft/[sessionId]` | server | Stage dispatcher → Stage 01/02/03/04 runner (derives stage from `stage_outputs` presence) |
+| `/updraft/account` | client | Session keep-flags · delete-my-data · data-export |
+
+(Magic-link verification is the API route `/api/updraft/auth/callback`, not an app page. Stage 04's "done" state is rendered by `Stage04Runner`, not a separate `/done` route.)
 
 ### 3.3 API endpoints (under `src/app/api/updraft/`)
+
+Reconciled against the actual route tree 2026-06-13 (the canonical, more-detailed table also lives in the repo `CLAUDE.md`):
 
 | Route | Method | Purpose | Auth |
 |---|---|---|---|
 | `/api/updraft/auth/issue` | POST | Issue magic-link email | rate-limited per IP |
-| `/api/updraft/auth/verify` | POST | Verify token + set session cookie | one-shot HMAC token |
+| `/api/updraft/auth/callback` | GET | Verify token + set session cookie | one-shot HMAC token |
 | `/api/updraft/auth/logout` | POST | Clear cookie | session cookie |
-| `/api/updraft/sessions` | POST | Create session | session cookie |
-| `/api/updraft/sessions` | GET | List user's sessions | session cookie |
-| `/api/updraft/sessions/[id]` | GET | Read session state | cookie + ownership |
-| `/api/updraft/sessions/[id]/stage/[n]` | PATCH | Update stage output | cookie + ownership |
+| `/api/updraft/sessions` | POST | Create session | cookie + quota |
+| `/api/updraft/sessions/retailor` | POST | Re-tailoring — create a session pre-seeded with a source MOD (stage_01 + stage_03); defaults to the active-MOD pointer | cookie + quota |
+| `/api/updraft/sessions/[id]` | GET / DELETE | Read or delete session (cascade) | cookie + ownership |
+| `/api/updraft/sessions/[id]/parse-upload` | POST | Stage 01 — upload + Gemini parse | cookie + ownership + AI quota |
+| `/api/updraft/sessions/[id]/match-analyze` | POST | Stage 02 — `SYS_MATCH_ANALYZER` + target metadata | cookie + ownership + AI quota |
+| `/api/updraft/sessions/[id]/generate-summary` | POST | Stage 03 — `SYS_SUMMARY_GENERATOR` | cookie + ownership + AI quota |
+| `/api/updraft/sessions/[id]/generate-files` | POST | Stage 04 — render selected DOCX/PDF, draft CL, lint MOD | cookie + ownership + AI quota |
+| `/api/updraft/sessions/[id]/exports/[exportId]` | GET | 302 → signed download URL | cookie + ownership |
+| `/api/updraft/sessions/[id]/stage/[n]` | PATCH | Merge-patch a stage output | cookie + ownership |
 | `/api/updraft/sessions/[id]/keep` | PATCH | Toggle 30-day-purge exemption | cookie + ownership |
-| `/api/updraft/sessions/[id]` | DELETE | Delete session (cascade) | cookie + ownership |
-| `/api/updraft/parse-resume` | POST | PDF/DOCX → structured JSON | cookie |
-| `/api/updraft/ai/[stage]` | POST | Gemini wrapper, Audit voice | cookie + cap check |
-| `/api/updraft/lint` | POST | Anti-pattern Phase 1 + Phase 2 | cookie |
-| `/api/updraft/sessions/[id]/exports` | POST | Generate DOCX + PDF | cookie + cap check |
-| `/api/updraft/sessions/[id]/exports/[file]` | GET | Signed download URL | cookie + ownership |
-| `/api/updraft/me` | GET | Current user + active MOD | cookie |
+| `/api/updraft/me` | GET | Current user + active-MOD pointer | cookie |
+| `/api/updraft/me/active-mod` | PATCH | Set/clear active-MOD pointer (validates target holds a ready MOD) | cookie |
 | `/api/updraft/me/data-export` | GET | Self-serve archive (GDPR/CCPA) | cookie |
 | `/api/updraft/me/delete` | POST | Account delete (full cascade) | cookie + email confirm |
-| `/api/updraft/status` | GET | Diagnostic: today's quota burn | `Bearer $CRON_SECRET` |
-| `/api/updraft/cron/purge` | POST | 30-day purge job | `Bearer $CRON_SECRET` |
+| `/api/updraft/status` | GET | Diagnostic: quota burn + env presence + 24h failure counts | `Bearer $CRON_SECRET` |
+| `/api/updraft/cron/purge` | GET/POST | 30-day purge job | `Bearer $CRON_SECRET` |
+| `/api/updraft/cron/alert` | GET/POST | Daily failure-counter watcher → operator email digest | `Bearer $CRON_SECRET` |
+
+Stage AI runs through dedicated per-stage endpoints (parse-upload / match-analyze / generate-summary / generate-files), not a generic `ai/[stage]` route. Lint runs inside `generate-files`, not a standalone `/lint` endpoint.
 
 ### 3.4 Library layout (under `src/lib/updraft/`)
 
 | File | Responsibility |
 |---|---|
 | `auth.ts` | Magic-link issue/verify · session cookie HMAC · owner-secret bypass · server cookie helper |
-| `store.ts` | Supabase CRUD: users, magic tokens, sessions, events, exports + cascade-delete + purge query |
+| `store.ts` | Supabase CRUD: users, magic tokens, sessions, events, exports + cascade-delete + purge query. Also the active-MOD pointer (`setActiveModSession`, validated) and `createRetailoredSession` (seed stage_01 + stage_03 from a source session). |
 | `storage.ts` | Supabase Storage helpers — upload, signed URL, delete-by-path, delete-session-prefix |
 | `quotas.ts` | Daily caps · per-IP buckets · owner bypass · global kill switch · status snapshot |
 | `gemini.ts` | Gemini wrapper. Structured output via `responseSchema`; supports inline file parts (PDF input). Loads SYS_* prompts + Audit voice from skill-files. |
@@ -115,17 +122,14 @@ Login (magic link) → Create session → Stage 01 (Intake)
 | `filename.ts` | Spec-compliant export filename builder (`Lastname_Type_Role_Company_MonYYYY.ext`) |
 | `data-export.ts` | GDPR/CCPA archive builder — user + sessions + events + exports w/ signed URLs |
 
-Purge logic lives in the `/api/updraft/cron/purge` route directly rather than a `purge.ts` lib (small enough to inline cleanly).
-| `quotas.ts` | Daily caps · per-IP buckets · owner bypass · kill switch |
-| `purge.ts` | 30-day purge logic (called by cron) |
-| `data-export.ts` | GDPR/CCPA archive builder |
+Purge logic lives in the `/api/updraft/cron/purge` route directly rather than a `purge.ts` lib (small enough to inline cleanly); the failure-alert watcher lives in `/api/updraft/cron/alert` the same way. The Phase-2 bullet reframer (`bullet-reframer.ts`, `SYS_BULLET_REFRAMER`) is scoped but not yet built — see `RETAILOR-SCOPE.md`.
 
 ### 3.5 Components (under `src/components/Updraft/`)
 
 Actual layout as shipped:
 
 - `LoginForm.tsx` · `PrivacyCallout.tsx` (login page Beau-edited verbiage)
-- `Dashboard.tsx` (session list)
+- `Dashboard.tsx` (session list w/ target-role labels + status · active-MOD set/unset · "Tailor to a new role" re-tailoring button)
 - `Stage01/Stage01Runner.tsx` (path picker · upload · identity · tier confirmation)
 - `Stage02/Stage02Runner.tsx` (deliverables picker · target form · match-analyze · briefing)
 - `Stage03/Stage03Runner.tsx` (phased UX with `StepProgress` + `StepBlock` wrappers around Roles, EarlierCareer, Education, Skills, Tier2 sections)
@@ -348,7 +352,7 @@ Purge driver: `last_activity_at` column. Cron runs daily via `/api/updraft/cron/
 |---|---|---|
 | **v0.1.5** "Vertical slice — SHIPPED 2026-05-06" | Magic-link auth (Brevo) · Path A only · Tier 2 only · MOD + Resume (no CL) · 1 template × 1 density (Classic) · **DOCX + PDF export** (Drive API) · **Gemini-direct PDF reading** · Lint Phase 1 (regex) · per-IP + global kill switch · 30-day purge cron · keep flags · delete-my-data · data-export | Unlinked URL — share manually |
 | **v0.5** "Make it good" | Path B (talk-it-through) · all 4 tiers (1/3/4 deepening branches) · Cover Letter (`SYS_COVER_LETTER_DRAFTER`) · Lint Phase 2 (AI rewrite via `SYS_ANTIPATTERN_REVIEWER`) · AI bullet rewriter (`SYS_BULLET_REWRITER`) · conversational Stage 03 (Phase A-D + STAR stories + skill surfacing card) · daily caps tuned to real traffic · **`SYS_MATCH_ANALYZER` prompt tuning** (see [`CALIBRATION.md`](CALIBRATION.md)) · Gemini explicit context caching | Pi-egg reveal |
-| **v1.0** "Complete" | All 4 templates × 3 densities (12) · ATS quarterly parsing tests · BYOK with safety harness · session resumption flow · active-MOD pointer + session history UI · re-tailoring flow (existing MOD + new JD → new resume, skip Stages 1–3) · **Vercel Sandbox + LibreOffice PDF rebuild** (now a hard blocker, not "if scale demands" — Drive died in prod 2026-06-12) | Promote to MODULES card as `LIVE` |
+| **v1.0** "Complete" | All 4 templates × 3 densities (12) · ATS quarterly parsing tests · BYOK with safety harness · session resumption flow · ~~active-MOD pointer + session history UI~~ (DONE 2026-06-13) · re-tailoring flow (existing MOD + new JD → new resume, skip Stages 1–3 — Phase 1 shipped 2026-06-13; Phase 2 bullet reframing pending) · ~~PDF rebuild~~ (DONE 2026-06-13 — native generation, no Sandbox) | Promote to MODULES card as `LIVE` |
 | **v1.5+** | Portfolio-site generator (Tier 4) · multi-language (Spanish first) · recruiter-perspective scoring | MODULES card |
 
 ---
@@ -404,13 +408,19 @@ Implementation files (`src/app/updraft/*`, `src/lib/updraft/*`, `src/components/
 **v0.1.5 + first wave of v0.5 polish — SHIPPED.** v0.1.5 happy path verified end-to-end on 2026-05-06 (magic-link sign-in → MOD/Resume DOCX + PDF → privacy controls). The v0.5 wave landed across two sessions on 2026-05-06 → 2026-05-07:
 
 - **Pi-egg reveal** — Operator Dashboard now exposes `OPEN_UPDRAFT [BETA]` alongside `OPEN_BLOG_EDITOR [ADMIN]`, so anyone who solves the Pi challenge gets a path to UpDraft. Tracked via `trackCTAClick('updraft_open', 'pi_dashboard')`.
-- **Cover Letter generation** — Stage 02 picker accepts `cover_letter`; Stage 04 drafts a 4-paragraph CL via `SYS_COVER_LETTER_DRAFTER` (one Gemini hop), renders DOCX through the same Classic primitives, converts to PDF via Drive API. Failure to draft is non-blocking. Structured metadata (`hook_type`, `p3_branch`, `close_type`, `word_count`) persists to `stage_04.cover_letter_meta`.
+- **Cover Letter generation** — Stage 02 picker accepts `cover_letter`; Stage 04 drafts a 4-paragraph CL via `SYS_COVER_LETTER_DRAFTER` (one Gemini hop), renders DOCX through the same Classic primitives, and renders PDF natively (`pdf-builder.tsx`). Failure to draft is non-blocking. Structured metadata (`hook_type`, `p3_branch`, `close_type`, `word_count`) persists to `stage_04.cover_letter_meta`.
 - **Casing normalization** — `SYS_RESUME_PARSER` rules 8-11 normalize identity / company / title / location / institution / degree to natural casing while preserving acronyms + brand names. Skills + bullets explicitly excluded. Watch list in `CALIBRATION.md`.
 - **Spaces preservation** — interview-objections textarea no longer trims/filters on every keystroke; consumers (cover-letter-generator, docx-builder, generate-summary seed) filter empties at consumption time.
-- **Centralized retry + 24h failure visibility** — `lib/updraft/retry.ts` wraps Drive + Gemini calls with exponential backoff + jitter (3 attempts). Retries log `*_retry_recovered` / `*_retry_exhausted` events. `/api/updraft/status` aggregates `failures` over the last 24h so a single curl tells you the failure profile.
+- **Centralized retry + 24h failure visibility** — `lib/updraft/retry.ts` wraps Gemini calls with exponential backoff + jitter (3 attempts; the Drive retry path was removed 2026-06-13 with native PDF). `/api/updraft/status` aggregates `failures` over the last 24h, and the daily `/api/updraft/cron/alert` cron emails the operator when they cross a threshold.
 - **Stage 04 deliverable + format picker** — backend accepts optional `selection: UpdraftExportKind[]` body param; default behavior unchanged when absent. Frontend picker has DOCX + PDF checkboxes per available deliverable, All / None shortcuts, and a Regenerate ↻ button on DoneView that switches to a "defaults all unchecked" picker for partial regeneration.
 - **Summary review at the top of Stage 04** — Stage 03 advance auto-drafts the executive summary in the background and lands the user on a Review-and-generate page; the summary is editable with autosave (800ms debounce, full-MOD PATCH) and a Regenerate ↻ button. Empty / failed-draft state is graceful — user can write or regenerate. Generate button refuses to fire on an empty summary.
 - **Phased Stage 03 UX** — "Build your story" page split into 3 (or 2 in lightweight mode) explicit step blocks: Job history → Background → About you, each with a "STEP N OF 3" badge + step title + intro paragraph. Non-interactive progress strip at the top shows the full shape of the page.
+
+**v1.0-gate work (2026-06-13)** — see `V1-GATE.md`:
+
+- **Trust track (§1) closed** — match-analyzer re-calibrated on `gemini-3.5-flash` (all four scoring fixes hold; `CALIBRATION.md`), the dead Drive PDF API replaced with **native generation** (`pdf-builder.tsx`; `DECISIONS.md` 2026-06-13), and a daily **failure-alert cron** (`/api/updraft/cron/alert`) now watches the failure counters nothing was reading.
+- **Active-MOD pointer** — the dashboard lets a user designate any finished session's MOD as their active master profile (set/unset via `PATCH /api/updraft/me/active-mod`, server-validated). Wired the missing setter + endpoint + UI onto the pre-existing `active_mod_session_id` column.
+- **Re-tailoring Phase 1** — "Tailor to a new role" creates a session pre-seeded with the active MOD's stage_01 + stage_03 (`createRetailoredSession` / `POST /api/updraft/sessions/retailor`), so it skips intake + interview and lands on Stage 02. **Tailoring is headline-only until Phase 2** (JD bullet reframing via `SYS_BULLET_REFRAMER` — scoped in `RETAILOR-SCOPE.md`, not yet built).
 
 The remaining v0.5 slice (pick by appetite — independent of each other):
 

@@ -111,10 +111,10 @@ src/
 │       ├── pi-challenge/{issue,validate}/route.ts
 │       └── updraft/                   # All UpDraft endpoints — see API Routes table
 │           ├── auth/{issue,callback,logout}/route.ts
-│           ├── me/{route,delete,data-export}/route.ts
+│           ├── me/{route,active-mod,delete,data-export}/route.ts
 │           ├── status/route.ts
 │           ├── cron/{purge,alert}/route.ts
-│           └── sessions/{route,[id]/{route,keep,parse-upload,match-analyze,generate-summary,generate-files,exports/[exportId],stage/[n]}}/route.ts
+│           └── sessions/{route,retailor,[id]/{route,keep,parse-upload,match-analyze,generate-summary,generate-files,exports/[exportId],stage/[n]}}/route.ts
 ├── components/
 │   ├── Header.tsx, Hero.tsx, AskBeau.tsx
 │   ├── TelemetryGrid.tsx, CaseStudies.tsx, BadLabsShowcase.tsx
@@ -202,10 +202,12 @@ src/
 | `/api/updraft/auth/issue`   | POST   | Issue magic-link email   | Rate: 10/hr per IP             |
 | `/api/updraft/auth/callback`| GET    | Verify magic-link, set session cookie | one-shot HMAC token |
 | `/api/updraft/auth/logout`  | POST   | Clear session cookie     | session cookie                 |
-| `/api/updraft/me`           | GET    | Current user info        | session cookie                 |
+| `/api/updraft/me`           | GET    | Current user info + active-MOD pointer | session cookie       |
+| `/api/updraft/me/active-mod`| PATCH  | Set/clear active-MOD pointer (validates target holds a ready MOD) | session cookie |
 | `/api/updraft/me/data-export` | GET  | JSON archive (GDPR portability) | session cookie         |
 | `/api/updraft/me/delete`    | POST   | Cascade-delete account + storage | session cookie + email confirm |
 | `/api/updraft/sessions`     | POST   | Create new session       | session cookie + quota         |
+| `/api/updraft/sessions/retailor` | POST | Re-tailoring: create a session pre-seeded with a source session's MOD (stage_01 + stage_03), landing the user on Stage 02. Defaults to the active-MOD pointer. | session cookie + quota |
 | `/api/updraft/sessions/[id]`| GET/DELETE | Read or delete session | cookie + ownership          |
 | `/api/updraft/sessions/[id]/parse-upload` | POST | Stage 01 — multipart upload, parse via Gemini, persist | cookie + ownership + AI quota |
 | `/api/updraft/sessions/[id]/match-analyze` | POST | Stage 02 — `SYS_MATCH_ANALYZER` + target metadata | cookie + ownership + AI quota |
@@ -399,7 +401,9 @@ Phase 2: cross-prompt audit. Phase 3: ACLED/UCDP/SIPRI reconciliation. Phase 4: 
 
 A resume + cover-letter generation tool operated by an AI character named **Audit**. 4-stage flow (intake → target → interview → generate) producing three deliverables in any combination: Master Overview Document (MOD), JD-tailored Resume, Cover Letter. Outputs DOCX + PDF (Markdown for MOD ships v0.5+). ATS-safe single-column templates.
 
-**Status:** v0.1.5 + first wave of v0.5 polish — SHIPPED. v0.1.5 verified end-to-end on 2026-05-06 with two test accounts. v0.5 wave landed 2026-05-06 → 2026-05-07: Pi-egg reveal in the Operator Dashboard, Cover Letter generation via `SYS_COVER_LETTER_DRAFTER`, casing rules in the resume parser, spaces-bug fix in the interview-objections textarea, **centralized retry + 24h failure visibility** at the Drive + Gemini boundaries, **per-deliverable + per-format picker** in Stage 04 (with Regenerate ↻), **summary review at the top of Stage 04** (auto-drafts on Stage 03 advance, autosave + regenerate before Generate), and a **phased Stage 03 UX** with a step-strip + 3 grouped blocks. Lives at unlinked `/updraft` URL. MODULES card promotion still gated to v1.0.
+**Status:** v0.1.5 + first wave of v0.5 polish — SHIPPED. v0.1.5 verified end-to-end on 2026-05-06 with two test accounts. v0.5 wave landed 2026-05-06 → 2026-05-07: Pi-egg reveal in the Operator Dashboard, Cover Letter generation via `SYS_COVER_LETTER_DRAFTER`, casing rules in the resume parser, spaces-bug fix in the interview-objections textarea, **centralized retry + 24h failure visibility** at the Gemini boundary, **per-deliverable + per-format picker** in Stage 04 (with Regenerate ↻), **summary review at the top of Stage 04** (auto-drafts on Stage 03 advance, autosave + regenerate before Generate), and a **phased Stage 03 UX** with a step-strip + 3 grouped blocks. Lives at unlinked `/updraft` URL. MODULES card promotion still gated to v1.0.
+
+**v1.0-gate progress (2026-06-13):** trust track (§1) fully closed — match-analyzer re-calibrated on `gemini-3.5-flash`, native PDF generation replaced the dead Drive API, and a daily failure-alert cron now watches the failure counters. Feature track (§2) in progress: the **active-MOD pointer** is live in the dashboard (designate a finished session as your master profile), and **re-tailoring Phase 1** ships the seed-and-skip flow (active MOD + new JD → new session that skips intake + interview). Phase 2 (JD bullet reframing via `SYS_BULLET_REFRAMER`) is scoped but not built — see [`skills/updraft/RETAILOR-SCOPE.md`](skills/updraft/RETAILOR-SCOPE.md) and [`V1-GATE.md`](skills/updraft/V1-GATE.md).
 
 **Architecture is "skill-as-orchestrator":** the host program (this Next.js app) owns UI, state, file generation, and the regex anti-pattern lint pass. The AI model (Gemini 3.5 Flash) owns parsing, voice, bullet rewriting, scoring, and CL drafting. Backend is the source of truth — conversation history is intentionally not preserved across stages; only structured stage outputs persist.
 

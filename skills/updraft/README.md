@@ -97,6 +97,13 @@ Search any stage file for `\`\[DET\]\``, `\`\[AI\]\``, or `\`\[AI+DET\]\`` to fi
 
 ### Required REST Endpoints
 
+This is the original implementer contract (generic shapes). The **shipped**
+routes all live under `/api/updraft/…` — see `PLAN.md` §3.3 or the repo
+`CLAUDE.md` API table for the canonical, current list. Notable differences
+from this sketch: create is `POST /api/updraft/sessions`; the active-MOD
+pointer is `GET /api/updraft/me` (read) + `PATCH /api/updraft/me/active-mod`
+(set/clear); exports generate via `POST /api/updraft/sessions/[id]/generate-files`.
+
 ```
 POST   /api/sessions                    Create new session, returns session_id
 GET    /api/sessions/[id]               Get current session state
