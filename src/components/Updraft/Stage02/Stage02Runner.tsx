@@ -44,9 +44,18 @@ export default function Stage02Runner({ session, userEmail }: Props) {
     (d) => d === 'jd_build' || d === 'cover_letter',
   );
 
+  // A re-tailoring session arrives at Stage 02 with stage_03 already seeded
+  // (the source MOD). That's the signal to greet the user differently and
+  // default the picker toward a fresh resume + cover letter — they already
+  // have a MOD, so the point is tailoring it to a new role.
+  const retailoring = Boolean(
+    (session.stageOutputs.stage_03 as { ready_for_generation?: boolean } | undefined)
+      ?.ready_for_generation,
+  );
+
   let body: React.ReactNode;
   if (deliverables.length === 0) {
-    body = <DeliverablePicker sessionId={session.id} />;
+    body = <DeliverablePicker sessionId={session.id} retailoring={retailoring} />;
   } else if (needsTarget && !stage02.target) {
     body = (
       <TargetForm
@@ -91,6 +100,18 @@ export default function Stage02Runner({ session, userEmail }: Props) {
     <main className="min-h-screen bg-[#111111] text-white">
       <SessionHeader sessionId={session.id} userEmail={userEmail} stage="02" />
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {retailoring && (
+          <div className="mb-8 bg-[#1c1726] border border-[#7C3AED]/40 rounded-lg px-5 py-4">
+            <p className="text-xs tracking-widest text-[#7C3AED] uppercase">
+              Tailoring your master profile
+            </p>
+            <p className="text-sm text-[#cbd5e1] mt-1">
+              Your existing MOD carries over — no need to re-do intake or the
+              interview. Just point it at the new role below and we&apos;ll
+              tailor the resume and cover letter to it.
+            </p>
+          </div>
+        )}
         {body}
       </section>
     </main>
@@ -139,9 +160,19 @@ function SessionHeader({
 // 2.1 — Deliverable picker
 // ---------------------------------------------------------------------------
 
-function DeliverablePicker({ sessionId }: { sessionId: string }) {
+function DeliverablePicker({
+  sessionId,
+  retailoring = false,
+}: {
+  sessionId: string;
+  retailoring?: boolean;
+}) {
   const router = useRouter();
-  const [selected, setSelected] = useState<Set<UpdraftDeliverable>>(new Set());
+  // Re-tailoring already has a MOD, so default to a fresh resume + cover
+  // letter for the new role. A clean session starts with nothing selected.
+  const [selected, setSelected] = useState<Set<UpdraftDeliverable>>(() =>
+    retailoring ? new Set<UpdraftDeliverable>(['jd_build', 'cover_letter']) : new Set(),
+  );
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 

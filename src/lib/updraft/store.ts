@@ -305,6 +305,63 @@ export async function createSessionForUser(userId: string): Promise<UpdraftSessi
 }
 
 /**
+ * Creates a re-tailored session: a fresh session pre-seeded with a source
+ * session's stage_01 (identity / path / tier) and stage_03 (the ready MOD),
+ * with stage_02 left empty. Because the session-page dispatcher derives the
+ * current stage from stage_outputs presence, the new session skips Stage 01
+ * (tier present) and Stage 03 (ready MOD present) and lands the user on
+ * Stage 02 to enter the new JD — then jumps straight to Stage 04.
+ *
+ * Validates the source is owned AND holds a generation-ready MOD (same gate
+ * as setActiveModSession). The tier/path columns are copied too, since Stage
+ * 04's cover-letter draft reads session.tier (the column, not stage_01.tier).
+ */
+export async function createRetailoredSession(args: {
+  userId: string;
+  sourceSessionId: string;
+}): Promise<
+  { ok: true; session: UpdraftSession } | { ok: false; error: string }
+> {
+  const source = await readSessionForUser(args.sourceSessionId, args.userId);
+  if (!source) return { ok: false, error: 'not-found' };
+
+  const stage01 = (source.stageOutputs.stage_01 ?? {}) as Record<string, unknown>;
+  const stage03 = (source.stageOutputs.stage_03 ?? {}) as {
+    mod?: unknown;
+    ready_for_generation?: boolean;
+  };
+  if (!stage03.ready_for_generation || !stage03.mod) {
+    return { ok: false, error: 'no-mod' };
+  }
+  if (!source.tier) return { ok: false, error: 'no-tier' };
+
+  const created = await createSessionForUser(args.userId);
+  if (!created) return { ok: false, error: 'create-failed' };
+
+  // Seed stage_01 + the tier/path columns, then stage_03. Leave stage_02
+  // empty so the dispatcher routes the user to the JD/target form.
+  const afterS01 = await patchSessionStage({
+    sessionId: created.id,
+    userId: args.userId,
+    stageKey: 'stage_01',
+    payload: stage01,
+    path: source.path,
+    tier: source.tier,
+  });
+  if (!afterS01) return { ok: false, error: 'seed-failed' };
+
+  const seeded = await patchSessionStage({
+    sessionId: created.id,
+    userId: args.userId,
+    stageKey: 'stage_03',
+    payload: stage03 as Record<string, unknown>,
+  });
+  if (!seeded) return { ok: false, error: 'seed-failed' };
+
+  return { ok: true, session: seeded };
+}
+
+/**
  * Merge-patches a single stage's output into stage_outputs.{stage_NN}.
  * stageKey is one of: 'stage_01' | 'stage_02' | 'stage_03' | 'stage_04'.
  * Other stage keys are preserved untouched.

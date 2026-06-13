@@ -50,6 +50,7 @@ export default function Dashboard({
   const [signingOut, setSigningOut] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [retailoring, setRetailoring] = useState(false);
 
   // Active-MOD pointer. activeId is optimistic; pendingId marks the row
   // whose set/unset call is in flight (for disabling + label swap).
@@ -83,6 +84,30 @@ export default function Dashboard({
     } catch {
       setCreateError('Network error. Try again.');
       setCreatingSession(false);
+    }
+  };
+
+  const handleRetailor = async () => {
+    setRetailoring(true);
+    setCreateError(null);
+    try {
+      const res = await fetch('/api/updraft/sessions/retailor', {
+        method: 'POST',
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCreateError(
+          body.error === 'no-mod'
+            ? 'Your active MOD has no finished profile to tailor.'
+            : body.error || 'Could not start a re-tailoring session.',
+        );
+        setRetailoring(false);
+        return;
+      }
+      router.push(body.redirectTo || `/updraft/${body.sessionId}`);
+    } catch {
+      setCreateError('Network error. Try again.');
+      setRetailoring(false);
     }
   };
 
@@ -159,14 +184,26 @@ export default function Dashboard({
               unless you mark them as kept.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleNewSession}
-            disabled={creatingSession}
-            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shrink-0"
-          >
-            {creatingSession ? 'Starting…' : '+ New session'}
-          </button>
+          <div className="flex items-center gap-3 shrink-0">
+            {activeId && (
+              <button
+                type="button"
+                onClick={handleRetailor}
+                disabled={retailoring}
+                className="border border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED] hover:text-white px-5 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {retailoring ? 'Starting…' : 'Tailor to a new role'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleNewSession}
+              disabled={creatingSession}
+              className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {creatingSession ? 'Starting…' : '+ New session'}
+            </button>
+          </div>
         </div>
         {createError && (
           <p role="alert" className="mb-4 text-sm text-red-400">

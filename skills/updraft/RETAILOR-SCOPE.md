@@ -62,22 +62,25 @@ Stage02Runner + Stage04Runner are **reused unchanged.**
 
 ---
 
-## Phase 1 — Re-tailoring plumbing (seed-and-skip)
+## Phase 1 — Re-tailoring plumbing (seed-and-skip) — BUILT 2026-06-13
 
-- [ ] `POST /api/updraft/sessions/retailor` — body `{ sourceSessionId }`
+- [x] `POST /api/updraft/sessions/retailor` — body `{ sourceSessionId }`
       (defaults to caller's active MOD). Validate source owned + has a ready
       MOD. Create new session; seed `stage_01` (identity / path / tier) +
       `stage_03` (mod + ready_for_generation + summary) from source; leave
       `stage_02` empty. Quota-gated like create. Log `retailor_started` with
       `source_session_id`. Return `{ sessionId, redirectTo }`.
-- [ ] `store.ts` — seed helper (or two `patchStageOutput` calls on the fresh
-      session). Validation reuses the `readSessionForUser` + `stage_03.mod`
-      check already in `setActiveModSession`.
-- [ ] `Dashboard.tsx` — "Tailor to a new role" button near the top, enabled
-      only when `activeModSessionId` is set; POSTs to the retailor endpoint
-      and redirects into the new session's Stage 02.
-- [ ] Stage02Runner polish — "Tailoring your master profile" banner; default
-      the deliverable picker to jd_build + cover_letter (MOD already exists).
+- [x] `store.ts` — `createRetailoredSession()`: `createSessionForUser` +
+      two `patchSessionStage` calls (stage_01 with tier/path columns, then
+      stage_03). Validation reuses the `readSessionForUser` + `stage_03.mod`
+      check. **Foot-gun caught:** tier lives in both `stage_01.tier` (dispatch)
+      and the `sessions.tier` column (Stage 04 CL draft) — seed both.
+- [x] `Dashboard.tsx` — "Tailor to a new role" button near the top, shown
+      only when an active MOD is set; POSTs to the retailor endpoint and
+      redirects into the new session's Stage 02.
+- [x] Stage02Runner polish — "Tailoring your master profile" banner (detects
+      re-tailoring via the seeded `stage_03`); deliverable picker defaults to
+      jd_build + cover_letter when re-tailoring.
 - [ ] Verify live: set active MOD → Tailor → lands on Stage 02 → enter JD →
       Continue jumps to Stage 04 → generate → new role-headlined docs.
 
