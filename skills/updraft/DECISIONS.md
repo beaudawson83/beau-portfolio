@@ -381,3 +381,22 @@ When a decision is reversed, append a new entry referencing the old one — neve
 **Invalidated by:** `gemini-3.5-flash` retirement announcement (repeat this migration), or observed quality regressions in parsing/scoring vs 2.0-era outputs (would justify pinning a specific dated snapshot or moving match-analyze to a pro-tier model).
 
 **Lesson captured:** a dead model fails *silently* behind graceful fallbacks. The fix PR added error-body logging to AskBeau; `/api/updraft/status` already aggregates 24h failure counts — check it after any Google model-lifecycle email.
+
+---
+
+## 2026-06-12 — Two production outages found by the first live 4-stage spot-check
+
+**Context:** First end-to-end live run of UpDraft on `gemini-3.5-flash` (V1-GATE §1.4), driven through the real `/updraft` UI. The flow worked on 3.5 — parse (correct name casing), tier (T4), match-analyze (79% Transferable, all four calibration fixes confirmed live), Stage 03 deep parse, summary auto-draft, and all three DOCX (MOD + Resume + Cover Letter, CL drafted on 3.5). Two boundary failures surfaced:
+
+**Outage 1 — Brevo email (FIXED in-session).** `POST /api/updraft/auth/issue` was returning 500 on *every* magic-link send; runtime log showed Brevo rejecting with an "unrecognised IP address" 401. Brevo's Authorized-IPs security feature had been (auto-)enabled, and Vercel's rotating serverless egress IPs aren't allowlistable. Same `lib/email.ts` send surface backs the **contact form**, so the whole site's outbound email was down. Fix: Beau disabled the IP restriction in the Brevo dashboard — sends resumed immediately, no deploy. **Decision:** Authorized-IPs must stay OFF for this app; allowlisting can't work with serverless rotating IPs.
+
+**Outage 2 — Drive PDF export (OPEN).** Stage 04 generated all DOCX but `renderPdf()` failed all three after retries. Runtime log: `updraft.pdf.upload: non-2xx` with a body containing `storageQuota` → **403 `storageQuotaExceeded`** on the Drive *upload* (creating the temp Google Doc). Root cause: **service accounts have no My Drive storage quota of their own** — Google has tightened enforcement of this since the 2026-05-06 verification when PDFs worked. The v0.5 graceful-degradation path handled it correctly (DOCX shipped, retries attempted, clear per-deliverable banner), so UpDraft is still usable, but **PDF is fully down in production.**
+
+**Fix options for Outage 2 (decision pending):**
+1. **Shared Drive** — create a Workspace Shared Drive, share it with the SA, create the temp Doc there (Shared Drives don't draw on the SA's personal quota). Smallest change; needs a Google Workspace Shared Drive.
+2. **Domain-wide delegation / impersonation** — SA impersonates a real Workspace user with storage. More setup, more blast radius.
+3. **Bring forward the v1.0 Sandbox + LibreOffice path** — removes the Google dependency entirely; the `renderPdf()` interface already isolates the swap to one file. Heaviest, but the documented v1.0 evolution anyway.
+
+**Lesson captured:** external-boundary verification can't be desk-checked — a 4-stage flow that compiles and typechecks still had two hard prod failures (email auth, PDF export) invisible until run against the live services. The `/api/updraft/status` failure counters (`pdf_retry_exhausted`, etc.) exist precisely for this; nothing was watching them. Adding active alerting on those counters is the real durable fix.
+
+**Invalidated by:** moving PDF off Drive (Outage 2 fix #3 makes the SA-quota issue moot), or Brevo replacing the IP-restriction model.

@@ -43,12 +43,14 @@ The branch's fixes were anchored to 2.0's behavior. Confirm each still does what
 - [ ] Open a PR for `claude/review-updraft-launch-qMznh` → `main` once 3.5 numbers justify the thresholds.
 - [ ] Merge. Clears the unmerged-branch hygiene loose end.
 
-### 1.4 — Live spot-check the full 4-stage flow on 3.5
-- [ ] Run a real session end-to-end (intake → target → interview → generate) producing MOD + Resume + Cover Letter, DOCX + PDF.
-- [ ] Confirm parsing, match scoring, summary gen, and CL drafting all behave on 3.5 (closes the open `DECISIONS.md` 2026-06-10 verification item).
-- [ ] Check `/api/updraft/status` 24h failure counters are clean afterward.
+### 1.4 — Live spot-check the full 4-stage flow on 3.5 — DONE 2026-06-12 (2 findings)
+- [x] Ran a real session end-to-end via the live `/updraft` UI on `gemini-3.5-flash`.
+- [x] Parse (correct name casing), tier (T4), match-analyze (**79% Transferable** — all four calibration fixes confirmed live + a bonus red-flag catch), Stage 03 deep parse, summary auto-draft, and **all three DOCX** (MOD + Resume + Cover Letter, CL drafted on 3.5) behave on 3.5. DOCX download (signed-URL 302) verified.
+- **Finding 1 — Brevo email outage (FIXED in-session):** `auth/issue` 500'd on every send — Brevo "unrecognised IP address" 401 (Authorized-IPs vs Vercel rotating IPs). Same surface backs the contact form, so all site email was down. Disabled the restriction in Brevo; resolved. See `DECISIONS.md` 2026-06-12.
+- **Finding 2 — Drive PDF export DOWN (OPEN, v1.0 blocker):** Stage 04 PDF failed all three (`updraft.pdf.upload` 403 `storageQuotaExceeded` — service accounts have no My Drive quota). Graceful degradation worked (DOCX shipped). Fix options in `DECISIONS.md` 2026-06-12; tracked under §2 PDF resilience.
+- [ ] (Follow-up) Add active alerting on `/api/updraft/status` failure counters — nothing was watching them.
 
-**Exit criteria for §1:** match thresholds calibrated on the live model, branch merged, full flow verified live, status counters clean.
+**Exit criteria for §1:** ✅ thresholds calibrated on live model · ✅ branch merged · ✅ full flow verified live · ⚠️ PDF export must be fixed (now a §2 blocker) before promotion.
 
 ---
 
@@ -61,7 +63,7 @@ Per `PLAN.md` §8 the v1.0 line is: *all 4 templates × 3 densities · ATS quart
 - [ ] **MOD Markdown export** — spec promises DOCX + PDF + **Markdown**; Markdown is the one still missing.
 - [ ] **BYOK with safety harness** — the documented escape valve when a session hits the token cap; "built carefully or not at all" (`PLAN.md` decision #8).
 - [ ] **Template breadth** — currently 1 template × 1 density (Classic); v1.0 target is 4 × 3 = 12.
-- [ ] **PDF resilience** — only swap Drive API → Vercel Sandbox + LibreOffice *if* observed scale/reliability demands it (`PLAN.md` §3 PDF, DECISIONS 2026-05-04). The `renderPdf()` interface already isolates this to one file.
+- [ ] **PDF export — BLOCKER (currently broken in prod).** As of 2026-06-12 Drive returns 403 `storageQuotaExceeded` (service accounts have no My Drive quota); all PDF generation is down. Pick a fix: (a) temp Doc on a Workspace **Shared Drive**, (b) **user impersonation** via domain-wide delegation, or (c) bring forward the **Vercel Sandbox + LibreOffice** path (removes the Google dependency; the `renderPdf()` interface isolates the swap to one file). See `DECISIONS.md` 2026-06-12. Was previously framed as "only if scale demands" — that's now moot, it's failing outright.
 
 **Deferred / parked (not v1.0 blockers):**
 - Conversational Stage 03 (Phase A–D rebuild) + its folded-in pieces: AI bullet rewriter, STAR extraction, tier deepening branches — see `CALIBRATION.md` §"Stage 03 deferred features".

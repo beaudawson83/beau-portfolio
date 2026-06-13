@@ -136,5 +136,6 @@
   "tsconfig.json": "Wiring — connects other pieces together but doesn't really do anything on its own.",
   "skills/updraft/V1-GATE.md": "The checklist of everything that must be finished before the UpDraft resume tool can be promoted from its hidden test URL to a public feature on the homepage — first proving the job-match scoring is trustworthy after a forced AI-model change, then completing the remaining features.",
   "scripts/calibrate-match-analyzer.ts": "A command-line tool for tuning UpDraft: it runs sample resumes against sample job descriptions through the real match-scoring engine and prints a comparison table, so the scoring can be checked and adjusted without clicking through the website.",
-  "skills/updraft/CALIBRATION.md": "The tuning notebook for UpDraft job-match scoring — records how well the scoring engine rates sample resumes against sample jobs, what was adjusted and why, and the list of features parked for later."
+  "skills/updraft/CALIBRATION.md": "The tuning notebook for UpDraft job-match scoring — records how well the scoring engine rates sample resumes against sample jobs, what was adjusted and why, and the list of features parked for later.",
+  "skills/updraft/DECISIONS.md": "The running history of every significant design and product decision for the UpDraft resume tool — what was chosen, what else was considered, why, and what would change the call. Written once and never rewritten, so the reasoning survives."
 }
