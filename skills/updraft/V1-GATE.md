@@ -24,31 +24,32 @@ Until these close, promoting UpDraft publicly would put an unvalidated scoring e
 
 Close these in order. Step 1 unblocks 2–4.
 
-### 1.1 — Re-run the 49-pair calibration sweep on `gemini-3.5-flash`
-- [ ] Check out `claude/review-updraft-launch-qMznh`; the harness is `SYS_MATCH_ANALYZER` CLI + `--all-pairs` discovery mode against the 7-resume × 7-JD corpus (49 pairs).
-- [ ] Run the full sweep on `gemini-3.5-flash` (the harness was last run on 2.0).
-- [ ] Diff the 3.5 band/percentage results against the 2.0-era numbers recorded in `CALIBRATION.md`.
+### 1.1 — Re-run the 49-pair calibration sweep on `gemini-3.5-flash` — DONE 2026-06-12
+- [x] Check out `claude/review-updraft-launch-qMznh`; the harness is `SYS_MATCH_ANALYZER` CLI + `--all-pairs` discovery mode against the 7-resume × 7-JD corpus (49 pairs).
+- [x] Run the full sweep on `gemini-3.5-flash` (the harness was last run on 2.0).
+- [x] Diff the 3.5 band/percentage results against the 2.0-era numbers recorded in `CALIBRATION.md`.
+- **Result:** 3.5 results table appended to `CALIBRATION.md` (2026-06-12 sweep). Verdict: thresholds hold on 3.5, ~0–5 pts more generous than post-fix 2.0.
 - **Cost note:** runs real Gemini calls against the live key — ~49 model hops + any `--all-pairs` discovery. Mind the daily quota.
 - **Output:** a 3.5 results table appended to `CALIBRATION.md`.
 
-### 1.2 — Validate or re-tune the four scoring fixes on 3.5
+### 1.2 — Validate or re-tune the four scoring fixes on 3.5 — DONE 2026-06-12 (all transfer)
 The branch's fixes were anchored to 2.0's behavior. Confirm each still does what its commit claims under 3.5:
-- [ ] `tier`: 8–15yr `years_floor` softened 3→2 for career-changers (the "Theo" operations-engineer case → T2).
-- [ ] `match-analyzer`: DIRECT band (90–100%) unlocked via second worked-example anchor (DIRECT was never emitted across 49 pairs on 2.0).
-- [ ] `match-analyzer`: transferable evidence credited in the match boolean.
-- [ ] `match-analyzer`: band/pct contract tightened + fallback.
-- Re-anchor any worked example or threshold whose 2.0 calibration no longer holds on 3.5.
+- [x] `tier`: 8–15yr `years_floor` softened 3→2 for career-changers (the "Theo" operations-engineer case → T2).
+- [x] `match-analyzer`: DIRECT band (90–100%) unlocked via second worked-example anchor (DIRECT was never emitted across 49 pairs on 2.0). Rubric math proves DIRECT reachable (93.5%); open follow-up in `CALIBRATION.md` to *observe* it fire on 3.5.
+- [x] `match-analyzer`: transferable evidence credited in the match boolean.
+- [x] `match-analyzer`: band/pct contract tightened + fallback.
+- **Result:** all four transfer to 3.5 with no re-tuning required — see the fix-by-fix table in `CALIBRATION.md` (2026-06-12).
 
-### 1.3 — Merge the calibration branch
-- [ ] Open a PR for `claude/review-updraft-launch-qMznh` → `main` once 3.5 numbers justify the thresholds.
-- [ ] Merge. Clears the unmerged-branch hygiene loose end.
+### 1.3 — Merge the calibration branch — DONE
+- [x] Open a PR for `claude/review-updraft-launch-qMznh` → `main` once 3.5 numbers justify the thresholds.
+- [x] Merge. Clears the unmerged-branch hygiene loose end. (All branch commits — harness `7994739`, corpus `407f16b`, `--all-pairs` `4937f30`, the four fixes, and the 3.5 sweep `bec4c56` — are in `main`; `git log origin/main..origin/claude/review-updraft-launch-qMznh` is empty.)
 
 ### 1.4 — Live spot-check the full 4-stage flow on 3.5 — DONE 2026-06-12 (2 findings)
 - [x] Ran a real session end-to-end via the live `/updraft` UI on `gemini-3.5-flash`.
 - [x] Parse (correct name casing), tier (T4), match-analyze (**79% Transferable** — all four calibration fixes confirmed live + a bonus red-flag catch), Stage 03 deep parse, summary auto-draft, and **all three DOCX** (MOD + Resume + Cover Letter, CL drafted on 3.5) behave on 3.5. DOCX download (signed-URL 302) verified.
 - **Finding 1 — Brevo email outage (FIXED in-session):** `auth/issue` 500'd on every send — Brevo "unrecognised IP address" 401 (Authorized-IPs vs Vercel rotating IPs). Same surface backs the contact form, so all site email was down. Disabled the restriction in Brevo; resolved. See `DECISIONS.md` 2026-06-12.
 - **Finding 2 — Drive PDF export DOWN (OPEN, v1.0 blocker):** Stage 04 PDF failed all three (`updraft.pdf.upload` 403 `storageQuotaExceeded` — service accounts have no My Drive quota). Graceful degradation worked (DOCX shipped). Fix options in `DECISIONS.md` 2026-06-12; tracked under §2 PDF resilience.
-- [ ] (Follow-up) Add active alerting on `/api/updraft/status` failure counters — nothing was watching them.
+- [x] (Follow-up) Add active alerting on `/api/updraft/status` failure counters — nothing was watching them. **DONE 2026-06-13:** new daily cron `/api/updraft/cron/alert` (08:00 UTC, `vercel.json`) sums the last 24h of failure events via `summarizeRecentFailures()` and emails the operator a digest when the total ≥ `UPDRAFT_ALERT_MIN_FAILURES` (default 1); clean windows send nothing. Recipient via `UPDRAFT_ALERT_EMAIL` (default `beau.dawson83@gmail.com`).
 
 **Exit criteria for §1:** ✅ thresholds calibrated on live model · ✅ branch merged · ✅ full flow verified live · ✅ PDF export fixed (native generation, 2026-06-13 — see §2).
 

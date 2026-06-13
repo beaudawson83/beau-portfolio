@@ -113,7 +113,7 @@ src/
 │           ├── auth/{issue,callback,logout}/route.ts
 │           ├── me/{route,delete,data-export}/route.ts
 │           ├── status/route.ts
-│           ├── cron/purge/route.ts
+│           ├── cron/{purge,alert}/route.ts
 │           └── sessions/{route,[id]/{route,keep,parse-upload,match-analyze,generate-summary,generate-files,exports/[exportId],stage/[n]}}/route.ts
 ├── components/
 │   ├── Header.tsx, Hero.tsx, AskBeau.tsx
@@ -216,6 +216,7 @@ src/
 | `/api/updraft/sessions/[id]/keep` | PATCH | Toggle keep-indefinitely flag | cookie + ownership |
 | `/api/updraft/status`       | GET    | Diagnostic — today's quota burn + env presence map + 24h failure counts (`pdf_failed`, `cover_letter_failed`, `summary_failed`, `export_failed`) aggregated from `updraft_events` | `Bearer $CRON_SECRET` |
 | `/api/updraft/cron/purge`   | GET/POST | 30-day inactivity purge | `Bearer $CRON_SECRET` (Vercel Cron supplies) |
+| `/api/updraft/cron/alert`   | GET/POST | Daily failure-counter watcher — emails operator a 24h digest when failure events ≥ `UPDRAFT_ALERT_MIN_FAILURES`; silent on a clean window | `Bearer $CRON_SECRET` (Vercel Cron supplies) |
 
 ---
 
@@ -407,6 +408,8 @@ A resume + cover-letter generation tool operated by an AI character named **Audi
 **PDF subsystem:** Stage 01 reads PDFs via Gemini's native `inline_data` input on `generateContent` (handles image-based PDFs via OCR — replaces the original pdf-parse plan after the v1/v2 API mismatch bit us 2026-05-04). Stage 04 writes PDFs **natively** via [`pdf-builder.tsx`](src/lib/updraft/pdf-builder.tsx) (`@react-pdf/renderer`), rendered directly from the same structured MOD data as the DOCX — UpDraft owns its templates, so there's no arbitrary DOCX to convert and thus **no conversion engine at all** (no LibreOffice, no Google, no paid API, no env var, $0). `pdf-builder.tsx` is the one-to-one sibling of `docx-builder.ts` (shared key-outcome + date helpers, same Classic/Regular layout) and produces a real selectable text layer (ATS-safe). This replaced the Google Drive API (died in prod 2026-06-12, `403 storageQuotaExceeded`) and the briefly-planned Sandbox+LibreOffice rebuild (abandoned as over-engineering) — see `DECISIONS.md` 2026-06-13. PDF generation is non-blocking — any render failure still ships the DOCX with a banner.
 
 **Cost guardrails:** all thresholds are env vars (`UPDRAFT_DAILY_*`, `UPDRAFT_PER_IP_*`, `UPDRAFT_SESSION_TOKEN_CAP_*`) dialable from the Vercel dashboard. Owner bypass via `UPDRAFT_OWNER_SECRET` Bearer header (mirrors `BLOG_EDITOR_SECRET`); owner sessions skip caps and tag events `owner: true`. BYOK fallback deferred to v1.0.
+
+**Failure alerting:** the daily `/api/updraft/cron/alert` cron (08:00 UTC) reads the same 24h failure counters as `/api/updraft/status` and emails the operator a digest when they cross a threshold — the watcher that was missing when the 2026-06-10 Gemini outage ran silent for 9 days. Both knobs are optional env vars: `UPDRAFT_ALERT_EMAIL` (recipient, default `beau.dawson83@gmail.com`) and `UPDRAFT_ALERT_MIN_FAILURES` (threshold, default 1). A clean 24h window sends nothing.
 
 **Spec + plan + decisions** live in [`skills/updraft/`](skills/updraft/):
 - [`SKILL.md`](skills/updraft/SKILL.md) — orchestrator (load first)

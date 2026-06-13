@@ -140,5 +140,6 @@
   "skills/updraft/DECISIONS.md": "The running history of every significant design and product decision for the UpDraft resume tool — what was chosen, what else was considered, why, and what would change the call. Written once and never rewritten, so the reasoning survives.",
   "skills/updraft/PLAN.md": "The master build plan for the UpDraft resume tool — the durable record of how it is put together, the locked design decisions, the full inventory of its parts, and the phased roadmap from soft launch to public release.",
   "src/lib/updraft/pdf-builder.tsx": "Builds the downloadable PDF versions of the resume, master overview, and cover letter directly from the same data used for the Word files — so they look like matched siblings — with real selectable text that applicant systems can read.",
-  "src/lib/updraft/docx-builder.ts": "Builds the downloadable Word (.docx) versions of the resume, master overview, and cover letter from the person's structured career data, in a clean single-column applicant-system-safe layout."
+  "src/lib/updraft/docx-builder.ts": "Builds the downloadable Word (.docx) versions of the resume, master overview, and cover letter from the person's structured career data, in a clean single-column applicant-system-safe layout.",
+  "src/app/api/updraft/cron/alert/route.ts": "Once a day, checks whether UpDraft has logged any document-generation or email failures in the past 24 hours and emails the operator a summary if it has. Stays silent when everything is healthy."
 }
