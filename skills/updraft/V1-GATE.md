@@ -59,7 +59,7 @@ The branch's fixes were anchored to 2.0's behavior. Confirm each still does what
 
 Per `PLAN.md` §8 the v1.0 line is: *all 4 templates × 3 densities · ATS quarterly parsing tests · BYOK with safety harness · session resumption · active-MOD pointer + session-history UI · re-tailoring flow · ~~PDF rebuild~~ (DONE 2026-06-13 — native generation, see below).* Pick the rest by appetite — most are independent. Suggested priority for "good enough to promote":
 
-- [ ] **Re-tailoring flow** — existing MOD + new JD → new resume, skipping Stages 1–3. High user value, leverages everything already built.
+- [ ] **Re-tailoring flow** — existing MOD + new JD → new resume, skipping Stages 1–3. High user value, leverages everything already built. **Scoped 2026-06-13** → `RETAILOR-SCOPE.md` (seed-and-skip plumbing + JD bullet reframing via `SYS_BULLET_REFRAMER`; Phase 1 in progress).
 - [ ] **Session-history UI + active-MOD pointer** — makes the dashboard a real workspace rather than a one-shot.
 - [ ] **MOD Markdown export** — spec promises DOCX + PDF + **Markdown**; Markdown is the one still missing.
 - [ ] **BYOK with safety harness** — the documented escape valve when a session hits the token cap; "built carefully or not at all" (`PLAN.md` decision #8).

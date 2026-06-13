@@ -145,5 +145,6 @@
   "src/lib/updraft/store.ts": "The Supabase data layer for UpDraft — all reads and writes for users, login tokens, sessions and their per-stage outputs, the active-master-profile pointer, generated-file records, and the failure-event log.",
   "src/app/api/updraft/me/active-mod/route.ts": "Lets a signed-in UpDraft user pick which past session's master profile is their active one (or unset it) — the profile future tailored resumes start from.",
   "src/app/updraft/page.tsx": "The signed-in UpDraft dashboard page — confirms the visitor is logged in, gathers their past sessions with a target-role label and which ones can serve as a master profile, and hands them to the dashboard view.",
-  "src/components/Updraft/Dashboard.tsx": "The UpDraft workspace screen — lists a user's past sessions with a target-role label and status, lets them start a new one, and pick (or unset) which finished session is their active master profile."
+  "src/components/Updraft/Dashboard.tsx": "The UpDraft workspace screen — lists a user's past sessions with a target-role label and status, lets them start a new one, and pick (or unset) which finished session is their active master profile.",
+  "skills/updraft/RETAILOR-SCOPE.md": "The design and two-phase build plan for UpDraft's re-tailoring feature — reusing a finished master profile against a new job posting to produce a freshly tailored resume without redoing intake or the interview."
 }
