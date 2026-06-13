@@ -20,7 +20,7 @@
 //   - Generation in flight                → Spinner
 //   - Done                                → Download list + lint warnings
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type {
@@ -639,6 +639,16 @@ function DoneView({
   coverLetterRequested: boolean;
   onRegenerate: () => void;
 }) {
+  // Export timestamps format in the server's tz (UTC) but the client's local
+  // tz, mismatching on hydration (React #418) and aborting hydration of this
+  // subtree. Render them only after mount so SSR and the first client render
+  // match. Same fix as Dashboard/AccountPanel (commit 2b987bb).
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+
   // Detect missing PDFs — a DOCX without its companion PDF means the PDF
   // pipeline failed for that deliverable. DOCX still ships per spec § 4.5
   // graceful degradation.
@@ -723,8 +733,8 @@ function DoneView({
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-[#94A3B8]">{formatBytes(e.bytes)}</p>
-                  <p className="text-[10px] text-[#64748b] mt-1">
-                    {new Date(e.generated_at).toLocaleString()}
+                  <p className="text-[10px] text-[#64748b] mt-1" suppressHydrationWarning>
+                    {mounted ? new Date(e.generated_at).toLocaleString() : ''}
                   </p>
                 </div>
               </div>
