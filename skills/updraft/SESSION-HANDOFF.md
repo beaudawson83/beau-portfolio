@@ -1,8 +1,14 @@
-# UpDraft — Session Handoff (2026-06-13)
+# UpDraft — Session Handoff (updated 2026-06-15)
 
-A rolling handoff to pass forward between sessions. **Next up: a testing
-session (verify what shipped today), then a build session (re-tailoring
-Phase 2).** Read this first, then the durable docs it points to.
+A rolling handoff to pass forward between sessions. **Testing is DONE
+(2026-06-15) — all live tests passed; see "Testing results" below.
+Next up: a build session (re-tailoring Phase 2).** Read this first, then
+the durable docs it points to.
+
+> **One open item:** Test ③ (cron alert happy-path HTTP call) is the only
+> unverified step — it needs `CRON_SECRET` (stored Sensitive, not retrievable
+> via CLI). The cron's **auth gate** and **data path** were both verified
+> independently, so this is a marginal confirmation, not a risk.
 
 ---
 
@@ -32,13 +38,52 @@ Phase 2).** Read this first, then the durable docs it points to.
 | `00b15f3` | Re-tailoring **scope doc** + locked decisions. |
 | `257968e` | **Re-tailoring Phase 1** — `POST /api/updraft/sessions/retailor` + `createRetailoredSession()` + "Tailor to a new role" dashboard button + Stage 02 banner. Seed-and-skip: a new session pre-seeded with the source MOD's stage_01 + stage_03 skips intake + interview, landing on Stage 02. |
 | `6587167` | Docs freshness sweep (reconciled all code-facing docs; fixed pre-existing Drive/Sandbox drift). |
+| `2b987bb` | **Hydration fix (Dashboard + AccountPanel)** — SSR-formatted dates (`toLocaleString`/`Date.now()`) mismatched server (UTC) vs client (local tz), throwing React #418. Gated behind a `mounted` flag (`useSyncExternalStore`) + `suppressHydrationWarning`. Found during 2026-06-15 live testing. |
+| `ced4f06` | **Hydration fix (Stage04Runner)** — same #418 on the "Your files" export timestamp; same `mounted`-gate. Clears #418 across all of UpDraft. |
 
-**v1.0-gate state:** §1 trust track fully closed. §2: active-MOD ✅ ·
-re-tailoring Phase 1 ✅ (pending live check) · Phase 2 not built.
+**v1.0-gate state:** §1 trust track fully closed. §2: active-MOD ✅ (live-verified) ·
+re-tailoring Phase 1 ✅ (live-verified) · Phase 2 not built.
 
 ---
 
-## SESSION N+1 — TESTING (do this next, fresh session)
+## Testing results (2026-06-15) — live, prod, cross-checked in Supabase
+
+Drove the full flow against prod (browser + Supabase MCP). **All passed.**
+
+- **Full E2E session** — real PDF résumé → Gemini OCR parse → tier auto-detect
+  (T4) → match briefing (86.5%) → phased Stage 03 interview → auto-summary →
+  **6 deliverables generated** (MOD/Resume/CL × DOCX/PDF), 0 failures. Validates
+  native PDF, CL drafter, JD-aware filenames in one pass.
+- **Test ① Active-MOD pointer** — set ✅ (DB + badge) · persists on reload ✅ ·
+  unset ✅ (DB cleared, "Tailor" button correctly hidden).
+- **Test ② Re-tailoring seed-and-skip** — new session seeds stage_01+stage_03
+  with `ready_for_generation:true` + tier in **both** locations; lands on Stage
+  02 with the banner; **jumps Stage 02 → Stage 04, Stage 03 never appears** ✅;
+  output re-headlined for the new role (`..._VPofCustomerOperations_...`). Phase
+  1 is **headline-only** (bullets unchanged) — that's Phase 2, not a bug.
+- **Match calibration** — 86.5% (Director) vs 76% (VP stretch) — sensibly
+  different, not inflated.
+- **Test ③ Alert cron** — auth gate rejects bad/empty token ✅; data path shows
+  0 failures/24h → would return `alerted:false` ✅. **HTTP happy-path call still
+  pending `CRON_SECRET`** (the one open item).
+
+**Two process lessons logged to memory (2026-06-15):**
+1. Chrome-MCP coordinate/ref clicks silently MISS on retina/scaled viewports —
+   the active-MOD button looked "broken" but my clicks were landing in empty
+   space. Drive UpDraft with `javascript_tool` `.click()` + verify via Supabase.
+   **Don't call a control broken before proving the click landed** — I
+   misdiagnosed this once and shipped a (real, but unrelated) #418 fix on a wrong
+   premise. The #418 fixes stand on their own merit; the framing was the error.
+2. The hydration bug is a perfect example of the "external/runtime failures are
+   invisible to typecheck/build" lesson — it only surfaced on a live run.
+
+---
+
+## SESSION N+1 — TESTING — ✅ COMPLETED 2026-06-15
+
+> **Done — see "Testing results (2026-06-15)" above.** All passed except the
+> cron HTTP happy-path (needs `CRON_SECRET`). The step-by-step below is kept
+> for reference / re-runs. Two real fixes came out of it (`2b987bb`, `ced4f06`).
 
 Goal: verify the three things shipped today actually work in prod. Nothing
 here needs code changes — it's pure verification.
