@@ -46,6 +46,7 @@ interface Stage04Output {
   generated_at?: string;
   cover_letter_meta?: CoverLetterMeta | null;
   cover_letter_error?: string | null;
+  reframe_error?: string | null;
 }
 
 interface ExportSummary {
@@ -306,6 +307,8 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
             lintFlags={lintFlags}
             coverLetterError={stage04.cover_letter_error ?? null}
             coverLetterRequested={deliverables.includes('cover_letter')}
+            reframeError={stage04.reframe_error ?? null}
+            resumeRequested={deliverables.includes('jd_build')}
             onRegenerate={enterRegenerateMode}
           />
         )}
@@ -630,6 +633,8 @@ function DoneView({
   lintFlags,
   coverLetterError,
   coverLetterRequested,
+  reframeError,
+  resumeRequested,
   onRegenerate,
 }: {
   exports: ExportSummary[];
@@ -637,6 +642,8 @@ function DoneView({
   lintFlags: UpdraftLintFlag[];
   coverLetterError: string | null;
   coverLetterRequested: boolean;
+  reframeError: string | null;
+  resumeRequested: boolean;
   onRegenerate: () => void;
 }) {
   // Export timestamps format in the server's tz (UTC) but the client's local
@@ -709,10 +716,23 @@ function DoneView({
           </p>
           <p className="text-sm text-[#cbd5e1] leading-relaxed">
             {coverLetterError === 'tier-missing'
-              ? 'Your tier wasn’t set on this session, so the cover letter couldn’t be drafted. This usually means Stage 01 didn’t finish cleanly — try a fresh session.'
+              ? "Your tier wasn\u2019t set on this session, so the cover letter couldn\u2019t be drafted. This usually means Stage 01 didn\u2019t finish cleanly \u2014 try a fresh session."
               : coverLetterError && coverLetterError.toLowerCase().includes('capacity')
-                ? 'I hit my daily AI capacity for cover letters. Your other files shipped — try again tomorrow, or write the cover letter yourself for now.'
-                : 'I couldn’t draft a cover letter this round — your other files still shipped. Click Generate again to retry; if it persists, your MOD might be too thin to anchor a letter.'}
+                ? "I hit my daily AI capacity for cover letters. Your other files shipped \u2014 try again tomorrow, or write the cover letter yourself for now."
+                : "I couldn\u2019t draft a cover letter this round \u2014 your other files still shipped. Click Generate again to retry; if it persists, your MOD might be too thin to anchor a letter."}
+          </p>
+        </div>
+      )}
+
+      {reframeError && resumeRequested && (
+        <div className="bg-[#1A1A1A] border border-amber-900/40 rounded-lg p-4">
+          <p className="text-[10px] tracking-widest text-amber-400 uppercase font-mono mb-2">
+            Resume bullets not tailored
+          </p>
+          <p className="text-sm text-[#cbd5e1] leading-relaxed">
+            {reframeError.toLowerCase().includes('capacity')
+              ? "I hit my daily AI capacity for bullet tailoring. Your resume still shipped with your original bullet wording \u2014 it\u2019s accurate and strong, just not tuned to this JD\u2019s vocabulary. Try generating again tomorrow."
+              : "I couldn\u2019t tailor the resume bullets to the job description this round. Your resume still shipped with the original wording \u2014 click Generate again to retry the tailoring pass."}
           </p>
         </div>
       )}

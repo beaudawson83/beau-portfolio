@@ -21,6 +21,8 @@ import {
   renderModPdf,
   renderResumePdf,
 } from '@/lib/updraft/pdf-builder';
+import { reframeBullets } from '@/lib/updraft/bullet-reframer';
+import type { ReframeLogEntry, ReframeRoleError } from '@/lib/updraft/bullet-reframer';
 import { draftCoverLetter } from '@/lib/updraft/cover-letter-generator';
 import { buildExportFilename } from '@/lib/updraft/filename';
 import { lintMod } from '@/lib/updraft/lint';
@@ -65,11 +67,13 @@ interface CoverLetterMeta {
  * lint pass on the MOD, persist to Storage + the exports table, log
  * events, mark the session completed.
  *
- * v0.1.5 + Cover Letter (v0.5 slice): MOD / Resume / Cover Letter, one
- * template (Classic) at one density (Regular). Cover letter goes through
- * SYS_COVER_LETTER_DRAFTER (one AI call) before DOCX rendering; failure
- * to draft the CL is non-blocking — other deliverables still ship.
- * Tailoring AI calls + template picker + Phase 2 lint rewrite all defer.
+ * v0.1.5 + Cover Letter + Bullet Reframing: MOD / Resume / Cover Letter,
+ * one template (Classic) at one density (Regular). Resume bullets are
+ * reframed against the target JD via SYS_BULLET_REFRAMER (one AI call per
+ * role) when a target + JD text is present. Cover letter goes through
+ * SYS_COVER_LETTER_DRAFTER (one AI call). Both are non-blocking — failure
+ * falls back to untailored bullets / no CL, other deliverables still ship.
+ * Template picker + Phase 2 lint rewrite defer.
  *
  * Body accepts an optional `selection: UpdraftExportKind[]` to scope this
  * round of generation. Absent / empty → render every kind valid for the
@@ -178,6 +182,9 @@ export async function POST(
   const generatedAt = new Date();
   let coverLetterMeta: CoverLetterMeta | null = null;
   let coverLetterError: string | null = null;
+  let reframeLog: ReframeLogEntry[] | null = null;
+  let reframeErrors: ReframeRoleError[] | null = null;
+  let reframeError: string | null = null;
 
   // Helper: render + persist a PDF natively from the structured data (NOT by
   // converting the DOCX). renderFn produces the PDF bytes via pdf-builder.tsx.
@@ -262,9 +269,80 @@ export async function POST(
       }
     }
 
+    // Resume — optionally reframe bullets against the JD before rendering.
+    // Reframing is non-blocking: failure falls back to the untailored MOD
+    // and surfaces a banner (same policy as CL draft / PDF failures).
     const wantResumeDocx = shouldRenderResume && wants('resume_docx');
     const wantResumePdf  = shouldRenderResume && wants('resume_pdf');
     if (wantResumeDocx || wantResumePdf) {
+      // The MOD used for resume renders — tailored if reframing succeeds,
+      // otherwise the canonical MOD ships untouched.
+      let resumeMod: UpdraftMod = mod;
+
+      if (target && target.jd_text) {
+        const reframeQuota = await canMakeAiCall(request);
+        if (!reframeQuota.allowed) {
+          reframeError = reframeQuota.message ?? 'Capacity limit reached — bullets not tailored.';
+        } else {
+          try {
+            const rfResult = await reframeBullets({ mod, target, matchAnalysis });
+            await recordQuotaUsage({
+              tokensIn: rfResult.tokensIn,
+              tokensOut: rfResult.tokensOut,
+            });
+            reframeLog = rfResult.log;
+            reframeErrors = rfResult.errors.length > 0 ? rfResult.errors : null;
+
+            if (rfResult.ok) {
+              resumeMod = rfResult.tailoredMod;
+              // Run lint over the reframed bullets as a safety net.
+              const tailoredLintFlags = lintMod(rfResult.tailoredMod);
+              if (tailoredLintFlags.length > lintFlags.length) {
+                // Reframing introduced new lint issues — fall back to untailored.
+                resumeMod = mod;
+                reframeError = 'lint-regression';
+                await logEvent({
+                  sessionId,
+                  stage: '04',
+                  eventType: 'bullet_reframe_failed',
+                  data: {
+                    error: 'lint-regression',
+                    original_lint_count: lintFlags.length,
+                    tailored_lint_count: tailoredLintFlags.length,
+                    owner: isUpdraftOwner(request),
+                  },
+                });
+              }
+            } else {
+              reframeError = rfResult.errors.map((e) => `${e.title}: ${e.error}`).join('; ');
+              await logEvent({
+                sessionId,
+                stage: '04',
+                eventType: 'bullet_reframe_failed',
+                data: {
+                  error: reframeError,
+                  role_errors: rfResult.errors,
+                  tokensIn: rfResult.tokensIn,
+                  tokensOut: rfResult.tokensOut,
+                  owner: isUpdraftOwner(request),
+                },
+              });
+            }
+          } catch (err) {
+            reframeError = err instanceof Error ? err.message : 'unknown';
+            await logEvent({
+              sessionId,
+              stage: '04',
+              eventType: 'bullet_reframe_failed',
+              data: {
+                error: reframeError,
+                owner: isUpdraftOwner(request),
+              },
+            });
+          }
+        }
+      }
+
       const docxName = buildExportFilename({
         candidateName: mod.identity.name,
         type: 'Resume',
@@ -273,7 +351,7 @@ export async function POST(
         date: generatedAt,
         ext: 'docx',
       });
-      const buf = await renderResumeDocx({ mod, target });
+      const buf = await renderResumeDocx({ mod: resumeMod, target });
       if (wantResumeDocx) {
         const path = buildExportPath({ userId, sessionId, filename: docxName });
         const upload = await uploadExport({ path, bytes: buf, mime: DOCX_MIME });
@@ -297,7 +375,7 @@ export async function POST(
           date: generatedAt,
           ext: 'pdf',
         });
-        await persistPdfFor(() => renderResumePdf({ mod, target }), pdfName, 'resume_pdf', 'resume');
+        await persistPdfFor(() => renderResumePdf({ mod: resumeMod, target }), pdfName, 'resume_pdf', 'resume');
       }
     }
 
@@ -448,6 +526,9 @@ export async function POST(
       generated_at: generatedAt.toISOString(),
       cover_letter_meta:  coverLetterMeta,
       cover_letter_error: coverLetterError,
+      reframe_log:    reframeLog,
+      reframe_errors: reframeErrors,
+      reframe_error:  reframeError,
     },
     status: 'completed',
   });
@@ -497,5 +578,6 @@ export async function POST(
     pdfFailures:        pdfFailures.length > 0 ? pdfFailures : undefined,
     coverLetterError:   coverLetterError ?? undefined,
     coverLetterMeta:    coverLetterMeta  ?? undefined,
+    reframeError:       reframeError ?? undefined,
   });
 }

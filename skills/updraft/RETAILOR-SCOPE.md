@@ -84,24 +84,26 @@ Stage02Runner + Stage04Runner are **reused unchanged.**
 - [ ] Verify live: set active MOD → Tailor → lands on Stage 02 → enter JD →
       Continue jumps to Stage 04 → generate → new role-headlined docs.
 
-## Phase 2 — JD bullet reframing (`SYS_BULLET_REFRAMER`)
+## Phase 2 — JD bullet reframing (`SYS_BULLET_REFRAMER`) — BUILT 2026-06-15
 
 A shared Stage-04 capability — improves the **normal flow's** tailored resume
 too, not only re-tailoring.
 
-- [ ] `lib/updraft/bullet-reframer.ts` — derive `target_jd_signal`
+- [x] `lib/updraft/bullet-reframer.ts` — derive `target_jd_signal`
       (terminology / outcome_type / abstraction_preference / scale_signal)
       from the existing `match_analysis`; reframe each role's bullets in one
       Gemini call via `SYS_BULLET_REFRAMER`; enforce the 4-part truth check
       (return original bullet on failure); produce a `tailoredMod` used
       **only** for the resume render. Canonical MOD doc stays untailored.
-- [ ] `generate-files` — when `jd_build` + target present, run the pass before
+- [x] `generate-files` — when `jd_build` + target present, run the pass before
       `renderResumeDocx({ mod: tailoredMod, target })`. Gate on
       `canMakeAiCall`. **Non-blocking**: reframe failure falls back to
       untailored bullets, ships the resume, surfaces a banner. New
       `bullet_reframe_failed` event (the alert cron already watches failures).
-- [ ] Run existing `lintMod` over reframed bullets as the safety net.
-- [ ] Persist the reframe log (per-bullet strategy_used + truth_check) into
+- [x] Run existing `lintMod` over reframed bullets as the safety net.
+      Lint regression (more flags after reframing than before) triggers
+      automatic fallback to untailored MOD + logs `bullet_reframe_failed`.
+- [x] Persist the reframe log (per-bullet strategy_used + truth_check) into
       `stage_04` outputs for transparency.
 - [ ] Cost note: adds N (= role count) model calls to a generate that today
       makes 0–1 (CL only). Reflect in cost-guardrail docs.
