@@ -28,6 +28,7 @@ import { draftCoverLetter } from '@/lib/updraft/cover-letter-generator';
 import { buildExportFilename } from '@/lib/updraft/filename';
 import { lintMod } from '@/lib/updraft/lint';
 import { buildExportPath, uploadExport } from '@/lib/updraft/storage';
+import { trimModForResume } from '@/lib/updraft/resume-trim';
 import type {
   UpdraftDeliverable,
   UpdraftExportKind,
@@ -367,6 +368,10 @@ export async function POST(
         }
       }
 
+      // Trim the resume MOD to the tier's page-length target before rendering.
+      const tier = (session.tier as UpdraftTier | null | undefined) ?? null;
+      const renderMod = tier ? trimModForResume(resumeMod, tier) : resumeMod;
+
       const docxName = buildExportFilename({
         candidateName: mod.identity.name,
         type: 'Resume',
@@ -375,7 +380,7 @@ export async function POST(
         date: generatedAt,
         ext: 'docx',
       });
-      const buf = await renderResumeDocx({ mod: resumeMod, target });
+      const buf = await renderResumeDocx({ mod: renderMod, target });
       if (wantResumeDocx) {
         const path = buildExportPath({ userId, sessionId, filename: docxName });
         const upload = await uploadExport({ path, bytes: buf, mime: DOCX_MIME });
@@ -399,7 +404,7 @@ export async function POST(
           date: generatedAt,
           ext: 'pdf',
         });
-        await persistPdfFor(() => renderResumePdf({ mod: resumeMod, target }), pdfName, 'resume_pdf', 'resume');
+        await persistPdfFor(() => renderResumePdf({ mod: renderMod, target }), pdfName, 'resume_pdf', 'resume');
       }
     }
 
