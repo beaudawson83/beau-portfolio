@@ -61,7 +61,7 @@ Per `PLAN.md` §8 the v1.0 line is: *all 4 templates × 3 densities · ATS quart
 
 - [x] **Re-tailoring flow** — existing MOD + new JD → new resume, skipping Stages 1–3. **Phase 1** (seed-and-skip plumbing) shipped 2026-06-13, live-verified 2026-06-15. **Phase 2** (JD bullet reframing via `SYS_BULLET_REFRAMER`) shipped 2026-06-15 — one Gemini call per role, truth-check enforced, non-blocking fallback, lint regression guard. Both phases improve the normal flow's resume too, not only re-tailoring.
 - [x] **Session-history UI + active-MOD pointer** — DONE 2026-06-13. Dashboard now lists sessions with target-role labels + status, and lets the user designate any finished session's MOD as the active master profile (set/unset, with server-side validation that the target holds a ready MOD). The half-built `active_mod_session_id` column (FK, ON DELETE SET NULL) got its missing setter + `PATCH /api/updraft/me/active-mod` endpoint + UI.
-- [ ] **MOD Markdown export** — spec promises DOCX + PDF + **Markdown**; Markdown is the one still missing.
+- [x] **MOD Markdown export** — DONE 2026-06-15. `md-builder.ts` renders the MOD as clean Markdown; wired into `generate-files` route and Stage 04 picker (DOCX / PDF / MD checkboxes for MOD row).
 - [ ] **BYOK with safety harness** — the documented escape valve when a session hits the token cap; "built carefully or not at all" (`PLAN.md` decision #8).
 - [ ] **Template breadth** — currently 1 template × 1 density (Classic); v1.0 target is 4 × 3 = 12.
 - [x] **PDF export — RESOLVED 2026-06-13 (native generation).** Drive died 2026-06-12 (403 `storageQuotaExceeded`). Rather than the Sandbox+LibreOffice rebuild (abandoned as over-engineering — it solved "convert an arbitrary DOCX," which UpDraft never has), PDFs are now **generated natively** from the same structured MOD data as the DOCX, via [`pdf-builder.tsx`](../../src/lib/updraft/pdf-builder.tsx) (`@react-pdf/renderer`). No conversion, no LibreOffice, no Google, no paid API, no env var, $0, runs in the existing serverless function. All three templates (MOD / Resume / CL) verified locally with a realistic fixture — correct layout, selectable ATS-safe text, builds clean. See `DECISIONS.md` 2026-06-13. (Native generation is fully verifiable without Vercel, so this didn't need a deploy to prove.)
@@ -76,8 +76,8 @@ Per `PLAN.md` §8 the v1.0 line is: *all 4 templates × 3 densities · ATS quart
 
 ## §3 — Promotion to `LIVE`
 
-- [ ] §1 fully closed.
-- [ ] Enough of §2 closed to stand as "Complete" (re-tailoring + session history + Markdown export is a defensible minimum).
+- [x] §1 fully closed.
+- [x] Enough of §2 closed to stand as "Complete" — re-tailoring (Phase 1 + 2), session history + active-MOD pointer, MOD Markdown export, native PDF generation all shipped.
 - [ ] Add the UpDraft `MODULES` card on the homepage (`src/components/Modules/`), wired like the Blog / Global Conflict cards, status `LIVE`.
 - [ ] Decide on indexing — UpDraft currently relies on being unlinked rather than `noindex`; confirm the desired discoverability posture before linking it publicly.
 - [ ] Tune daily caps (`UPDRAFT_DAILY_*`, `UPDRAFT_PER_IP_*`) for public traffic, not single-tester traffic.

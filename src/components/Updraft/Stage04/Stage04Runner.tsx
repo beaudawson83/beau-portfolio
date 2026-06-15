@@ -68,6 +68,7 @@ interface AvailableDeliverable {
   label: string;
   docxKind: UpdraftExportKind;
   pdfKind: UpdraftExportKind;
+  mdKind?: UpdraftExportKind;
 }
 
 export default function Stage04Runner({ session, userEmail, exports: priorExports }: Props) {
@@ -176,6 +177,7 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
         label: stage02.lightweight_mod ? 'MOD (lightweight)' : 'Master Overview Document',
         docxKind: 'mod_docx',
         pdfKind: 'mod_pdf',
+        mdKind: 'mod_md',
       });
     }
     if (deliverables.includes('jd_build')) {
@@ -207,6 +209,7 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
     for (const a of available) {
       out[a.docxKind] = true;
       out[a.pdfKind]  = true;
+      if (a.mdKind) out[a.mdKind] = true;
     }
     return out;
   });
@@ -219,6 +222,7 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
     for (const a of available) {
       next[a.docxKind] = value;
       next[a.pdfKind]  = value;
+      if (a.mdKind) next[a.mdKind] = value;
     }
     setSelection(next);
   };
@@ -238,6 +242,7 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
     const out: UpdraftExportKind[] = [];
     if (selection[a.docxKind]) out.push(a.docxKind);
     if (selection[a.pdfKind])  out.push(a.pdfKind);
+    if (a.mdKind && selection[a.mdKind]) out.push(a.mdKind);
     return out;
   });
 
@@ -383,7 +388,7 @@ function GenerateView({
   onRegenerateSummary: () => Promise<void>;
 }) {
   const anyChecked = available.some(
-    (a) => selection[a.docxKind] || selection[a.pdfKind],
+    (a) => selection[a.docxKind] || selection[a.pdfKind] || (a.mdKind && selection[a.mdKind]),
   );
   const heading = isRegenMode ? 'Regenerate files' : 'Review and generate';
   const subhead = isRegenMode
@@ -439,7 +444,7 @@ function GenerateView({
             {available.map((a) => (
               <li
                 key={a.key}
-                className="grid grid-cols-[1fr_auto_auto] gap-4 items-center bg-[#111111] border border-[#1F1F1F] rounded-md px-4 py-3"
+                className={`grid ${a.mdKind ? 'grid-cols-[1fr_auto_auto_auto]' : 'grid-cols-[1fr_auto_auto]'} gap-4 items-center bg-[#111111] border border-[#1F1F1F] rounded-md px-4 py-3`}
               >
                 <div>
                   <p className="text-sm text-white font-medium">{a.label}</p>
@@ -457,6 +462,13 @@ function GenerateView({
                   checked={Boolean(selection[a.pdfKind])}
                   onToggle={() => onToggle(a.pdfKind)}
                 />
+                {a.mdKind && (
+                  <FormatCheck
+                    label="MD"
+                    checked={Boolean(selection[a.mdKind])}
+                    onToggle={() => onToggle(a.mdKind!)}
+                  />
+                )}
               </li>
             ))}
           </ul>

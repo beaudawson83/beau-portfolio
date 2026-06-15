@@ -22,6 +22,7 @@ import {
   renderResumePdf,
 } from '@/lib/updraft/pdf-builder';
 import { reframeBullets } from '@/lib/updraft/bullet-reframer';
+import { renderModMarkdown } from '@/lib/updraft/md-builder';
 import type { ReframeLogEntry, ReframeRoleError } from '@/lib/updraft/bullet-reframer';
 import { draftCoverLetter } from '@/lib/updraft/cover-letter-generator';
 import { buildExportFilename } from '@/lib/updraft/filename';
@@ -267,6 +268,29 @@ export async function POST(
         });
         await persistPdfFor(() => renderModPdf({ mod }), pdfName, 'mod_pdf', 'mod');
       }
+    }
+
+    // MOD Markdown — plain text, no AI, no external service.
+    if (shouldRenderMod && wants('mod_md')) {
+      const mdName = buildExportFilename({
+        candidateName: mod.identity.name,
+        type: 'MOD',
+        date: generatedAt,
+        ext: 'md',
+      });
+      const mdBuf = renderModMarkdown({ mod });
+      const mdPath = buildExportPath({ userId, sessionId, filename: mdName });
+      const mdUpload = await uploadExport({ path: mdPath, bytes: mdBuf, mime: 'text/markdown' });
+      if (!mdUpload.ok) throw new Error(`mod markdown upload failed: ${mdUpload.error ?? 'unknown'}`);
+      await recordExport({
+        sessionId,
+        kind: 'mod_md',
+        filename: mdName,
+        storagePath: mdPath,
+        mime: 'text/markdown',
+        bytes: mdBuf.length,
+      });
+      generated.push({ kind: 'mod_md', filename: mdName, storagePath: mdPath, mime: 'text/markdown', bytes: mdBuf.length });
     }
 
     // Resume — optionally reframe bullets against the JD before rendering.
