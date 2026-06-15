@@ -21,6 +21,8 @@
   "scripts/setup-supabase-blog-storage.sql": "This is the one-time database setup that creates the image storage bucket for the blog.",
   "scripts/setup-supabase-blog.sql": "This is the one-time database setup that creates the blog posts table and all its rules about who can read or write what.",
   "scripts/setup-supabase-conflict.sql": "This is the one-time database setup that creates all the tables needed to run the Global Conflict Index.",
+  "skills/updraft/references/lib-system-prompts.md": "The exact instructions given to the AI for each UpDraft task — parsing resumes, scoring job matches, writing cover letters, reframing bullets, and quality-checking output. Each prompt is a named section the code loads at runtime.",
+  "src/lib/updraft/bullet-reframer.ts": "Adapts resume bullet points to match a specific job description's vocabulary and priorities without changing the underlying facts — picks the best reframing strategy per bullet and enforces a truth check, falling back to the original wording if anything would be misleading.",
   "src/app/api/ask-beau/route.ts": "This is the brain of the AskBeau chatbot — it receives a visitor's question, calls the Gemini AI, streams back an answer, logs the conversation, and enforces hourly rate limits.",
   "src/app/api/blog/admin/auth/route.ts": "This checks whether the editor password is correct without ever revealing the password itself.",
   "src/app/api/blog/categories/route.ts": "This returns the list of blog categories — editors see all of them, while the public only sees categories attached to published posts.",

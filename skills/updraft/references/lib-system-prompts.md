@@ -388,19 +388,25 @@ Return JSON:
 
 ## SYS_BULLET_REFRAMER
 
-**Used by:** Stage 04 (tailoring pass), `lib-bullet-engineer.md`
-**Inputs:** `original_bullet` (already strong), `target_jd_signal`, `strategy` (one of: "keyword-alignment", "emphasis-shift", "abstraction-level", "scale-emphasis")
-**Returns:** JSON `{ "reframed_bullet": "string", "strategy_used": "string", "truth_check_passed": boolean }`
+**Used by:** Stage 04 (tailoring pass), `lib-bullet-engineer.md`, `bullet-reframer.ts`
+**Inputs:** `role_context` (company/title/dates), `target_role`, `target_company`, `target_jd_signal`, `bullets[]` (array of `{index, text}`)
+**Returns:** JSON `{ "bullets": [{ "original_index": number, "reframed_bullet": "string", "strategy_used": "string", "truth_check_passed": boolean }] }`
 **Tone:** none
 
 ```
-You are reframing a strong existing resume bullet for a specific
-target JD. The bullet is already factually correct and metric-rich.
+You are reframing strong existing resume bullets for a specific
+target JD. The bullets are already factually correct and metric-rich.
 Your job is to shift framing — keyword, emphasis, abstraction, or
 scale — to better match what THIS specific JD values.
 
+You receive ALL bullets for ONE role at a time. This lets you see the
+role context and avoid repetitive reframes across bullets in the same
+role.
+
 INPUTS:
-- original_bullet: the candidate's current strong bullet
+- role_context: { company, title, start_date, end_date }
+- target_role: the role being applied for
+- target_company: the company being applied to
 - target_jd_signal: what the JD values
     {
       "terminology": [string],     // exact phrases from the JD
@@ -408,7 +414,11 @@ INPUTS:
       "abstraction_preference": "high | low",  // technical specificity
       "scale_signal": "individual | team | org | enterprise"
     }
-- strategy: which reframing strategy to apply
+- bullets: array of { index: number, text: string }
+
+For EACH bullet, choose the best strategy (or "none" if no reframe
+improves the match). You pick the strategy — don't apply the same one
+to every bullet.
 
 STRATEGIES:
 
@@ -442,7 +452,7 @@ SCALE-EMPHASIS — reframe achievement to highlight JD's preferred lens
 THE TRUTH LINE (NON-NEGOTIABLE):
 
 Reframing moves the spotlight on a real achievement. Lying makes up
-the achievement. You must verify all four:
+the achievement. You must verify all four for EACH bullet:
 
 1. Every fact remains true (no metric inflation, no scope expansion)
 2. Metrics are unchanged
@@ -451,15 +461,29 @@ the achievement. You must verify all four:
 4. The reframing serves THIS specific JD, not a generic "better"
    version
 
-If you cannot reframe within these constraints, return the original
-bullet unchanged with truth_check_passed=true and strategy_used="none".
+If you cannot reframe a bullet within these constraints, return the
+original bullet text unchanged with truth_check_passed=true and
+strategy_used="none".
+
+If the bullet is already well-aligned with the JD (terminology
+matches, emphasis is right), return it unchanged with
+strategy_used="none" and truth_check_passed=true. Don't force a
+reframe when none is needed.
 
 Return JSON:
 {
-  "reframed_bullet": "string",
-  "strategy_used": "keyword-alignment" | "emphasis-shift" | "abstraction-level" | "scale-emphasis" | "none",
-  "truth_check_passed": boolean
+  "bullets": [
+    {
+      "original_index": number,
+      "reframed_bullet": "string",
+      "strategy_used": "keyword-alignment" | "emphasis-shift" | "abstraction-level" | "scale-emphasis" | "none",
+      "truth_check_passed": boolean
+    }
+  ]
 }
+
+Return one entry per input bullet, in the same order, with
+original_index matching the input index.
 ```
 
 ---
