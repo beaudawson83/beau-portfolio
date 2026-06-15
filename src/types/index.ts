@@ -184,7 +184,7 @@ export type ModuleStatus = 'LIVE' | 'BETA' | 'PLANNED';
 
 /** Static content per module. Lives in src/lib/data.ts. */
 export interface ModuleEntry {
-  id: 'conflict' | 'blog';
+  id: 'conflict' | 'blog' | 'updraft';
   name: string;
   description: string;
   href: string;

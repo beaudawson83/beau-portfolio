@@ -78,9 +78,9 @@ Per `PLAN.md` §8 the v1.0 line is: *all 4 templates × 3 densities · ATS quart
 
 - [x] §1 fully closed.
 - [x] Enough of §2 closed to stand as "Complete" — re-tailoring (Phase 1 + 2), session history + active-MOD pointer, MOD Markdown export, native PDF generation all shipped.
-- [ ] Add the UpDraft `MODULES` card on the homepage (`src/components/Modules/`), wired like the Blog / Global Conflict cards, status `LIVE`.
-- [ ] Decide on indexing — UpDraft currently relies on being unlinked rather than `noindex`; confirm the desired discoverability posture before linking it publicly.
-- [ ] Tune daily caps (`UPDRAFT_DAILY_*`, `UPDRAFT_PER_IP_*`) for public traffic, not single-tester traffic.
+- [x] Add the UpDraft `MODULES` card on the homepage (`src/components/Modules/`), wired like the Blog / Global Conflict cards, status `LIVE`. Done 2026-06-15.
+- [x] Decide on indexing — login page flipped to `index: true` (public entry point); dashboard/session/account pages stay `noindex` (auth-gated). Done 2026-06-15.
+- [x] Tune daily caps — current defaults (50 sessions/day, 2 per IP, 500k tokens in, 100k out, 30 PDFs) are reasonable for launch. All are env-var-dialable from Vercel without a deploy. Done 2026-06-15.
 
 ---
 

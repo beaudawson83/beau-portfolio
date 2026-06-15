@@ -327,6 +327,13 @@ export const modules: ModuleEntry[] = [
     href: '/blog',
     status: 'LIVE',
   },
+  {
+    id: 'updraft',
+    name: 'UPDRAFT',
+    description: 'AI-powered resume and cover letter generator — upload, tailor to a role, download.',
+    href: '/updraft',
+    status: 'LIVE',
+  },
 ];
 
 // =============================================================================

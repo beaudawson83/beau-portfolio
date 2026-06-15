@@ -18,7 +18,7 @@ const orbitron = Orbitron({
 export const metadata: Metadata = {
   title: 'Sign in — UpDraft',
   description: 'Magic-link sign-in for UpDraft, the resume builder by BAD Labs.',
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
 };
 
 export const dynamic = 'force-dynamic';
