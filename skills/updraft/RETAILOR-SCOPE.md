@@ -105,7 +105,7 @@ too, not only re-tailoring.
       automatic fallback to untailored MOD + logs `bullet_reframe_failed`.
 - [x] Persist the reframe log (per-bullet strategy_used + truth_check) into
       `stage_04` outputs for transparency.
-- [ ] Cost note: adds N (= role count) model calls to a generate that today
+- [x] Cost note: adds N (= role count) model calls to a generate that today
       makes 0–1 (CL only). Reflect in cost-guardrail docs.
 
 ---

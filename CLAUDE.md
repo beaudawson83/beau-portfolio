@@ -66,7 +66,7 @@ Hero            Name, trifecta positioning, proof line, CTAs, headshot, AskBeau
 TelemetryGrid   8 metrics, 4x2 grid, animated count-up
 CaseStudies     Expedia, Union, BAD Labs — problem → built → results
 BadLabsShowcase Current venture: Console CRM, AI tooling, fractional leadership
-Modules         Owned-systems control panel: Conflict + Notes cards w/ live telemetry
+Modules         Owned-systems control panel: Conflict + Notes + UpDraft cards w/ live telemetry
 SystemKernel    4-column tools/platforms grid
 Timeline        Collapsible full career history (CSS-only)
 Footer          Contact form + social links
@@ -93,7 +93,7 @@ src/
 │   │       ├── page.tsx               # Drafts list
 │   │       ├── new/page.tsx           # Create + redirect
 │   │       └── [slug]/page.tsx        # The editor
-│   ├── updraft/                       # UpDraft v0.1.5 — auth-gated, unlinked
+│   ├── updraft/                       # UpDraft v1.0 — auth-gated, publicly linked
 │   │   ├── login/page.tsx             # Magic-link request + privacy callout
 │   │   ├── account/page.tsx           # Sessions · keep flags · data export · delete
 │   │   ├── page.tsx                   # Auth-gated dashboard (session list)
@@ -198,7 +198,7 @@ src/
 | `/api/blog/categories`      | GET    | Distinct categories (admin sees drafts) | Optional Bearer            |
 | `/api/pi-challenge/issue`   | POST   | Issue HMAC challenge     | —                              |
 | `/api/pi-challenge/validate`| POST   | Validate response        | —                              |
-| **UpDraft v0.1.5 (auth + sessions + stages + account + cron):** | | | |
+| **UpDraft v1.0 (auth + sessions + stages + account + cron):** | | | |
 | `/api/updraft/auth/issue`   | POST   | Issue magic-link email   | Rate: 10/hr per IP             |
 | `/api/updraft/auth/callback`| GET    | Verify magic-link, set session cookie | one-shot HMAC token |
 | `/api/updraft/auth/logout`  | POST   | Clear session cookie     | session cookie                 |
@@ -397,13 +397,13 @@ Phase 2: cross-prompt audit. Phase 3: ACLED/UCDP/SIPRI reconciliation. Phase 4: 
 
 ---
 
-## UpDraft — v0.1.5 LIVE (unlinked URL)
+## UpDraft — v1.0 LIVE
 
-A resume + cover-letter generation tool operated by an AI character named **Audit**. 4-stage flow (intake → target → interview → generate) producing three deliverables in any combination: Master Overview Document (MOD), JD-tailored Resume, Cover Letter. Outputs DOCX + PDF (Markdown for MOD ships v0.5+). ATS-safe single-column templates.
+A resume + cover-letter generation tool operated by an AI character named **Audit**. 4-stage flow (intake → target → interview → generate) producing three deliverables in any combination: Master Overview Document (MOD), JD-tailored Resume, Cover Letter. Outputs DOCX + PDF + Markdown (MOD only). ATS-safe single-column templates.
 
-**Status:** v0.1.5 + first wave of v0.5 polish — SHIPPED. v0.1.5 verified end-to-end on 2026-05-06 with two test accounts. v0.5 wave landed 2026-05-06 → 2026-05-07: Pi-egg reveal in the Operator Dashboard, Cover Letter generation via `SYS_COVER_LETTER_DRAFTER`, casing rules in the resume parser, spaces-bug fix in the interview-objections textarea, **centralized retry + 24h failure visibility** at the Gemini boundary, **per-deliverable + per-format picker** in Stage 04 (with Regenerate ↻), **summary review at the top of Stage 04** (auto-drafts on Stage 03 advance, autosave + regenerate before Generate), and a **phased Stage 03 UX** with a step-strip + 3 grouped blocks. Lives at unlinked `/updraft` URL. MODULES card promotion still gated to v1.0.
+**Status:** v1.0 — promoted to homepage MODULES card, publicly linked. Shipped 2026-06-15. v1.0 includes: bullet reframing via `SYS_BULLET_REFRAMER`, MOD Markdown export, re-tailoring (Phase 1 seed-and-skip + Phase 2 JD bullet reframing), session history + active-MOD pointer, native PDF generation via `@react-pdf/renderer`, daily failure-alert cron, match-analyzer re-calibrated on `gemini-3.5-flash`. Earlier milestones: v0.1.5 verified end-to-end on 2026-05-06 with two test accounts; v0.5 polish wave (2026-05-06 → 2026-05-07) added Cover Letter generation, centralized retry, per-deliverable picker in Stage 04, summary review, and phased Stage 03 UX.
 
-**v1.0-gate progress (2026-06-13):** trust track (§1) fully closed — match-analyzer re-calibrated on `gemini-3.5-flash`, native PDF generation replaced the dead Drive API, and a daily failure-alert cron now watches the failure counters. Feature track (§2) in progress: the **active-MOD pointer** is live in the dashboard (designate a finished session as your master profile), and **re-tailoring Phase 1** ships the seed-and-skip flow (active MOD + new JD → new session that skips intake + interview). Phase 2 (JD bullet reframing via `SYS_BULLET_REFRAMER`) is scoped but not built — see [`skills/updraft/RETAILOR-SCOPE.md`](skills/updraft/RETAILOR-SCOPE.md) and [`V1-GATE.md`](skills/updraft/V1-GATE.md).
+**v1.0 gate closed (2026-06-15):** trust track (§1), feature track minimum (§2), and homepage promotion (§3) all done. Trust: match-analyzer re-calibrated on `gemini-3.5-flash`, native PDF generation replaced the dead Drive API, daily failure-alert cron watches the failure counters. Features: active-MOD pointer, re-tailoring Phase 1 (seed-and-skip) + Phase 2 (JD bullet reframing via `SYS_BULLET_REFRAMER`), MOD Markdown export. Promotion: UpDraft card live in the homepage MODULES section. See [`V1-GATE.md`](skills/updraft/V1-GATE.md) and [`RETAILOR-SCOPE.md`](skills/updraft/RETAILOR-SCOPE.md) for the full record.
 
 **Architecture is "skill-as-orchestrator":** the host program (this Next.js app) owns UI, state, file generation, and the regex anti-pattern lint pass. The AI model (Gemini 3.5 Flash) owns parsing, voice, bullet rewriting, scoring, and CL drafting. Backend is the source of truth — conversation history is intentionally not preserved across stages; only structured stage outputs persist.
 
@@ -411,7 +411,7 @@ A resume + cover-letter generation tool operated by an AI character named **Audi
 
 **PDF subsystem:** Stage 01 reads PDFs via Gemini's native `inline_data` input on `generateContent` (handles image-based PDFs via OCR — replaces the original pdf-parse plan after the v1/v2 API mismatch bit us 2026-05-04). Stage 04 writes PDFs **natively** via [`pdf-builder.tsx`](src/lib/updraft/pdf-builder.tsx) (`@react-pdf/renderer`), rendered directly from the same structured MOD data as the DOCX — UpDraft owns its templates, so there's no arbitrary DOCX to convert and thus **no conversion engine at all** (no LibreOffice, no Google, no paid API, no env var, $0). `pdf-builder.tsx` is the one-to-one sibling of `docx-builder.ts` (shared key-outcome + date helpers, same Classic/Regular layout) and produces a real selectable text layer (ATS-safe). This replaced the Google Drive API (died in prod 2026-06-12, `403 storageQuotaExceeded`) and the briefly-planned Sandbox+LibreOffice rebuild (abandoned as over-engineering) — see `DECISIONS.md` 2026-06-13. PDF generation is non-blocking — any render failure still ships the DOCX with a banner.
 
-**Cost guardrails:** all thresholds are env vars (`UPDRAFT_DAILY_*`, `UPDRAFT_PER_IP_*`, `UPDRAFT_SESSION_TOKEN_CAP_*`) dialable from the Vercel dashboard. Owner bypass via `UPDRAFT_OWNER_SECRET` Bearer header (mirrors `BLOG_EDITOR_SECRET`); owner sessions skip caps and tag events `owner: true`. BYOK fallback deferred to v1.0.
+**Cost guardrails:** all thresholds are env vars (`UPDRAFT_DAILY_*`, `UPDRAFT_PER_IP_*`, `UPDRAFT_SESSION_TOKEN_CAP_*`) dialable from the Vercel dashboard. Owner bypass via `UPDRAFT_OWNER_SECRET` Bearer header (mirrors `BLOG_EDITOR_SECRET`); owner sessions skip caps and tag events `owner: true`. BYOK fallback deferred post-v1.0.
 
 **Failure alerting:** the daily `/api/updraft/cron/alert` cron (08:00 UTC) reads the same 24h failure counters as `/api/updraft/status` and emails the operator a digest when they cross a threshold — the watcher that was missing when the 2026-06-10 Gemini outage ran silent for 9 days. Both knobs are optional env vars: `UPDRAFT_ALERT_EMAIL` (recipient, default `beau.dawson83@gmail.com`) and `UPDRAFT_ALERT_MIN_FAILURES` (threshold, default 1). A clean 24h window sends nothing.
 
@@ -429,7 +429,7 @@ A resume + cover-letter generation tool operated by an AI character named **Audi
 - [`scripts/setup-supabase-updraft-rpc.sql`](scripts/setup-supabase-updraft-rpc.sql) — atomic UPSERT-increment helper (`updraft_increment_quota`) + today-snapshot read (`updraft_today_quota`). Drives the kill-switch counters.
 - [`scripts/setup-supabase-updraft-storage.sql`](scripts/setup-supabase-updraft-storage.sql) — private `updraft-exports` bucket (signed-URL reads only, 5 MB cap, docx/pdf/md MIME allowlist). Output-only — raw uploaded resumes are parsed in-memory and discarded, never persisted.
 
-**Data flow (v0.1.5 + v0.5 polish):** browser → `/updraft/login` (magic link via Brevo) → `/updraft` dashboard → `/updraft/[sessionId]` runs the 4 stages (each stage's structured JSON persists to `updraft_sessions.stage_outputs` on completion). Stage 01 PDF reading is via Gemini direct (handles image PDFs via OCR, casing rules normalize all-caps banners); DOCX reading is via mammoth. **Stage 03** is a phased "Build your story" page (step-of-N strip + grouped blocks for Job history / Background / About you); on Continue it auto-drafts the executive summary in the background and advances. **Stage 04** lands on a Review-and-generate page — summary at the top (editable, autosave, regenerate ↻), then a per-deliverable + per-format checkbox grid (MOD / Resume / Cover Letter × DOCX / PDF). User picks any subset and clicks Generate; on first time defaults all-checked, on Regenerate ↻ defaults all-unchecked. Cover Letter draft (`SYS_COVER_LETTER_DRAFTER`) runs in the same call when any CL kind is selected. DOCX renders via `docx` npm package; PDF renders natively via `@react-pdf/renderer` (`pdf-builder.tsx`) from the same data — no conversion. **Auto-retry** at the Gemini boundary (3 attempts, exponential backoff + jitter, transient-only). Both files write to Supabase Storage and download via 10-min signed URLs. PDF generation is non-blocking — DOCX always ships, PDF surfaces a banner only on the rare native-render failure. Daily 30-day inactivity purge runs at 09:00 UTC via Vercel Cron.
+**Data flow (v1.0):** browser → `/updraft/login` (magic link via Brevo) → `/updraft` dashboard → `/updraft/[sessionId]` runs the 4 stages (each stage's structured JSON persists to `updraft_sessions.stage_outputs` on completion). Stage 01 PDF reading is via Gemini direct (handles image PDFs via OCR, casing rules normalize all-caps banners); DOCX reading is via mammoth. **Stage 03** is a phased "Build your story" page (step-of-N strip + grouped blocks for Job history / Background / About you); on Continue it auto-drafts the executive summary in the background and advances. **Stage 04** lands on a Review-and-generate page — summary at the top (editable, autosave, regenerate ↻), then a per-deliverable + per-format checkbox grid (MOD / Resume / Cover Letter × DOCX / PDF). User picks any subset and clicks Generate; on first time defaults all-checked, on Regenerate ↻ defaults all-unchecked. Cover Letter draft (`SYS_COVER_LETTER_DRAFTER`) runs in the same call when any CL kind is selected. DOCX renders via `docx` npm package; PDF renders natively via `@react-pdf/renderer` (`pdf-builder.tsx`) from the same data — no conversion. **Auto-retry** at the Gemini boundary (3 attempts, exponential backoff + jitter, transient-only). Both files write to Supabase Storage and download via 10-min signed URLs. PDF generation is non-blocking — DOCX always ships, PDF surfaces a banner only on the rare native-render failure. Daily 30-day inactivity purge runs at 09:00 UTC via Vercel Cron.
 
 ---
 

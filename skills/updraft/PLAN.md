@@ -291,6 +291,16 @@ UPDRAFT_SESSION_TOKEN_CAP_OUT=50000
 
 Bring-your-own Gemini key. Held in `sessionStorage` only, sent per-request as `X-Updraft-User-Key` header, server forwards to Gemini and discards. No persistence, no logging, redacted in error paths. Event log records `{byok: true}`, never the key itself.
 
+### 5.6 Bullet reframing cost profile (added 2026-06-15)
+
+Stage 04's `generate-files` endpoint previously made 0–1 Gemini calls per request (1 only when a Cover Letter kind was selected, via `SYS_COVER_LETTER_DRAFTER`). With bullet reframing (shipped 2026-06-15), the endpoint now makes an additional **N calls**, where N = the number of roles in the MOD (typically 3–6). Each call runs `SYS_BULLET_REFRAMER` against one role's bullet set to tailor them to the target JD.
+
+Key cost properties:
+
+- **Separately quota-gated.** Each reframing call goes through `canMakeAiCall`, so token caps and the global daily kill switch apply per call — the same guardrails that gate CL generation.
+- **Non-blocking failures.** If any reframing call fails (transient Gemini error, quota exhaustion, or lint regression), the resume ships with untailored bullets for that role. The user sees a UI banner; the system logs a `bullet_reframe_failed` event (watched by the daily `/api/updraft/cron/alert` digest).
+- **Worst-case per generate:** N reframe calls + 1 CL call + DOCX/PDF renders. For a 6-role MOD with a Cover Letter selected, that's 7 Gemini calls total (was 1 before reframing).
+
 ---
 
 ## 6. Gemini strategy

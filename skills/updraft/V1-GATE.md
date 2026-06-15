@@ -66,11 +66,7 @@ Per `PLAN.md` §8 the v1.0 line is: *all 4 templates × 3 densities · ATS quart
 - [ ] **Template breadth** — currently 1 template × 1 density (Classic); v1.0 target is 4 × 3 = 12.
 - [x] **PDF export — RESOLVED 2026-06-13 (native generation).** Drive died 2026-06-12 (403 `storageQuotaExceeded`). Rather than the Sandbox+LibreOffice rebuild (abandoned as over-engineering — it solved "convert an arbitrary DOCX," which UpDraft never has), PDFs are now **generated natively** from the same structured MOD data as the DOCX, via [`pdf-builder.tsx`](../../src/lib/updraft/pdf-builder.tsx) (`@react-pdf/renderer`). No conversion, no LibreOffice, no Google, no paid API, no env var, $0, runs in the existing serverless function. All three templates (MOD / Resume / CL) verified locally with a realistic fixture — correct layout, selectable ATS-safe text, builds clean. See `DECISIONS.md` 2026-06-13. (Native generation is fully verifiable without Vercel, so this didn't need a deploy to prove.)
 
-**Deferred / parked (not v1.0 blockers):**
-- Conversational Stage 03 (Phase A–D rebuild) + its folded-in pieces: AI bullet rewriter, STAR extraction, tier deepening branches — see `CALIBRATION.md` §"Stage 03 deferred features".
-- Lint Phase 2 (AI rewrite via `SYS_ANTIPATTERN_REVIEWER`).
-- Target-JD seniority downshifting Audit voice (`PLAN.md` parked design changes).
-- Gemini explicit context caching (cost optimization, not a gate).
+**Post-v1.0 backlog** — all deferred items consolidated in [`BACKLOG.md`](BACKLOG.md).
 
 ---
 
