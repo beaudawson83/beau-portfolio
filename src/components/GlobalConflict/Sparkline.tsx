@@ -1,24 +1,32 @@
 'use client';
 
-import { useMemo } from 'react';
-
 interface SparklineProps {
-  seed: string;
+  data: number[];
 }
 
-function generateBars(seed: string): number[] {
-  let s = 0;
-  for (let i = 0; i < seed.length; i++) s += seed.charCodeAt(i);
-  const out: number[] = [];
-  for (let i = 0; i < 7; i++) {
-    s = (s * 9301 + 49297) % 233280;
-    out.push(0.25 + (s / 233280) * 0.75);
+export default function Sparkline({ data }: SparklineProps) {
+  if (data.length === 0) {
+    return (
+      <div
+        style={{
+          height: 50,
+          marginTop: 10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: 'var(--gc-mono)',
+          fontSize: 10,
+          letterSpacing: '0.08em',
+          color: '#52525b',
+          textTransform: 'uppercase' as const,
+        }}
+      >
+        Trend data not yet available
+      </div>
+    );
   }
-  return out;
-}
 
-export default function Sparkline({ seed }: SparklineProps) {
-  const bars = useMemo(() => generateBars(seed), [seed]);
+  const max = Math.max(...data, 1);
   return (
     <div
       style={{
@@ -29,17 +37,20 @@ export default function Sparkline({ seed }: SparklineProps) {
         marginTop: 10,
       }}
     >
-      {bars.map((v, i) => (
-        <div
-          key={i}
-          style={{
-            flex: 1,
-            height: `${v * 100}%`,
-            background: 'var(--gc-accent)',
-            opacity: 0.4 + v * 0.5,
-          }}
-        />
-      ))}
+      {data.map((v, i) => {
+        const ratio = v / max;
+        return (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              height: `${Math.max(ratio * 100, 4)}%`,
+              background: 'var(--gc-accent)',
+              opacity: 0.4 + ratio * 0.5,
+            }}
+          />
+        );
+      })}
     </div>
   );
 }

@@ -1,24 +1,17 @@
 # Portfolio TODO
 
-> **Last updated:** 2026-06-12
+> **Last updated:** 2026-06-15
 > **Live:** beaudawson.com
-> **Status:** All four surfaces shipped — portfolio, Blog (Terminal Notebook), Global
-> Conflict Index, UpDraft v0.1.5 (unlinked). AskBeau recovered from the 2026-06-01
-> `gemini-2.0-flash` retirement (now `gemini-3.5-flash`, env-dialable) and hard-scoped
-> to Beau-only answers. **2026-06-12:** match-analyzer calibration merged (PR #6) +
-> re-validated on 3.5; full 4-stage flow verified live. That run found two prod
-> outages — Brevo email (IP-restriction, fixed) and **Drive PDF down (`403
-> storageQuotaExceeded`)** → PDF being rebuilt on Sandbox + LibreOffice. See
-> `skills/updraft/V1-GATE.md` + `DECISIONS.md` 2026-06-12.
+> **Status:** All four surfaces shipped and live — portfolio, Blog (Terminal Notebook),
+> Global Conflict Index (now indexed), UpDraft v1.0 (promoted to homepage MODULES card).
+> AskBeau on `gemini-3.5-flash` (env-dialable). UpDraft v1.0 gate closed 2026-06-15
+> (see `skills/updraft/V1-GATE.md`). Global Conflict hardened + indexed 2026-06-15
+> (sparkline backed by real data, noindex flipped).
 
 ---
 
 ## Needs a decision (don't delete, don't merge blindly)
 
-- ✅ **`claude/review-updraft-launch-qMznh` branch — RESOLVED 2026-06-12.** Rebased onto
-  main, re-validated on `gemini-3.5-flash`, merged via PR #6, branch deleted. The four
-  scoring fixes hold on 3.5 (see `CALIBRATION.md` 2026-06-12). *(Kept here briefly as a
-  closure note; safe to delete on the next TODO pass.)*
 - **Stale remote branches** — `claude/add-blog-feature-nIKFK` (old Contentful blog,
   merged + later ripped out), `claude/add-landing-page-button-HSZLg`,
   `claude/global-conflict-cleanup`, `claude/great-taussig-77c15a`,
@@ -47,26 +40,19 @@
 
 ## Global Conflict Index
 
-- Update the daily Routine prompt to populate the per-conflict narrative fields added in
-  the May UI pass: `displaced_7d`, `summary`, `resolution_outlook` (UI currently renders
-  empty-state placeholders).
-- Flip `robots: noindex` when the experience is hardened.
+- ✅ Sparkline backed by real per-conflict daily data (`conflict_daily_stats` table).
+- ✅ `robots: noindex` flipped to `index: true` (2026-06-15).
+- Update the daily Routine prompt to: (1) populate `displaced_7d`, `summary`,
+  `resolution_outlook` per hotspot, and (2) insert a row into `conflict_daily_stats`
+  per conflict per run. UI handles empty-state gracefully until populated.
 - Phase 2: cross-prompt audit. Phase 3: ACLED/UCDP/SIPRI reconciliation. Phase 4: map UI
   layers (territory / belligerents / sponsors). (Parked — see CLAUDE.md.)
 
-## UpDraft — road to v1.0
+## UpDraft — v1.0 SHIPPED
 
-- ✅ Calibration merged (PR #6) + re-validated on 3.5; full 4-stage flow verified live.
-- 🔴 **NEXT / blocker — PDF rebuild on Sandbox + LibreOffice.** Drive PDF is dead in prod
-  (`403 storageQuotaExceeded` — service accounts have no My Drive quota). Decided to
-  revert to Sandbox + LibreOffice; ~6–10h dedicated build behind the `renderPdf()`
-  interface. Lead item of `V1-GATE.md` §2. (Until done: DOCX-only with banner.)
-- Follow-up: add active alerting on `/api/updraft/status` failure counters (nothing was
-  watching them — both outages today were found by hand).
-- Remaining v0.5 parked items (see `skills/updraft/CALIBRATION.md`): per-bullet
-  "✨ Rewrite with Audit" flow, Tier 3/4 deepening blocks, MOD Markdown export.
-- Other v1.0 gate items (see `skills/updraft/V1-GATE.md` §2): re-tailoring flow,
-  session-history UI, MODULES card promotion, BYOK fallback, template breadth.
+v1.0 gate closed 2026-06-15. See `skills/updraft/V1-GATE.md` for the full record and
+`skills/updraft/BACKLOG.md` for the post-v1.0 backlog (template breadth, BYOK,
+conversational Stage 03, lint Phase 2, context caching).
 
 ## Portfolio site (no urgency)
 

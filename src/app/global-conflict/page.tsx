@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: 'Global Conflict Index — Beau Dawson',
   description:
     'A daily synthesis of armed conflict data and breaking reportage, refreshed each morning at 7am Central by an AI research agent.',
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
 };
 
 export const revalidate = 900;

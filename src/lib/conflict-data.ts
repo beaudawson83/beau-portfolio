@@ -57,6 +57,8 @@ export interface ConflictHotspot {
   summary: string | null;
   /** Short note on resolution outlook written by the Routine. Null until populated. */
   resolutionOutlook: string | null;
+  /** Last 7 daily casualty snapshots (oldest → newest) from conflict_daily_stats. */
+  casualtyTrend: number[];
 }
 
 export interface ConflictNewsItem {

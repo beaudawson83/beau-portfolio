@@ -304,7 +304,7 @@ Schema: [`scripts/setup-supabase-blog.sql`](scripts/setup-supabase-blog.sql) (id
 
 ## Global Conflict Index — LIVE
 
-Live at `/global-conflict`, surfaced publicly via the homepage `MODULES` section. `robots: noindex` for now — flip when the experience is hardened.
+Live at `/global-conflict`, surfaced publicly via the homepage `MODULES` section. Indexed (`robots: index`) as of 2026-06-15.
 
 A sober data-journalism module: real TopoJSON world map (countries tinted red by intensity), animated stat row, hotspot markers, wire feed. Click any hotspot → news section becomes that conflict's full journal timeline (paginated, all-time history).
 
@@ -331,6 +331,7 @@ Single user-managed project: **`ygvhoocbvraiplzmgufa`** (https://ygvhoocbvraiplz
 
 ```
 conflict_hotspots    territory + intensity + casualties + iso codes + displaced_7d + summary + resolution_outlook
+conflict_daily_stats per-conflict daily casualty snapshots (conflict_id + date PK) — powers detail-panel sparklines
 conflict_news        URL-deduped journal (append-only)
 conflict_snapshots   time series of global stats
 conflict_actors      (conflict_id, country_iso, role, confidence, sources jsonb)

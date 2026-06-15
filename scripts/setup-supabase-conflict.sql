@@ -122,6 +122,27 @@ create policy "anon read actors" on conflict_actors for select to anon          
 create policy "auth read actors" on conflict_actors for select to authenticated using (true);
 
 -- ===========================================================================
+-- DAILY STATS (per-conflict daily casualty snapshots for trend sparklines)
+-- ===========================================================================
+create table if not exists conflict_daily_stats (
+  conflict_id   text not null references conflict_hotspots(id) on delete cascade,
+  date          date not null,
+  casualties    integer not null default 0,
+  primary key (conflict_id, date)
+);
+
+create index if not exists idx_conflict_daily_stats_date
+  on conflict_daily_stats (date desc);
+
+alter table conflict_daily_stats enable row level security;
+
+drop policy if exists "anon read daily_stats"  on conflict_daily_stats;
+drop policy if exists "auth read daily_stats"  on conflict_daily_stats;
+
+create policy "anon read daily_stats"  on conflict_daily_stats for select to anon          using (true);
+create policy "auth read daily_stats"  on conflict_daily_stats for select to authenticated using (true);
+
+-- ===========================================================================
 -- ROW-LEVEL SECURITY
 -- Public read, no public write.  Service role bypasses RLS automatically.
 -- ===========================================================================

@@ -76,6 +76,7 @@ function rowToHotspot(r: HotspotRow): ConflictHotspot {
     displaced7d: r.displaced_7d ?? 0,
     summary: r.summary ?? null,
     resolutionOutlook: r.resolution_outlook ?? null,
+    casualtyTrend: [],
   };
 }
 
@@ -197,6 +198,51 @@ export async function readNewsTimeline(q: NewsQuery = {}): Promise<TimelineItem[
   }));
 }
 
+// ---------------------------------------------------------------------------
+// DAILY STATS — per-conflict casualty trend for sparklines
+// ---------------------------------------------------------------------------
+
+interface DailyStatRow {
+  conflict_id: string;
+  date: string;
+  casualties: number;
+}
+
+async function readDailyStats(
+  conflictIds: string[],
+): Promise<Map<string, number[]>> {
+  const result = new Map<string, number[]>();
+  if (conflictIds.length === 0) return result;
+  const sb = getReadClient();
+  if (!sb) return result;
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+
+  const { data, error } = await sb
+    .from('conflict_daily_stats')
+    .select('conflict_id,date,casualties')
+    .in('conflict_id', conflictIds)
+    .gte('date', sevenDaysAgo)
+    .order('date', { ascending: true });
+
+  if (error) {
+    console.error('readDailyStats:', error);
+    return result;
+  }
+
+  for (const row of (data ?? []) as DailyStatRow[]) {
+    let arr = result.get(row.conflict_id);
+    if (!arr) {
+      arr = [];
+      result.set(row.conflict_id, arr);
+    }
+    arr.push(row.casualties);
+  }
+  return result;
+}
+
 /**
  * Reads stats + active hotspots + last-24h news + actors from Supabase.
  * Returns null if the store is empty (caller should fall back).
@@ -212,6 +258,11 @@ export async function readConflictData(): Promise<ConflictData | null> {
   ]);
 
   if (!snapshot || hotspots.length === 0) return null;
+
+  const trends = await readDailyStats(hotspots.map((h) => h.id));
+  for (const h of hotspots) {
+    h.casualtyTrend = trends.get(h.id) ?? [];
+  }
 
   return {
     lastUpdated: snapshot.captured_at,

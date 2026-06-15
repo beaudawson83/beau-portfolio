@@ -325,7 +325,7 @@ function DetailPanel({
       </div>
 
       <div className="gc-detail-spark-label">Bar chart · 7d casualty trend</div>
-      <Sparkline seed={h.id} />
+      <Sparkline data={h.casualtyTrend} />
       <button
         type="button"
         className="gc-detail-cta"
