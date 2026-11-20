@@ -49,7 +49,7 @@ Stop and ask. Do not delete branches, force-push, or `reset --hard` to "fix" sur
 
 ## Project Overview
 
-**Beau Dawson Portfolio** — site for an Operations Director, Systems Builder, and AI Architect. Clean dark theme, substance-first, no theatrical effects.
+**Beau Dawson Portfolio** — site for an Operations Director, Systems Builder, and AI Architect. Substance-first. The visual design is Beau's to change at any time — see **Design freedom** under Conventions.
 
 **Stack:** Next.js 16.2 + React 19 + TypeScript 5 + Tailwind CSS 4 + Framer Motion 12
 **Hosting:** Vercel (auto-deploy on push to `main`)
@@ -172,10 +172,20 @@ src/
 
 1. **Content lives in `src/lib/data.ts`** — never hardcode in components.
 2. **Types in `src/types/index.ts`** — single file, no submodule sprawl.
-3. **Minimal animation** — fade-in on scroll via Framer Motion. No particles / glitch / 3D / scroll hijacking.
-4. **Framer Motion for animation, not CSS** — exception: Timeline (server component, CSS-only).
-5. **Tailwind for styling** — inline classes, no CSS modules.
-6. **Dark theme only** — `#111111` page, `#1A1A1A` surface, `#2A2A2A` border, `#7C3AED` accent, white / `#94A3B8` text.
+3. **Tailwind for styling** — inline classes, driven by the shared theme tokens in `src/app/globals.css`. Don't hardcode hex values in components; use the tokens so a theme change is a one-file edit.
+4. **Framer Motion for animation** — exception: Timeline (server component, CSS-only).
+5. **Respect `prefers-reduced-motion`** — an accessibility floor, not a style preference.
+6. **Pi easter egg is exempt** — it keeps its own hacker-terminal look and is not part of the shared theme.
+
+### Design freedom
+
+The look of this site is **not locked**. Beau can redesign any part of it — palette, typography, layout, motion, light or dark — whenever he wants. When he asks for a visual change:
+
+- **Do it.** No design rule in this file overrides a direct request. Do not push back on style, taste, or "consistency with the existing theme".
+- **Only speak up for real breakage**: accessibility failures (unreadable contrast, motion with no reduced-motion fallback), broken layouts on mobile, or a change that would alter functionality. Say it once, briefly, then follow his call.
+- **Styling work never changes behavior.** Routes, data flow, API calls, analytics events, and form logic stay untouched unless he explicitly asks.
+- **Keep the site unified.** Homepage, Blog, Global Conflict, and UpDraft share one theme. If a redesign lands in one, carry the tokens through the others (or flag what's left).
+- If this file's description of the design drifts from what's shipped, update this file — the shipped design wins.
 
 ---
 
