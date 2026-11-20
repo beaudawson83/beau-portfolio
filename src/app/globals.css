@@ -379,3 +379,9 @@ body {
   );
   animation: scan-line 2s linear infinite;
 }
+
+/* Native dropdown options need an opaque background to stay readable. */
+select option {
+  background: var(--surface);
+  color: var(--ink);
+}
