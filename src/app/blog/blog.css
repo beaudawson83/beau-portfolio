@@ -28,7 +28,7 @@
   --tn-accent-dim:  #a855f733;
   --tn-accent-glow: #a855f722;
 
-  --tn-sans:  var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --tn-sans:  var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --tn-serif: var(--font-source-serif), Charter, "Iowan Old Style", Georgia, serif;
   --tn-mono:  var(--font-jetbrains-mono), "SF Mono", Menlo, Consolas, monospace;
 }
