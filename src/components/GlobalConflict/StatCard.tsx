@@ -35,7 +35,7 @@ function CountUp({ value, duration = 1400, format = (n) => n.toLocaleString() }:
 }
 
 function Delta({ value }: { value: number }) {
-  if (value === 0) return <span style={{ color: '#71717a' }}>—</span>;
+  if (value === 0) return <span style={{ color: 'var(--faint)' }}>—</span>;
   const up = value > 0;
   const arrow = up ? '▲' : '▼';
   const color = up ? 'var(--gc-accent)' : '#5e7a4e';

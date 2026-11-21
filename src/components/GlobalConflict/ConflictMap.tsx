@@ -125,7 +125,7 @@ export default function ConflictMap({
               if (!c.d) return null;
               const k = c.id != null ? String(parseInt(String(c.id), 10)) : '';
               const intensity = countryIntensity[k];
-              const fill = intensity ? 'var(--gc-accent)' : '#1a1a1a';
+              const fill = intensity ? 'var(--gc-accent)' : 'rgb(255 255 255 / 0.07)';
               const opacity = intensity ? 0.18 + intensity * 0.13 : 1;
               return (
                 <path
@@ -133,7 +133,7 @@ export default function ConflictMap({
                   d={c.d}
                   fill={fill}
                   opacity={opacity}
-                  stroke="#0a0a0a"
+                  stroke="var(--canvas)"
                   strokeWidth="0.6"
                   vectorEffect="non-scaling-stroke"
                 />
@@ -144,9 +144,9 @@ export default function ConflictMap({
               x={MAP_W / 2}
               y={MAP_H / 2}
               textAnchor="middle"
-              fontFamily="ui-monospace, monospace"
+              fontFamily="inherit"
               fontSize="11"
-              fill="#52525b"
+              fill="var(--faint)"
             >
               loading geography…
             </text>
@@ -199,7 +199,7 @@ export default function ConflictMap({
                 cy={y}
                 r={isHovered || isFocused ? baseR + 1.5 : baseR}
                 fill="var(--gc-accent)"
-                stroke="#0a0a0a"
+                stroke="var(--canvas)"
                 strokeWidth="0.7"
               />
               <circle cx={x} cy={y} r={14} fill="transparent" />
