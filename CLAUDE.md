@@ -86,7 +86,7 @@ src/
 │   ├── global-conflict/page.tsx       # Hidden /global-conflict page
 │   ├── blog/
 │   │   ├── layout.tsx                 # tn-shell wrapper, theme cookie, Source Serif font
-│   │   ├── blog.css                   # Terminal Notebook tokens (scoped to .tn-shell)
+│   │   ├── blog.css                   # Blog tokens, mapped onto the shared theme (scoped to .tn-shell)
 │   │   ├── page.tsx                   # /blog index (server, ISR 15m)
 │   │   ├── [slug]/page.tsx            # /blog/[slug] article (server, ISR 15m)
 │   │   └── edit/                      # Editor (client, BLOG_EDITOR_SECRET-gated)
@@ -124,7 +124,7 @@ src/
 │   ├── GoogleAnalytics.tsx, AnalyticsProvider.tsx
 │   ├── GlobalConflict/                # Map, stats, journal UI
 │   ├── PiEasterEgg/                   # Hidden interactive feature
-│   ├── Blog/                          # Terminal Notebook reader + builder
+│   ├── Blog/                          # Blog reader + builder
 │   │   ├── Topbar.tsx, ThemeToggle.tsx, CoverBand.tsx
 │   │   ├── blocks/Blocks.tsx          # All 17 read-mode blocks + TOC + ReadingProgress
 │   │   ├── Reader/{IndexView,ArticleView}.tsx
@@ -176,6 +176,17 @@ src/
 4. **Framer Motion for animation** — exception: Timeline (server component, CSS-only).
 5. **Respect `prefers-reduced-motion`** — an accessibility floor, not a style preference.
 6. **Pi easter egg is exempt** — it keeps its own hacker-terminal look and is not part of the shared theme.
+
+### Current design (unified 2026-11)
+
+One theme across Homepage, Blog, Global Conflict, and UpDraft:
+
+- **Tokens** live in `:root` in `src/app/globals.css` and are exposed to Tailwind as `canvas`, `surface`, `raised`, `line`, `line-strong`, `ink`, `soft`, `muted`, `faint`, `accent`, `accent-bright`, `accent-deep`, `accent-warm`, `success` (e.g. `bg-surface`, `text-muted`, `border-line`).
+- **Building blocks**: `.ui-card` (+ `.ui-card-hover`), `.ui-eyebrow`, `.ui-gradient-text`, `.ui-backdrop` (fixed aurora + grid, rendered once in the root layout).
+- **Type**: Geist for everything; JetBrains Mono only for real code and the Pi easter egg.
+- **Shape**: pill buttons and chips, 16-24px card radii, hairline translucent borders.
+- **Global Conflict** keeps red (`--gc-accent`) for conflict data only; interface chrome uses the site accent.
+- Blog and Global Conflict style through their own scoped CSS files (`blog.css`, `global-conflict.css`), both reading the shared tokens.
 
 ### Design freedom
 
@@ -266,11 +277,11 @@ Conversations are logged to Supabase (`chat_conversations`) via [`src/lib/chat-l
 
 ---
 
-## Blog (Terminal Notebook) — LIVE
+## Blog — LIVE
 
 Live at `/blog` and `/blog/[slug]`, surfaced publicly via the homepage `MODULES` section. `robots: noindex` is still set in [`src/app/blog/layout.tsx`](src/app/blog/layout.tsx) — flip that to `index: true` once the index/article pages are tuned for SEO.
 
-The Terminal Notebook design (handed off from Claude Design) uses its own dark-purple palette (`#0e0c14` background, `#a855f7` accent) scoped under `.tn-shell` so it doesn't leak into the rest of the site. Light theme is supported via a topbar toggle and persisted in a `tn-theme` cookie (read in [`src/app/blog/layout.tsx`](src/app/blog/layout.tsx) for SSR-safe initial render).
+The blog shares the site theme. Its `--tn-*` variables in [`src/app/blog/blog.css`](src/app/blog/blog.css) are scoped under `.tn-shell` and map onto the shared tokens in `globals.css`, so a site-wide theme change carries through. Interface labels use the site sans; only real code blocks use monospace (`--tn-code`). A light theme is supported via a topbar toggle and persisted in a `tn-theme` cookie (read in [`src/app/blog/layout.tsx`](src/app/blog/layout.tsx) for SSR-safe initial render). The `tn-` class prefix is a leftover from the original "Terminal Notebook" design and is just a namespace now.
 
 ### Read path
 
