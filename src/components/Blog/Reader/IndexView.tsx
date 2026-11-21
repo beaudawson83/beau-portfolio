@@ -74,14 +74,15 @@ export default function IndexView({
       <Topbar
         theme={theme}
         crumb={[
-          { text: '~/', href: '/' },
+          { text: 'Home', href: '/' },
           { text: 'beaudawson', accent: true, href: '/' },
           { text: 'blog', bold: true },
         ]}
       />
 
-      <div style={{ flex: 1, overflowY: 'auto', background: 'var(--tn-bg)' }}>
+      <div style={{ flex: 1, overflowY: 'auto' }}>
         <header
+          className="tn-pad"
           style={{
             padding: '56px 48px 32px',
             borderBottom: '1px solid var(--tn-line)',
@@ -91,7 +92,7 @@ export default function IndexView({
             <h1
               style={{
                 fontFamily: 'var(--tn-sans)',
-                fontSize: 64,
+                fontSize: 'clamp(38px, 9vw, 64px)',
                 fontWeight: 800,
                 letterSpacing: '-2.4px',
                 lineHeight: 0.98,
@@ -118,11 +119,13 @@ export default function IndexView({
 
         {/* Filter row */}
         <div
+          className="tn-pad"
           style={{
             position: 'sticky',
             top: 0,
             zIndex: 10,
-            background: 'var(--tn-bg)',
+            background: 'color-mix(in srgb, var(--tn-bg) 78%, transparent)',
+            backdropFilter: 'blur(20px)',
             borderBottom: '1px solid var(--tn-line)',
             padding: '12px 48px',
           }}
@@ -137,22 +140,23 @@ export default function IndexView({
               flexWrap: 'wrap',
             }}
           >
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {categories.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setFilter(c)}
                   style={{
-                    padding: '5px 11px',
+                    padding: '6px 14px',
                     fontFamily: 'var(--tn-mono)',
-                    fontSize: 11,
+                    fontWeight: 500,
+                    fontSize: 11.5,
                     background: filter === c ? 'var(--tn-accent-glow)' : 'transparent',
                     color: filter === c ? 'var(--tn-accent)' : 'var(--tn-dim)',
                     border: `1px solid ${filter === c ? 'var(--tn-accent-dim)' : 'var(--tn-line)'}`,
-                    borderRadius: 5,
+                    borderRadius: 99,
                     textTransform: 'uppercase',
-                    letterSpacing: '.08em',
+                    letterSpacing: '.04em',
                     cursor: 'pointer',
                   }}
                 >
@@ -165,13 +169,13 @@ export default function IndexView({
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="grep title…"
+                placeholder="Search titles…"
                 className="tn-focus"
                 style={{
                   background: 'var(--tn-bg2)',
                   border: '1px solid var(--tn-line)',
-                  padding: '6px 10px 6px 28px',
-                  borderRadius: 5,
+                  padding: '8px 14px 8px 32px',
+                  borderRadius: 99,
                   fontFamily: 'var(--tn-mono)',
                   fontSize: 12,
                   color: 'var(--tn-ink)',
@@ -190,7 +194,7 @@ export default function IndexView({
                   fontFamily: 'var(--tn-mono)',
                 }}
               >
-                $
+                ⌕
               </span>
             </div>
             <span
@@ -202,12 +206,13 @@ export default function IndexView({
         </div>
 
         {/* List */}
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 48px 80px' }}>
+        <div className="tn-pad" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 48px 80px' }}>
           {posts.length === 0 ? (
             <EmptyState />
           ) : (
             <>
               <div
+                className="tn-index-head"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '60px 96px 80px 1fr 80px 60px',
@@ -220,9 +225,9 @@ export default function IndexView({
                   letterSpacing: '.12em',
                 }}
               >
-                <span>num</span>
+                <span>No.</span>
                 <span>date</span>
-                <span>cat</span>
+                <span>Topic</span>
                 <span>title</span>
                 <span style={{ textAlign: 'right' }}>words</span>
                 <span style={{ textAlign: 'right' }}>min</span>
@@ -293,6 +298,7 @@ function PostRow({
       href={href}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      className="tn-index-row"
       style={{
         display: 'grid',
         gridTemplateColumns: '60px 96px 80px 1fr 80px 60px',
@@ -312,8 +318,8 @@ function PostRow({
             style={{
               fontFamily: 'var(--tn-mono)',
               fontSize: 10,
-              padding: '2px 7px',
-              borderRadius: 3,
+              padding: '3px 9px',
+              borderRadius: 99,
               background: 'var(--tn-bg2)',
               border: '1px solid var(--tn-line2)',
               color: categoryColor(category),

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0e0c14',
+  themeColor: '#08080C',
 };
 
 export default async function BlogLayout({

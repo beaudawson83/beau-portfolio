@@ -109,7 +109,7 @@ export default function AuthGate({
           width: 380,
           background: 'var(--tn-bg2)',
           border: '1px solid var(--tn-line2)',
-          borderRadius: 10,
+          borderRadius: 18,
           padding: 24,
           boxShadow: 'var(--tn-shadow)',
         }}
@@ -123,7 +123,7 @@ export default function AuthGate({
             marginBottom: 16,
           }}
         >
-          $ sudo open ./editor
+          Editor
         </div>
         <h2
           style={{
@@ -160,7 +160,7 @@ export default function AuthGate({
             width: '100%',
             background: 'var(--tn-bg)',
             border: '1px solid var(--tn-line2)',
-            borderRadius: 6,
+            borderRadius: 14,
             padding: '10px 12px',
             fontFamily: 'var(--tn-mono)',
             fontSize: 13,

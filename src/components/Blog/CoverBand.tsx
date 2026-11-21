@@ -38,7 +38,7 @@ export default function CoverBand({
           height: 'auto',
           maxHeight: PHOTO_MAX_HEIGHT,
           objectFit: 'cover',
-          borderRadius: 6,
+          borderRadius: 14,
           border: '1px solid var(--tn-line)',
           display: 'block',
         }}
@@ -51,7 +51,7 @@ export default function CoverBand({
       style={{
         width: '100%',
         aspectRatio: '4/1',
-        borderRadius: 6,
+        borderRadius: 14,
         background: coverBackground(coverId, coverUrl),
         border: '1px solid var(--tn-line)',
       }}
