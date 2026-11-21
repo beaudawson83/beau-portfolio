@@ -284,7 +284,7 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
   const showPicker = priorExports.length === 0 || forceRegenerate;
 
   return (
-    <main className="min-h-screen bg-[#111111] text-white">
+    <main className="min-h-screen text-ink">
       <SessionHeader sessionId={session.id} userEmail={userEmail} />
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {showPicker ? (
@@ -328,20 +328,20 @@ export default function Stage04Runner({ session, userEmail, exports: priorExport
 
 function SessionHeader({ sessionId, userEmail }: { sessionId: string; userEmail: string }) {
   return (
-    <header className="border-b border-[#1F1F1F]">
+    <header className="border-b border-raised">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
         <div>
-          <p className="text-xs tracking-widest text-[#7C3AED] uppercase">
+          <p className="text-xs tracking-wider text-accent-bright uppercase">
             UpDraft · stage 04
           </p>
-          <p className="text-sm text-[#94A3B8] mt-1">
+          <p className="text-sm text-muted mt-1">
             <span className="text-white">{userEmail}</span>
-            <span className="ml-2 font-mono text-[#64748b]">{sessionId.slice(0, 8)}</span>
+            <span className="ml-2 text-faint">{sessionId.slice(0, 8)}</span>
           </p>
         </div>
         <Link
           href="/updraft"
-          className="text-xs text-[#94A3B8] hover:text-white transition-colors"
+          className="text-xs text-muted hover:text-white transition-colors"
         >
           ← Back to dashboard
         </Link>
@@ -398,7 +398,7 @@ function GenerateView({
   return (
     <div>
       <h1 className="text-2xl sm:text-3xl font-bold mb-3">{heading}</h1>
-      <p className="text-sm text-[#cbd5e1] mb-6 leading-relaxed">{subhead}</p>
+      <p className="text-sm text-soft mb-6 leading-relaxed">{subhead}</p>
 
       {!isRegenMode && (
         <SummaryPanel
@@ -410,24 +410,24 @@ function GenerateView({
         />
       )}
 
-      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6">
+      <div className="bg-surface border border-line rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
-          <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono">
+          <p className="text-[11px] tracking-wider text-accent-bright uppercase ">
             {isRegenMode ? 'Files to regenerate' : 'About to generate'}
           </p>
-          <div className="flex items-center gap-2 text-[11px] font-mono">
+          <div className="flex items-center gap-2 text-[11px] ">
             <button
               type="button"
               onClick={onSelectAll}
-              className="text-[#94A3B8] hover:text-white transition-colors uppercase tracking-wider"
+              className="text-muted hover:text-white transition-colors uppercase tracking-wider"
             >
               All
             </button>
-            <span className="text-[#2A2A2A]">·</span>
+            <span className="text-line">·</span>
             <button
               type="button"
               onClick={onSelectNone}
-              className="text-[#94A3B8] hover:text-white transition-colors uppercase tracking-wider"
+              className="text-muted hover:text-white transition-colors uppercase tracking-wider"
             >
               None
             </button>
@@ -435,7 +435,7 @@ function GenerateView({
         </div>
 
         {available.length === 0 ? (
-          <p className="text-sm text-[#94A3B8]">
+          <p className="text-sm text-muted">
             No deliverables selected at Stage 02 — go back and pick what you
             want to build.
           </p>
@@ -444,11 +444,11 @@ function GenerateView({
             {available.map((a) => (
               <li
                 key={a.key}
-                className={`grid ${a.mdKind ? 'grid-cols-[1fr_auto_auto_auto]' : 'grid-cols-[1fr_auto_auto]'} gap-4 items-center bg-[#111111] border border-[#1F1F1F] rounded-md px-4 py-3`}
+                className={`grid ${a.mdKind ? 'grid-cols-[1fr_auto_auto_auto]' : 'grid-cols-[1fr_auto_auto]'} gap-4 items-center bg-canvas border border-raised rounded-lg px-4 py-3`}
               >
                 <div>
                   <p className="text-sm text-white font-medium">{a.label}</p>
-                  <p className="text-[10px] uppercase tracking-widest font-mono text-[#64748b] mt-0.5">
+                  <p className="text-[11px] uppercase tracking-wider text-faint mt-0.5">
                     Classic · Regular
                   </p>
                 </div>
@@ -474,7 +474,7 @@ function GenerateView({
           </ul>
         )}
 
-        <div className="mt-6 pt-5 border-t border-[#1F1F1F] flex items-center justify-end gap-3">
+        <div className="mt-6 pt-5 border-t border-raised flex items-center justify-end gap-3">
           {error && (
             <p role="alert" className="text-sm text-red-400 mr-auto">
               {error}
@@ -485,7 +485,7 @@ function GenerateView({
               type="button"
               onClick={onCancelRegen}
               disabled={generating}
-              className="text-sm text-[#94A3B8] hover:text-white transition-colors px-3 py-2"
+              className="text-sm text-muted hover:text-white transition-colors px-3 py-2"
             >
               Cancel
             </button>
@@ -494,14 +494,14 @@ function GenerateView({
             type="button"
             onClick={onGenerate}
             disabled={generating || available.length === 0 || !anyChecked}
-            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="bg-gradient-to-b from-accent-bright to-accent-deep hover:brightness-110 text-white shadow-[0_10px_30px_-12px_rgb(139_92_246/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] px-5 py-2 text-sm rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {generating ? 'Building…' : isRegenMode ? 'Regenerate selected →' : 'Generate →'}
           </button>
         </div>
       </div>
 
-      <p className="mt-6 text-[11px] text-[#64748b] leading-relaxed">
+      <p className="mt-6 text-[11px] text-faint leading-relaxed">
         Generation typically takes a few seconds per deliverable. Your DOCX
         and PDF are both generated here from the same content, so they match.
         In the rare case a PDF doesn&apos;t generate, you&apos;ll still get
@@ -526,9 +526,9 @@ function FormatCheck({
         type="checkbox"
         checked={checked}
         onChange={onToggle}
-        className="h-4 w-4 rounded border-[#2A2A2A] bg-[#111111] text-[#7C3AED] focus:ring-[#7C3AED] focus:ring-offset-0 cursor-pointer"
+        className="h-4 w-4 rounded border-line bg-canvas text-accent-bright focus:ring-accent focus:ring-offset-0 cursor-pointer"
       />
-      <span className="text-xs uppercase tracking-widest font-mono text-[#cbd5e1]">
+      <span className="text-xs uppercase tracking-wider text-soft">
         {label}
       </span>
     </label>
@@ -561,23 +561,23 @@ function SummaryPanel({
   };
   const phaseColor: Record<typeof phase, string> = {
     idle:        'text-emerald-400/70',
-    saving:      'text-[#94A3B8]',
-    generating:  'text-[#a855f7]',
+    saving:      'text-muted',
+    generating:  'text-accent-bright',
     error:       'text-red-400',
   };
 
   return (
-    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 mb-6">
+    <div className="bg-surface border border-line rounded-xl p-6 mb-6">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono">
+          <p className="text-[11px] tracking-wider text-accent-bright uppercase ">
             Executive summary
           </p>
-          <p className="text-xs text-[#94A3B8] mt-1">
+          <p className="text-xs text-muted mt-1">
             The 4-6 sentence opener at the top of your resume. Audit drafted; edit anything.
           </p>
         </div>
-        <p className={`text-[10px] uppercase tracking-widest font-mono ${phaseColor[phase]}`}>
+        <p className={`text-[11px] uppercase tracking-wider ${phaseColor[phase]}`}>
           {phaseLabel[phase]}
         </p>
       </div>
@@ -591,7 +591,7 @@ function SummaryPanel({
             ? 'Auto-draft is still running, or it failed. Click Regenerate to try again, or write your own summary here.'
             : ''
         }
-        className="w-full bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg resize-y leading-relaxed"
+        className="w-full bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl resize-y leading-relaxed"
       />
 
       <div className="flex items-center justify-between mt-3 gap-3">
@@ -600,7 +600,7 @@ function SummaryPanel({
             {error}
           </p>
         ) : (
-          <p className="text-[11px] text-[#64748b] leading-relaxed">
+          <p className="text-[11px] text-faint leading-relaxed">
             Edits autosave. Regenerate to redraft from the latest MOD content.
           </p>
         )}
@@ -608,7 +608,7 @@ function SummaryPanel({
           type="button"
           onClick={onRegenerate}
           disabled={phase === 'generating' || phase === 'saving'}
-          className="text-xs text-[#7C3AED] hover:text-[#a855f7] underline disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          className="text-xs text-accent-bright hover:text-accent-bright underline disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
         >
           {phase === 'generating'
             ? 'Drafting…'
@@ -696,22 +696,22 @@ function DoneView({
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono mb-2">
+        <p className="text-[11px] tracking-wider text-accent-bright uppercase mb-2">
           Stage 04 complete
         </p>
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">Your files</h1>
-        <p className="text-sm text-[#cbd5e1]">
+        <p className="text-sm text-soft">
           Click any file below to download. Links are signed and expire after
           10 minutes — refresh this page if a link goes stale.
         </p>
       </div>
 
       {missingPdfs.length > 0 && (
-        <div className="bg-[#1A1A1A] border border-amber-900/40 rounded-lg p-4">
-          <p className="text-[10px] tracking-widest text-amber-400 uppercase font-mono mb-2">
+        <div className="bg-surface border border-amber-900/40 rounded-xl p-4">
+          <p className="text-[11px] tracking-wider text-amber-400 uppercase mb-2">
             PDF unavailable for {missingPdfs.join(' + ')}
           </p>
-          <p className="text-sm text-[#cbd5e1] leading-relaxed">
+          <p className="text-sm text-soft leading-relaxed">
             Your DOCX shipped successfully — that&apos;s the source-of-truth
             ATS file and parses cleanly through every major applicant tracking
             system. The PDF didn&apos;t generate this time. You can click
@@ -722,11 +722,11 @@ function DoneView({
       )}
 
       {coverLetterDocxMissing && (
-        <div className="bg-[#1A1A1A] border border-amber-900/40 rounded-lg p-4">
-          <p className="text-[10px] tracking-widest text-amber-400 uppercase font-mono mb-2">
+        <div className="bg-surface border border-amber-900/40 rounded-xl p-4">
+          <p className="text-[11px] tracking-wider text-amber-400 uppercase mb-2">
             Cover Letter not generated
           </p>
-          <p className="text-sm text-[#cbd5e1] leading-relaxed">
+          <p className="text-sm text-soft leading-relaxed">
             {coverLetterError === 'tier-missing'
               ? "Your tier wasn\u2019t set on this session, so the cover letter couldn\u2019t be drafted. This usually means Stage 01 didn\u2019t finish cleanly \u2014 try a fresh session."
               : coverLetterError && coverLetterError.toLowerCase().includes('capacity')
@@ -737,11 +737,11 @@ function DoneView({
       )}
 
       {reframeError && resumeRequested && (
-        <div className="bg-[#1A1A1A] border border-amber-900/40 rounded-lg p-4">
-          <p className="text-[10px] tracking-widest text-amber-400 uppercase font-mono mb-2">
+        <div className="bg-surface border border-amber-900/40 rounded-xl p-4">
+          <p className="text-[11px] tracking-wider text-amber-400 uppercase mb-2">
             Resume bullets not tailored
           </p>
-          <p className="text-sm text-[#cbd5e1] leading-relaxed">
+          <p className="text-sm text-soft leading-relaxed">
             {reframeError.toLowerCase().includes('capacity')
               ? "I hit my daily AI capacity for bullet tailoring. Your resume still shipped with your original bullet wording \u2014 it\u2019s accurate and strong, just not tuned to this JD\u2019s vocabulary. Try generating again tomorrow."
               : "I couldn\u2019t tailor the resume bullets to the job description this round. Your resume still shipped with the original wording \u2014 click Generate again to retry the tailoring pass."}
@@ -754,18 +754,18 @@ function DoneView({
           <li key={e.id}>
             <a
               href={`/api/updraft/sessions/${sessionId}/exports/${e.id}`}
-              className="block bg-[#1A1A1A] border border-[#2A2A2A] hover:border-[#7C3AED] rounded-lg p-4 transition-colors group"
+              className="block bg-surface border border-line hover:border-accent rounded-xl p-4 transition-colors group"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-white group-hover:text-[#a855f7] transition-colors">
+                  <p className="text-sm font-semibold text-white group-hover:text-accent-bright transition-colors">
                     {KIND_LABEL[e.kind] ?? e.kind}
                   </p>
-                  <p className="text-xs text-[#94A3B8] mt-1 font-mono">{e.filename}</p>
+                  <p className="text-xs text-muted mt-1 ">{e.filename}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-[#94A3B8]">{formatBytes(e.bytes)}</p>
-                  <p className="text-[10px] text-[#64748b] mt-1" suppressHydrationWarning>
+                  <p className="text-xs text-muted">{formatBytes(e.bytes)}</p>
+                  <p className="text-[11px] text-faint mt-1" suppressHydrationWarning>
                     {mounted ? new Date(e.generated_at).toLocaleString() : ''}
                   </p>
                 </div>
@@ -779,21 +779,21 @@ function DoneView({
         <LintWarnings flags={lintFlags} />
       )}
 
-      <div className="border-t border-[#1F1F1F] pt-6 flex items-center justify-between gap-4">
-        <p className="text-xs text-[#94A3B8]">
+      <div className="border-t border-raised pt-6 flex items-center justify-between gap-4">
+        <p className="text-xs text-muted">
           Files are kept for 30 days unless you mark this session as kept.
         </p>
         <div className="flex items-center gap-4">
           <button
             type="button"
             onClick={onRegenerate}
-            className="text-xs text-[#7C3AED] hover:text-[#a855f7] underline"
+            className="text-xs text-accent-bright hover:text-accent-bright underline"
           >
             Regenerate ↻
           </button>
           <Link
             href="/updraft"
-            className="text-xs text-[#7C3AED] hover:text-[#a855f7] underline"
+            className="text-xs text-accent-bright hover:text-accent-bright underline"
           >
             Back to dashboard →
           </Link>
@@ -828,11 +828,11 @@ function LintWarnings({ flags }: { flags: UpdraftLintFlag[] }) {
   }
 
   return (
-    <div className="bg-[#1A1A1A] border border-amber-900/40 rounded-lg p-5">
-      <p className="text-[10px] tracking-widest text-amber-400 uppercase font-mono mb-2">
+    <div className="bg-surface border border-amber-900/40 rounded-xl p-5">
+      <p className="text-[11px] tracking-wider text-amber-400 uppercase mb-2">
         Lint pass · {flags.length} flag{flags.length === 1 ? '' : 's'}
       </p>
-      <p className="text-sm text-[#cbd5e1] mb-4 leading-relaxed">
+      <p className="text-sm text-soft mb-4 leading-relaxed">
         Your files are downloaded — these are non-blocking notes about
         phrasing the lint pass spotted. v0.1 doesn&apos;t auto-rewrite these.
         Open the DOCX, fix what you want, save. v0.5 routes flagged items
@@ -841,25 +841,25 @@ function LintWarnings({ flags }: { flags: UpdraftLintFlag[] }) {
       <div className="space-y-3">
         {Array.from(byCategory.entries()).map(([category, list]) => (
           <details key={category} className="text-sm">
-            <summary className="cursor-pointer text-[#cbd5e1] hover:text-white transition-colors flex items-center gap-2">
+            <summary className="cursor-pointer text-soft hover:text-white transition-colors flex items-center gap-2">
               <span className="text-amber-400 font-semibold">
                 {CATEGORY_LABEL[category]}
               </span>
-              <span className="text-xs text-[#94A3B8]">
+              <span className="text-xs text-muted">
                 ({list.length} occurrence{list.length === 1 ? '' : 's'})
               </span>
             </summary>
             <ul className="mt-2 space-y-1.5 ml-4">
               {list.slice(0, 8).map((f, i) => (
-                <li key={i} className="text-xs text-[#94A3B8]">
-                  <span className="font-mono text-[10px] text-[#64748b] mr-2">
+                <li key={i} className="text-xs text-muted">
+                  <span className="text-[11px] text-faint mr-2">
                     {f.location}
                   </span>
                   <span className="italic">{f.excerpt}</span>
                 </li>
               ))}
               {list.length > 8 && (
-                <li className="text-xs text-[#64748b] italic">
+                <li className="text-xs text-faint italic">
                   + {list.length - 8} more
                 </li>
               )}

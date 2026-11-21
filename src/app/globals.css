@@ -14,6 +14,7 @@
 
   /* Text */
   --ink: #F5F5F7;
+  --soft: #D4D4DE;
   --muted: #A3A3B2;
   --faint: #6B6B7B;
 
@@ -45,6 +46,7 @@
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-ink: var(--ink);
+  --color-soft: var(--soft);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
   --color-accent: var(--accent);
@@ -384,4 +386,10 @@ body {
 select option {
   background: var(--surface);
   color: var(--ink);
+}
+
+/* Native checkboxes and radios pick up the site accent. */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
 }

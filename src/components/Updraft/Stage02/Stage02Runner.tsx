@@ -84,11 +84,11 @@ export default function Stage02Runner({ session, userEmail }: Props) {
     // dispatcher routes elsewhere, so this branch shouldn't render. Keeps
     // the user un-stuck if dispatcher logic ever drifts.
     body = (
-      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 text-center">
-        <p className="text-sm text-[#cbd5e1] mb-3">Stage 02 complete.</p>
+      <div className="bg-surface border border-line rounded-xl p-6 text-center">
+        <p className="text-sm text-soft mb-3">Stage 02 complete.</p>
         <Link
           href="/updraft"
-          className="text-xs text-[#7C3AED] hover:text-[#a855f7] underline"
+          className="text-xs text-accent-bright hover:text-accent-bright underline"
         >
           Back to dashboard
         </Link>
@@ -97,15 +97,15 @@ export default function Stage02Runner({ session, userEmail }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-[#111111] text-white">
+    <main className="min-h-screen text-ink">
       <SessionHeader sessionId={session.id} userEmail={userEmail} stage="02" />
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {retailoring && (
-          <div className="mb-8 bg-[#1c1726] border border-[#7C3AED]/40 rounded-lg px-5 py-4">
-            <p className="text-xs tracking-widest text-[#7C3AED] uppercase">
+          <div className="mb-8 bg-raised border border-accent/40 rounded-xl px-5 py-4">
+            <p className="text-xs tracking-wider text-accent-bright uppercase">
               Tailoring your master profile
             </p>
-            <p className="text-sm text-[#cbd5e1] mt-1">
+            <p className="text-sm text-soft mt-1">
               Your existing MOD carries over — no need to re-do intake or the
               interview. Just point it at the new role below and we&apos;ll
               tailor the resume and cover letter to it.
@@ -132,22 +132,22 @@ function SessionHeader({
   stage: string;
 }) {
   return (
-    <header className="border-b border-[#1F1F1F]">
+    <header className="border-b border-raised">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
         <div>
-          <p className="text-xs tracking-widest text-[#7C3AED] uppercase">
+          <p className="text-xs tracking-wider text-accent-bright uppercase">
             UpDraft · stage {stage}
           </p>
-          <p className="text-sm text-[#94A3B8] mt-1">
+          <p className="text-sm text-muted mt-1">
             <span className="text-white">{userEmail}</span>
-            <span className="ml-2 font-mono text-[#64748b]">
+            <span className="ml-2 text-faint">
               {sessionId.slice(0, 8)}
             </span>
           </p>
         </div>
         <Link
           href="/updraft"
-          className="text-xs text-[#94A3B8] hover:text-white transition-colors"
+          className="text-xs text-muted hover:text-white transition-colors"
         >
           ← Back to dashboard
         </Link>
@@ -239,7 +239,7 @@ function DeliverablePicker({
       <h1 className="text-2xl sm:text-3xl font-bold mb-3">
         What do you want to build?
       </h1>
-      <p className="text-sm text-[#cbd5e1] mb-8">
+      <p className="text-sm text-soft mb-8">
         Pick one, two, or all three. JD-Build and Cover Letter both need a
         target job; if you skip the MOD I&apos;ll build a lightweight one as
         part of the work — you get it either way.
@@ -271,14 +271,14 @@ function DeliverablePicker({
               {errorMessage}
             </p>
           ) : (
-            <p className="text-xs text-[#94A3B8]">
+            <p className="text-xs text-muted">
               {selected.size} selected
             </p>
           )}
           <button
             type="submit"
             disabled={busy || selected.size === 0}
-            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="bg-gradient-to-b from-accent-bright to-accent-deep hover:brightness-110 text-white shadow-[0_10px_30px_-12px_rgb(139_92_246/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] px-5 py-2 text-sm rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {busy ? 'Saving…' : 'Continue →'}
           </button>
@@ -308,12 +308,12 @@ function DeliverableCheck({
       type="button"
       onClick={disabled ? undefined : onToggle}
       disabled={disabled}
-      className={`w-full text-left bg-[#1A1A1A] border rounded-lg p-4 transition-colors ${
+      className={`w-full text-left bg-surface border rounded-xl p-4 transition-colors ${
         disabled
-          ? 'border-[#1F1F1F] opacity-50 cursor-not-allowed'
+          ? 'border-raised opacity-50 cursor-not-allowed'
           : checked
-            ? 'border-[#7C3AED]'
-            : 'border-[#2A2A2A] hover:border-[#3A3A3A]'
+            ? 'border-accent'
+            : 'border-line hover:border-line-strong'
       }`}
     >
       <div className="flex items-start gap-3">
@@ -321,8 +321,8 @@ function DeliverableCheck({
           aria-hidden="true"
           className={`mt-0.5 w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center text-[12px] ${
             checked
-              ? 'border-[#7C3AED] bg-[#7C3AED] text-white'
-              : 'border-[#2A2A2A]'
+              ? 'border-accent bg-accent text-white'
+              : 'border-line'
           }`}
         >
           {checked ? '✓' : ''}
@@ -331,12 +331,12 @@ function DeliverableCheck({
           <h3 className="text-sm font-semibold text-white">
             {title}
             {disabledNote && (
-              <span className="ml-2 text-[10px] tracking-widest text-[#94A3B8] uppercase font-mono">
+              <span className="ml-2 text-[11px] tracking-wider text-muted uppercase ">
                 {disabledNote}
               </span>
             )}
           </h3>
-          <p className="mt-1 text-xs text-[#cbd5e1] leading-relaxed">{body}</p>
+          <p className="mt-1 text-xs text-soft leading-relaxed">{body}</p>
         </div>
       </div>
     </button>
@@ -438,7 +438,7 @@ function TargetForm({
   return (
     <div>
       <h1 className="text-2xl sm:text-3xl font-bold mb-3">Target role</h1>
-      <p className="text-sm text-[#cbd5e1] mb-6">
+      <p className="text-sm text-soft mb-6">
         Paste the full JD, or describe what you&apos;re aiming for. I&apos;ll
         extract the role title, company, and other details from there.
         Specific is better — &ldquo;Director of Trust at a marketplace doing
@@ -446,16 +446,16 @@ function TargetForm({
         {!wantsMod && (
           <>
             {' '}
-            <span className="text-[#94A3B8]">
+            <span className="text-muted">
               (Building a lightweight MOD as part of this since you skipped it.)
             </span>
           </>
         )}
       </p>
 
-      <form onSubmit={submit} className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 space-y-4">
+      <form onSubmit={submit} className="bg-surface border border-line rounded-xl p-6 space-y-4">
         <div>
-          <label className="block text-xs text-[#94A3B8] mb-1.5 uppercase tracking-wider">
+          <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
             Job description or target blurb *
           </label>
           <textarea
@@ -463,26 +463,26 @@ function TargetForm({
             onChange={updateField('jd_text')}
             placeholder={'Paste the full JD here…\n\nOr something like:\n"Senior backend engineer at a healthtech company,\n6+ years, comfortable with Postgres + Go."'}
             rows={12}
-            className="w-full bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg resize-y font-mono"
+            className="w-full bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl resize-y "
           />
-          <p className="mt-1 text-[10px] text-[#64748b]">
+          <p className="mt-1 text-[11px] text-faint">
             {target.jd_text.length.toLocaleString()} / 50,000 chars
           </p>
         </div>
 
-        <div className="border-t border-[#1F1F1F] pt-4">
+        <div className="border-t border-raised pt-4">
           <button
             type="button"
             onClick={() => setShowOverrides((v) => !v)}
-            className="text-xs text-[#94A3B8] hover:text-white transition-colors flex items-center gap-1.5"
+            className="text-xs text-muted hover:text-white transition-colors flex items-center gap-1.5"
           >
-            <span className="font-mono">{showOverrides ? '▾' : '▸'}</span>
+            <span className="">{showOverrides ? '▾' : '▸'}</span>
             Override extracted fields (optional)
           </button>
 
           {showOverrides && (
             <div className="mt-4 space-y-4">
-              <p className="text-[11px] text-[#64748b] leading-relaxed">
+              <p className="text-[11px] text-faint leading-relaxed">
                 Any field you fill here wins over what the AI extracts from the
                 JD. Leave blank and the AI will fill it in.
               </p>
@@ -532,19 +532,19 @@ function TargetForm({
           )}
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-[#1F1F1F]">
+        <div className="flex items-center justify-between pt-2 border-t border-raised">
           <button
             type="button"
             onClick={goBack}
             disabled={goingBack || phase === 'analyzing'}
-            className="text-xs text-[#94A3B8] hover:text-white transition-colors disabled:opacity-50"
+            className="text-xs text-muted hover:text-white transition-colors disabled:opacity-50"
           >
             {goingBack ? 'Going back…' : '← Back'}
           </button>
           <button
             type="submit"
             disabled={!jdFilled || phase === 'analyzing'}
-            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="bg-gradient-to-b from-accent-bright to-accent-deep hover:brightness-110 text-white shadow-[0_10px_30px_-12px_rgb(139_92_246/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] px-5 py-2 text-sm rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {phase === 'analyzing' ? 'Analyzing the JD…' : 'Analyze →'}
           </button>
@@ -554,11 +554,11 @@ function TargetForm({
           <div role="alert" className="space-y-1.5">
             <p className="text-sm text-red-400">{errorMessage}</p>
             {errorDetail && (
-              <details className="text-[11px] text-[#64748b]">
-                <summary className="cursor-pointer hover:text-[#94A3B8] transition-colors">
+              <details className="text-[11px] text-faint">
+                <summary className="cursor-pointer hover:text-muted transition-colors">
                   Show technical details
                 </summary>
-                <pre className="mt-1.5 font-mono text-[11px] text-[#94A3B8] bg-[#111111] border border-[#2A2A2A] rounded p-2 whitespace-pre-wrap break-words">
+                <pre className="mt-1.5 text-[11px] text-muted bg-canvas border border-line rounded p-2 whitespace-pre-wrap break-words">
                   {errorDetail}
                 </pre>
               </details>
@@ -585,7 +585,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs text-[#94A3B8] mb-1.5 uppercase tracking-wider">
+      <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
         {label}
       </label>
       <input
@@ -593,7 +593,7 @@ function Field({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg"
+        className="w-full bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl"
       />
     </div>
   );
@@ -640,9 +640,9 @@ function AnalyzeRetry({
   };
 
   return (
-    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6">
+    <div className="bg-surface border border-line rounded-xl p-6">
       <h2 className="text-lg font-semibold mb-2">Match analysis pending</h2>
-      <p className="text-sm text-[#cbd5e1] mb-4">
+      <p className="text-sm text-soft mb-4">
         We have your target ({target.role_title} @ {target.company}) but the
         analysis didn&apos;t complete. Click below to retry — your JD is still saved.
       </p>
@@ -650,7 +650,7 @@ function AnalyzeRetry({
         type="button"
         onClick={retry}
         disabled={busy}
-        className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 font-medium"
+        className="bg-gradient-to-b from-accent-bright to-accent-deep hover:brightness-110 text-white shadow-[0_10px_30px_-12px_rgb(139_92_246/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] px-5 py-2 text-sm rounded-full transition-all disabled:opacity-50 font-medium"
       >
         {busy ? 'Retrying…' : 'Retry analysis'}
       </button>
@@ -668,9 +668,9 @@ function AnalyzeRetry({
 // ---------------------------------------------------------------------------
 
 const BAND_COLOR: Record<UpdraftConfidenceBand, string> = {
-  DIRECT:       'text-[#10B981]',
-  TRANSFERABLE: 'text-[#10B981]',
-  ADJACENT:     'text-[#7C3AED]',
+  DIRECT:       'text-success',
+  TRANSFERABLE: 'text-success',
+  ADJACENT:     'text-accent-bright',
   WEAK:         'text-amber-400',
   GAP:          'text-red-400',
 };
@@ -686,7 +686,7 @@ const BAND_LABEL: Record<UpdraftConfidenceBand, string> = {
 const SEVERITY_COLOR: Record<'critical' | 'major' | 'minor', string> = {
   critical: 'text-red-400',
   major:    'text-amber-400',
-  minor:    'text-[#94A3B8]',
+  minor:    'text-muted',
 };
 
 function MatchBriefing({
@@ -737,7 +737,7 @@ function MatchBriefing({
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">Match briefing</h1>
         {target && (target.role_title || target.company) && (
-          <p className="text-sm text-[#94A3B8]">
+          <p className="text-sm text-muted">
             {target.role_title && (
               <span className="text-white">{target.role_title}</span>
             )}
@@ -750,8 +750,8 @@ function MatchBriefing({
       </div>
 
       {hasScore ? (
-        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6">
-          <p className="text-[10px] tracking-widest uppercase font-mono text-[#94A3B8] mb-2">
+        <div className="bg-surface border border-line rounded-xl p-6">
+          <p className="text-[11px] tracking-wider uppercase text-muted mb-2">
             Overall match
           </p>
           <div className="flex items-baseline gap-3">
@@ -762,8 +762,8 @@ function MatchBriefing({
           </div>
         </div>
       ) : (
-        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6">
-          <p className="text-sm text-[#cbd5e1]">
+        <div className="bg-surface border border-line rounded-xl p-6">
+          <p className="text-sm text-soft">
             No resume yet, so I can&apos;t run a match score — that comes after
             we build the MOD. The breakdown below is what I extracted from
             the JD itself.
@@ -773,12 +773,12 @@ function MatchBriefing({
 
       <Section title="Strengths to emphasize">
         {analysis.strengths_to_emphasize.length === 0 ? (
-          <p className="text-sm text-[#94A3B8]">— none surfaced —</p>
+          <p className="text-sm text-muted">— none surfaced —</p>
         ) : (
           <ul className="space-y-2">
             {analysis.strengths_to_emphasize.map((s, i) => (
-              <li key={i} className="flex gap-2 text-sm text-[#cbd5e1]">
-                <span className="text-[#10B981]">▸</span>
+              <li key={i} className="flex gap-2 text-sm text-soft">
+                <span className="text-success">▸</span>
                 {s}
               </li>
             ))}
@@ -788,15 +788,15 @@ function MatchBriefing({
 
       <Section title="Gaps">
         {analysis.gaps.length === 0 ? (
-          <p className="text-sm text-[#94A3B8]">— none surfaced —</p>
+          <p className="text-sm text-muted">— none surfaced —</p>
         ) : (
           <ul className="space-y-2">
             {analysis.gaps.map((g, i) => (
               <li key={i} className="text-sm">
-                <span className={`text-[10px] uppercase tracking-widest font-mono mr-2 ${SEVERITY_COLOR[g.severity]}`}>
+                <span className={`text-[11px] uppercase tracking-wider mr-2 ${SEVERITY_COLOR[g.severity]}`}>
                   {g.severity}
                 </span>
-                <span className="text-[#cbd5e1]">{g.requirement}</span>
+                <span className="text-soft">{g.requirement}</span>
               </li>
             ))}
           </ul>
@@ -807,10 +807,10 @@ function MatchBriefing({
         <ul className="space-y-1.5">
           {analysis.required_skills.map((s, i) => (
             <li key={i} className="text-sm flex items-start gap-2">
-              <span className={s.match ? 'text-[#10B981]' : 'text-red-400'}>
+              <span className={s.match ? 'text-success' : 'text-red-400'}>
                 {s.match ? '✓' : '✗'}
               </span>
-              <span className={s.match ? 'text-[#cbd5e1]' : 'text-[#94A3B8]'}>{s.skill}</span>
+              <span className={s.match ? 'text-soft' : 'text-muted'}>{s.skill}</span>
             </li>
           ))}
         </ul>
@@ -821,10 +821,10 @@ function MatchBriefing({
           <ul className="space-y-1.5">
             {analysis.preferred_skills.map((s, i) => (
               <li key={i} className="text-sm flex items-start gap-2">
-                <span className={s.match ? 'text-[#10B981]' : 'text-[#64748b]'}>
+                <span className={s.match ? 'text-success' : 'text-faint'}>
                   {s.match ? '✓' : '○'}
                 </span>
-                <span className={s.match ? 'text-[#cbd5e1]' : 'text-[#94A3B8]'}>{s.skill}</span>
+                <span className={s.match ? 'text-soft' : 'text-muted'}>{s.skill}</span>
               </li>
             ))}
           </ul>
@@ -836,10 +836,10 @@ function MatchBriefing({
           <ul className="space-y-2">
             {analysis.red_flags.map((f, i) => (
               <li key={i} className="text-sm">
-                <span className="text-[10px] uppercase tracking-widest font-mono text-amber-400 mr-2">
+                <span className="text-[11px] uppercase tracking-wider text-amber-400 mr-2">
                   {f.type}
                 </span>
-                <span className="text-[#cbd5e1]">{f.description}</span>
+                <span className="text-soft">{f.description}</span>
               </li>
             ))}
           </ul>
@@ -851,7 +851,7 @@ function MatchBriefing({
           type="button"
           onClick={acknowledge}
           disabled={busy}
-          className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 font-medium"
+          className="bg-gradient-to-b from-accent-bright to-accent-deep hover:brightness-110 text-white shadow-[0_10px_30px_-12px_rgb(139_92_246/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] px-5 py-2 text-sm rounded-full transition-all disabled:opacity-50 font-medium"
         >
           {busy ? 'Saving…' : 'Continue →'}
         </button>
@@ -863,7 +863,7 @@ function MatchBriefing({
         </p>
       )}
 
-      <p className="text-[11px] text-[#64748b] pt-2">
+      <p className="text-[11px] text-faint pt-2">
         v0.1 renders the structured analysis. The full Audit-voiced briefing
         ships in a later iteration.
       </p>
@@ -873,8 +873,8 @@ function MatchBriefing({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-5">
-      <h3 className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono mb-3">
+    <div className="bg-surface border border-line rounded-xl p-5">
+      <h3 className="text-[11px] tracking-wider text-accent-bright uppercase mb-3">
         {title}
       </h3>
       {children}

@@ -368,18 +368,18 @@ export default function Stage03Runner({ session, userEmail }: Props) {
   };
 
   return (
-    <main className="min-h-screen bg-[#111111] text-white">
+    <main className="min-h-screen text-ink">
       <SessionHeader sessionId={session.id} userEmail={userEmail} stage="03" />
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {stage03.ready_for_generation ? (
           // Defensive fallback — when ready_for_generation=true the page-
           // level dispatcher routes to Stage04Runner, so this branch
           // shouldn't render. Keeps the user un-stuck if it does.
-          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 text-center">
-            <p className="text-sm text-[#cbd5e1] mb-3">Stage 03 complete.</p>
+          <div className="bg-surface border border-line rounded-xl p-6 text-center">
+            <p className="text-sm text-soft mb-3">Stage 03 complete.</p>
             <Link
               href="/updraft"
-              className="text-xs text-[#7C3AED] hover:text-[#a855f7] underline"
+              className="text-xs text-accent-bright hover:text-accent-bright underline"
             >
               Back to dashboard
             </Link>
@@ -418,22 +418,22 @@ function SessionHeader({
   stage: string;
 }) {
   return (
-    <header className="border-b border-[#1F1F1F]">
+    <header className="border-b border-raised">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
         <div>
-          <p className="text-xs tracking-widest text-[#7C3AED] uppercase">
+          <p className="text-xs tracking-wider text-accent-bright uppercase">
             UpDraft · stage {stage}
           </p>
-          <p className="text-sm text-[#94A3B8] mt-1">
+          <p className="text-sm text-muted mt-1">
             <span className="text-white">{userEmail}</span>
-            <span className="ml-2 font-mono text-[#64748b]">
+            <span className="ml-2 text-faint">
               {sessionId.slice(0, 8)}
             </span>
           </p>
         </div>
         <Link
           href="/updraft"
-          className="text-xs text-[#94A3B8] hover:text-white transition-colors"
+          className="text-xs text-muted hover:text-white transition-colors"
         >
           ← Back to dashboard
         </Link>
@@ -469,7 +469,7 @@ function Stage03Form(p: FormProps) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Build your story</h1>
-            <p className="text-sm text-[#cbd5e1] mt-1">
+            <p className="text-sm text-soft mt-1">
               {p.modMode === 'full'
                 ? 'Walk through three steps below. Edit anything Audit pulled wrong, add detail where bullets feel thin. Your work autosaves as you go — no Save button.'
                 : 'Lightweight build — two steps below, just enough to power the JD-tailored output. You can come back for a full MOD pass later. Autosaves as you go.'}
@@ -531,8 +531,8 @@ function Stage03Form(p: FormProps) {
         </StepBlock>
       )}
 
-      <div className="border-t border-[#1F1F1F] pt-6 flex items-center justify-between gap-4">
-        <p className="text-xs text-[#94A3B8] leading-relaxed">
+      <div className="border-t border-raised pt-6 flex items-center justify-between gap-4">
+        <p className="text-xs text-muted leading-relaxed">
           When you continue, Audit drafts your executive summary in the
           background and lands you on the review page — you&apos;ll get to
           edit or regenerate it before files render.
@@ -541,7 +541,7 @@ function Stage03Form(p: FormProps) {
           type="button"
           onClick={p.advance}
           disabled={p.continuePhase === 'advancing'}
-          className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium whitespace-nowrap"
+          className="bg-gradient-to-b from-accent-bright to-accent-deep hover:brightness-110 text-white shadow-[0_10px_30px_-12px_rgb(139_92_246/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] px-5 py-2 text-sm rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium whitespace-nowrap"
         >
           {p.continuePhase === 'advancing' ? 'Drafting summary…' : 'Continue → review summary'}
         </button>
@@ -563,12 +563,12 @@ function Stage03Form(p: FormProps) {
 function SaveIndicator({ phase }: { phase: 'idle' | 'saving' | 'saved' | 'error' }) {
   if (phase === 'idle') return null;
   const map = {
-    saving: { label: 'Saving…', color: 'text-[#94A3B8]' },
-    saved: { label: 'Saved', color: 'text-[#10B981]' },
+    saving: { label: 'Saving…', color: 'text-muted' },
+    saved: { label: 'Saved', color: 'text-success' },
     error: { label: 'Save failed — your changes may not persist', color: 'text-red-400' },
   } as const;
   const { label, color } = map[phase];
-  return <p className={`text-[11px] ${color} font-mono uppercase tracking-widest whitespace-nowrap`}>{label}</p>;
+  return <p className={`text-[11px] ${color} uppercase tracking-wider whitespace-nowrap`}>{label}</p>;
 }
 
 // ---------------------------------------------------------------------------
@@ -582,15 +582,15 @@ function StepProgress({ total }: { total: number }) {
     ? ['Job history', 'Background', 'About you']
     : ['Job history', 'Background'];
   return (
-    <ol className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-mono text-[#94A3B8] flex-wrap">
+    <ol className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-muted flex-wrap">
       {labels.map((label, i) => (
         <li key={label} className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-[#7C3AED]/40 text-[#a855f7]">
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-accent/40 text-accent-bright">
             {i + 1}
           </span>
           <span>{label}</span>
           {i < labels.length - 1 && (
-            <span className="text-[#2A2A2A] mx-1">→</span>
+            <span className="text-line mx-1">→</span>
           )}
         </li>
       ))}
@@ -612,13 +612,13 @@ function StepBlock({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-8 border-t border-[#1F1F1F] pt-8">
+    <div className="space-y-8 border-t border-raised pt-8">
       <div className="space-y-1.5">
-        <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono">
+        <p className="text-[11px] tracking-wider text-accent-bright uppercase ">
           Step {n} of {total}
         </p>
         <h2 className="text-xl sm:text-2xl font-semibold text-white">{title}</h2>
-        <p className="text-sm text-[#94A3B8] leading-relaxed max-w-prose">
+        <p className="text-sm text-muted leading-relaxed max-w-prose">
           {description}
         </p>
       </div>
@@ -647,11 +647,11 @@ function RolesSection({
   return (
     <Section title="Recent roles" subtitle="Last ~10 years. Edit anything that was pulled wrong.">
       {roles.length === 0 ? (
-        <p className="text-sm text-[#94A3B8]">— no roles yet —</p>
+        <p className="text-sm text-muted">— no roles yet —</p>
       ) : (
         <div className="space-y-6">
           {roles.map((role, i) => (
-            <div key={i} className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-5 space-y-4">
+            <div key={i} className="bg-surface border border-line rounded-xl p-5 space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <Input
                   label="Company"
@@ -690,7 +690,7 @@ function RolesSection({
               />
 
               <div>
-                <p className="text-xs text-[#94A3B8] mb-2 uppercase tracking-wider">
+                <p className="text-xs text-muted mb-2 uppercase tracking-wider">
                   Bullets ({role.bullets.length})
                 </p>
                 <div className="space-y-2">
@@ -700,13 +700,13 @@ function RolesSection({
                         value={b.text}
                         onChange={(e) => updateBullet(i, j, e.target.value)}
                         rows={2}
-                        className="flex-1 bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg resize-y leading-relaxed"
+                        className="flex-1 bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl resize-y leading-relaxed"
                       />
                       <button
                         type="button"
                         onClick={() => removeBullet(i, j)}
                         title="Remove this bullet"
-                        className="text-[#64748b] hover:text-red-400 transition-colors text-xs px-2 py-1"
+                        className="text-faint hover:text-red-400 transition-colors text-xs px-2 py-1"
                       >
                         ✕
                       </button>
@@ -716,7 +716,7 @@ function RolesSection({
                 <button
                   type="button"
                   onClick={() => addBullet(i)}
-                  className="mt-3 text-xs text-[#7C3AED] hover:text-[#a855f7] transition-colors"
+                  className="mt-3 text-xs text-accent-bright hover:text-accent-bright transition-colors"
                 >
                   + Add bullet
                 </button>
@@ -753,37 +753,37 @@ function EarlierCareerSection({
       subtitle="Older than ~10 years. One line each — no bullets needed."
     >
       {entries.length === 0 ? (
-        <p className="text-sm text-[#94A3B8]">— none yet —</p>
+        <p className="text-sm text-muted">— none yet —</p>
       ) : (
         <ul className="space-y-2">
           {entries.map((e, i) => (
             <li
               key={i}
-              className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-3 grid sm:grid-cols-12 gap-2 items-center"
+              className="bg-surface border border-line rounded-xl p-3 grid sm:grid-cols-12 gap-2 items-center"
             >
               <input
                 value={e.company}
                 onChange={(ev) => update(i, { company: ev.target.value })}
                 placeholder="Company"
-                className="sm:col-span-4 bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg"
+                className="sm:col-span-4 bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl"
               />
               <input
                 value={e.title}
                 onChange={(ev) => update(i, { title: ev.target.value })}
                 placeholder="Title"
-                className="sm:col-span-4 bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg"
+                className="sm:col-span-4 bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl"
               />
               <input
                 value={e.dates}
                 onChange={(ev) => update(i, { dates: ev.target.value })}
                 placeholder="2008-01 – 2012-06"
-                className="sm:col-span-3 bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg font-mono text-xs"
+                className="sm:col-span-3 bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl text-xs"
               />
               <button
                 type="button"
                 onClick={() => remove(i)}
                 title="Remove this entry"
-                className="sm:col-span-1 text-[#64748b] hover:text-red-400 transition-colors text-xs"
+                className="sm:col-span-1 text-faint hover:text-red-400 transition-colors text-xs"
               >
                 ✕
               </button>
@@ -794,7 +794,7 @@ function EarlierCareerSection({
       <button
         type="button"
         onClick={add}
-        className="mt-3 text-xs text-[#7C3AED] hover:text-[#a855f7] transition-colors"
+        className="mt-3 text-xs text-accent-bright hover:text-accent-bright transition-colors"
       >
         + Add earlier role
       </button>
@@ -832,19 +832,19 @@ function EducationSection({
   return (
     <Section title="Education + equivalent" subtitle="Degrees, certs, bootcamps, military, self-directed.">
       {entries.length === 0 ? (
-        <p className="text-sm text-[#94A3B8]">— none yet —</p>
+        <p className="text-sm text-muted">— none yet —</p>
       ) : (
         <ul className="space-y-2">
           {entries.map((e, i) => (
             <li
               key={i}
-              className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-3 grid sm:grid-cols-12 gap-2"
+              className="bg-surface border border-line rounded-xl p-3 grid sm:grid-cols-12 gap-2"
             >
               <input
                 value={e.institution}
                 onChange={(ev) => update(i, { institution: ev.target.value })}
                 placeholder="Institution"
-                className="sm:col-span-5 bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg"
+                className="sm:col-span-5 bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl"
               />
               <input
                 value={e.degree ?? ''}
@@ -852,25 +852,25 @@ function EducationSection({
                   update(i, { degree: ev.target.value.trim() === '' ? null : ev.target.value })
                 }
                 placeholder="Degree / cert"
-                className="sm:col-span-4 bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg"
+                className="sm:col-span-4 bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl"
               />
               <input
                 value={e.start_year?.toString() ?? ''}
                 onChange={(ev) => update(i, { start_year: num(ev.target.value) })}
                 placeholder="Start"
-                className="sm:col-span-1 bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg font-mono text-xs"
+                className="sm:col-span-1 bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl text-xs"
               />
               <input
                 value={e.end_year?.toString() ?? ''}
                 onChange={(ev) => update(i, { end_year: num(ev.target.value) })}
                 placeholder="End"
-                className="sm:col-span-1 bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg font-mono text-xs"
+                className="sm:col-span-1 bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl text-xs"
               />
               <button
                 type="button"
                 onClick={() => remove(i)}
                 title="Remove this entry"
-                className="sm:col-span-1 text-[#64748b] hover:text-red-400 transition-colors text-xs"
+                className="sm:col-span-1 text-faint hover:text-red-400 transition-colors text-xs"
               >
                 ✕
               </button>
@@ -881,7 +881,7 @@ function EducationSection({
       <button
         type="button"
         onClick={add}
-        className="mt-3 text-xs text-[#7C3AED] hover:text-[#a855f7] transition-colors"
+        className="mt-3 text-xs text-accent-bright hover:text-accent-bright transition-colors"
       >
         + Add education
       </button>
@@ -919,18 +919,18 @@ function SkillsSection({
     <Section title="Skills" subtitle="5+ keyword-aligned skills. The chip list goes onto the resume's skills section.">
       <div className="flex flex-wrap gap-2 mb-3">
         {skills.length === 0 ? (
-          <p className="text-sm text-[#94A3B8]">— none yet —</p>
+          <p className="text-sm text-muted">— none yet —</p>
         ) : (
           skills.map((s, i) => (
             <span
               key={i}
-              className="inline-flex items-center gap-1.5 bg-[#1A1A1A] border border-[#2A2A2A] rounded-full px-3 py-1 text-xs text-[#cbd5e1]"
+              className="inline-flex items-center gap-1.5 bg-surface border border-line rounded-full px-3 py-1 text-xs text-soft"
             >
               {s}
               <button
                 type="button"
                 onClick={() => remove(i)}
-                className="text-[#64748b] hover:text-red-400 transition-colors"
+                className="text-faint hover:text-red-400 transition-colors"
                 title="Remove skill"
               >
                 ✕
@@ -950,12 +950,12 @@ function SkillsSection({
             }
           }}
           placeholder="Add a skill and press Enter"
-          className="flex-1 bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg"
+          className="flex-1 bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl"
         />
         <button
           type="button"
           onClick={add}
-          className="bg-[#1A1A1A] hover:bg-[#1F1F1F] border border-[#2A2A2A] text-white px-4 py-2 text-xs rounded-lg transition-colors"
+          className="bg-surface hover:bg-raised border border-line text-white px-4 py-2 text-xs rounded-xl transition-colors"
         >
           Add
         </button>
@@ -1041,7 +1041,7 @@ function Section({
     <section>
       <h2 className="text-lg font-semibold text-white">{title}</h2>
       {subtitle && (
-        <p className="text-xs text-[#94A3B8] mt-1 mb-4">{subtitle}</p>
+        <p className="text-xs text-muted mt-1 mb-4">{subtitle}</p>
       )}
       {!subtitle && <div className="mb-4" />}
       {children}
@@ -1062,14 +1062,14 @@ function Input({
 }) {
   return (
     <div>
-      <label className="block text-xs text-[#94A3B8] mb-1.5 uppercase tracking-wider">
+      <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
         {label}
       </label>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg"
+        className="w-full bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl"
       />
     </div>
   );
@@ -1092,16 +1092,16 @@ function Textarea({
 }) {
   return (
     <div>
-      <label className="block text-xs text-[#94A3B8] mb-1.5 uppercase tracking-wider">
+      <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
         {label}
       </label>
-      {subtitle && <p className="text-[11px] text-[#64748b] mb-1.5">{subtitle}</p>}
+      {subtitle && <p className="text-[11px] text-faint mb-1.5">{subtitle}</p>}
       <textarea
         value={value}
         onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
         rows={rows}
         placeholder={placeholder}
-        className="w-full bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg resize-y leading-relaxed"
+        className="w-full bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl resize-y leading-relaxed"
       />
     </div>
   );

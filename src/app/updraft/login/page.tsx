@@ -35,13 +35,7 @@ export default async function UpdraftLoginPage({
   const errorCode = typeof params.err === 'string' ? params.err : null;
 
   return (
-    <main
-      className="min-h-screen text-white"
-      style={{
-        background:
-          'radial-gradient(1200px 600px at 50% -10%, rgba(139,109,255,0.10), transparent 60%), #0e0d12',
-      }}
-    >
+    <main className="min-h-screen text-ink">
       <div className="px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         {/* Brand lockup — logo butted against UpDraft wordmark, "BY BAD LABS"
             centered underneath. Single self-contained inline-flex block. */}
@@ -64,7 +58,7 @@ export default async function UpdraftLoginPage({
                 className="w-28 h-28 sm:w-32 sm:h-32 -mr-3 sm:-mr-4 flex-shrink-0 border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center"
                 aria-hidden="true"
               >
-                <span className="text-[10px] text-[#64748b] font-mono uppercase tracking-widest">
+                <span className="text-[11px] text-faint uppercase tracking-wider">
                   logo
                 </span>
               </div>
@@ -75,7 +69,7 @@ export default async function UpdraftLoginPage({
               >
                 UpDraft
               </h1>
-              <span className="font-mono text-[10px] sm:text-[11px] tracking-[0.2em] uppercase font-semibold text-[#8b6dff] whitespace-nowrap leading-none">
+              <span className="text-[11px] sm:text-[11px] tracking-[0.2em] uppercase font-semibold text-accent-bright whitespace-nowrap leading-none">
                 by Bad Labs
               </span>
             </div>
@@ -85,7 +79,7 @@ export default async function UpdraftLoginPage({
         {/* Sign-in card — centered, ~420px wide, lifted off the page with a
             soft shadow. Card owns the form + trust row + success state. */}
         <div className="max-w-md mx-auto">
-          <div className="bg-[#15141b] border border-white/[0.08] rounded-2xl p-7 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.5)]">
+          <div className="ui-card backdrop-blur-md p-7 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.6)]">
             <div className="mb-5">
               <h2 className="text-xl font-semibold text-white tracking-tight">
                 Sign in to UpDraft

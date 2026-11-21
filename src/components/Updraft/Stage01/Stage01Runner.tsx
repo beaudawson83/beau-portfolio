@@ -66,9 +66,9 @@ export default function Stage01Runner({ session, userEmail }: Props) {
     // Defensive: if tier is set the page-level dispatcher routes elsewhere,
     // so this branch shouldn't render. Fallback keeps the user un-stuck.
     body = (
-      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 text-center">
-        <p className="text-sm text-[#cbd5e1] mb-3">Stage 01 complete.</p>
-        <Link href="/updraft" className="text-xs text-[#7C3AED] hover:text-[#a855f7] underline">
+      <div className="bg-surface border border-line rounded-xl p-6 text-center">
+        <p className="text-sm text-soft mb-3">Stage 01 complete.</p>
+        <Link href="/updraft" className="text-xs text-accent-bright hover:text-accent-bright underline">
           Back to dashboard
         </Link>
       </div>
@@ -76,7 +76,7 @@ export default function Stage01Runner({ session, userEmail }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-[#111111] text-white">
+    <main className="min-h-screen text-ink">
       <SessionHeader sessionId={session.id} userEmail={userEmail} />
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {body}
@@ -91,22 +91,22 @@ export default function Stage01Runner({ session, userEmail }: Props) {
 
 function SessionHeader({ sessionId, userEmail }: { sessionId: string; userEmail: string }) {
   return (
-    <header className="border-b border-[#1F1F1F]">
+    <header className="border-b border-raised">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
         <div>
-          <p className="text-xs tracking-widest text-[#7C3AED] uppercase">
+          <p className="text-xs tracking-wider text-accent-bright uppercase">
             UpDraft · session
           </p>
-          <p className="text-sm text-[#94A3B8] mt-1">
+          <p className="text-sm text-muted mt-1">
             <span className="text-white">{userEmail}</span>
-            <span className="ml-2 font-mono text-[#64748b]">
+            <span className="ml-2 text-faint">
               {sessionId.slice(0, 8)}
             </span>
           </p>
         </div>
         <Link
           href="/updraft"
-          className="text-xs text-[#94A3B8] hover:text-white transition-colors"
+          className="text-xs text-muted hover:text-white transition-colors"
         >
           ← Back to dashboard
         </Link>
@@ -149,7 +149,7 @@ function PathPicker({ sessionId }: { sessionId: string }) {
   return (
     <div>
       <h1 className="text-2xl sm:text-3xl font-bold mb-3">Two ways to start</h1>
-      <p className="text-sm text-[#cbd5e1] mb-8">
+      <p className="text-sm text-soft mb-8">
         Either works. Same conversation after that.
       </p>
 
@@ -196,14 +196,14 @@ function PathCard({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="text-left bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-5 hover:border-[#7C3AED] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      className="text-left bg-surface border border-line rounded-xl p-5 hover:border-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <h3 className="text-base font-semibold text-white">{title}</h3>
-      <p className="mt-2 text-sm text-[#cbd5e1] leading-relaxed">{body}</p>
+      <p className="mt-2 text-sm text-soft leading-relaxed">{body}</p>
       {comingSoonNote && (
-        <p className="mt-3 text-[11px] text-[#94A3B8] italic">{comingSoonNote}</p>
+        <p className="mt-3 text-[11px] text-muted italic">{comingSoonNote}</p>
       )}
-      {loading && <p className="mt-3 text-xs text-[#7C3AED]">Saving…</p>}
+      {loading && <p className="mt-3 text-xs text-accent-bright">Saving…</p>}
     </button>
   );
 }
@@ -224,16 +224,16 @@ function PathBStub({ sessionId }: { sessionId: string }) {
   };
 
   return (
-    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-8 text-center">
+    <div className="bg-surface border border-line rounded-xl p-8 text-center">
       <h2 className="text-xl font-bold mb-2">Path B is coming</h2>
-      <p className="text-sm text-[#cbd5e1] max-w-md mx-auto leading-relaxed">
+      <p className="text-sm text-soft max-w-md mx-auto leading-relaxed">
         The talk-it-through path lands in a later slice. For now, choose
         Path A and upload a PDF or DOCX.
       </p>
       <button
         type="button"
         onClick={goBack}
-        className="mt-6 text-xs text-[#7C3AED] hover:text-[#a855f7] underline"
+        className="mt-6 text-xs text-accent-bright hover:text-accent-bright underline"
       >
         ← Back to path picker
       </button>
@@ -291,13 +291,13 @@ function UploadView({ sessionId }: { sessionId: string }) {
   return (
     <div>
       <h1 className="text-2xl sm:text-3xl font-bold mb-3">Upload your resume</h1>
-      <p className="text-sm text-[#cbd5e1] mb-6">
+      <p className="text-sm text-soft mb-6">
         PDF or DOCX, up to 4 MB. Image-only PDFs won&apos;t parse — if yours
         is a scan, save it as DOCX first.
       </p>
 
       <form onSubmit={submit} className="space-y-4">
-        <label className="block bg-[#1A1A1A] border border-dashed border-[#2A2A2A] rounded-lg p-8 text-center cursor-pointer hover:border-[#7C3AED] transition-colors">
+        <label className="block bg-surface border border-dashed border-line rounded-xl p-8 text-center cursor-pointer hover:border-accent transition-colors">
           <input
             type="file"
             accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -307,11 +307,11 @@ function UploadView({ sessionId }: { sessionId: string }) {
           />
           {file ? (
             <span className="text-sm text-white">
-              <span className="font-mono">{file.name}</span>{' '}
-              <span className="text-[#94A3B8]">({(file.size / 1024).toFixed(0)} KB)</span>
+              <span className="">{file.name}</span>{' '}
+              <span className="text-muted">({(file.size / 1024).toFixed(0)} KB)</span>
             </span>
           ) : (
-            <span className="text-sm text-[#94A3B8]">
+            <span className="text-sm text-muted">
               Click to choose a PDF or DOCX
             </span>
           )}
@@ -320,7 +320,7 @@ function UploadView({ sessionId }: { sessionId: string }) {
         <button
           type="submit"
           disabled={!file || phase === 'extracting' || phase === 'parsing'}
-          className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-6 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+          className="w-full bg-gradient-to-b from-accent-bright to-accent-deep hover:brightness-110 text-white shadow-[0_10px_30px_-12px_rgb(139_92_246/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] px-6 py-2.5 text-sm rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
         >
           {phase === 'extracting' && 'Reading the file…'}
           {phase === 'parsing' && 'Parsing structure…'}
@@ -394,23 +394,23 @@ function IdentityView({
   return (
     <div>
       <h1 className="text-2xl sm:text-3xl font-bold mb-2">Confirm the basics</h1>
-      <p className="text-sm text-[#cbd5e1] mb-6">
+      <p className="text-sm text-soft mb-6">
         I pulled these from your resume. Edit anything that&apos;s off, then continue.
       </p>
 
-      <form onSubmit={submit} className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6 space-y-4">
+      <form onSubmit={submit} className="bg-surface border border-line rounded-xl p-6 space-y-4">
         <IdField label="Name *" value={identity.name ?? ''} onChange={(v) => set('name', v)} />
         <IdField label="Email *" value={identity.email ?? ''} onChange={(v) => set('email', v)} type="email" />
         <IdField label="Phone *" value={identity.phone ?? ''} onChange={(v) => set('phone', v)} />
         <IdField label="Location" value={identity.location ?? ''} onChange={(v) => set('location', v)} />
         <IdField label="LinkedIn" value={identity.linkedin ?? ''} onChange={(v) => set('linkedin', v)} />
 
-        <div className="flex items-center justify-between pt-2 border-t border-[#1F1F1F]">
-          <p className="text-xs text-[#94A3B8]">{matchedSummary}</p>
+        <div className="flex items-center justify-between pt-2 border-t border-raised">
+          <p className="text-xs text-muted">{matchedSummary}</p>
           <button
             type="submit"
             disabled={!requiredFilled || busy}
-            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="bg-gradient-to-b from-accent-bright to-accent-deep hover:brightness-110 text-white shadow-[0_10px_30px_-12px_rgb(139_92_246/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] px-5 py-2 text-sm rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {busy ? 'Saving…' : 'Confirm →'}
           </button>
@@ -439,14 +439,14 @@ function IdField({
 }) {
   return (
     <div>
-      <label className="block text-xs text-[#94A3B8] mb-1.5 uppercase tracking-wider">
+      <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
         {label}
       </label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg"
+        className="w-full bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl"
       />
     </div>
   );
@@ -510,29 +510,29 @@ function TierView({
   return (
     <div>
       <h1 className="text-2xl sm:text-3xl font-bold mb-2">Tier check</h1>
-      <p className="text-sm text-[#cbd5e1] mb-6">
+      <p className="text-sm text-soft mb-6">
         Years and role signals give me a starting tier. Bump it up or down if it&apos;s off.
       </p>
 
-      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-6">
-        <p className="text-[10px] tracking-widest text-[#7C3AED] uppercase font-mono mb-2">
+      <div className="bg-surface border border-line rounded-xl p-6">
+        <p className="text-[11px] tracking-wider text-accent-bright uppercase mb-2">
           Auto-detected
         </p>
         <h2 className="text-lg font-semibold text-white">{TIER_LABEL[auto.tier]}</h2>
-        <ul className="mt-4 text-xs text-[#94A3B8] space-y-1">
-          <li><span className="text-[#cbd5e1]">Years of experience:</span> {auto.yearsExperience} ({auto.inputs.years_band})</li>
-          <li><span className="text-[#cbd5e1]">Role level:</span> {auto.inputs.role_level}</li>
-          <li><span className="text-[#cbd5e1]">Direct reports at peak:</span> {auto.inputs.reports_peak}</li>
+        <ul className="mt-4 text-xs text-muted space-y-1">
+          <li><span className="text-soft">Years of experience:</span> {auto.yearsExperience} ({auto.inputs.years_band})</li>
+          <li><span className="text-soft">Role level:</span> {auto.inputs.role_level}</li>
+          <li><span className="text-soft">Direct reports at peak:</span> {auto.inputs.reports_peak}</li>
         </ul>
 
-        <div className="mt-6 pt-5 border-t border-[#1F1F1F]">
-          <label className="block text-xs text-[#94A3B8] mb-2 uppercase tracking-wider">
+        <div className="mt-6 pt-5 border-t border-raised">
+          <label className="block text-xs text-muted mb-2 uppercase tracking-wider">
             Override
           </label>
           <select
             value={chosenTier}
             onChange={(e) => setChosenTier(parseInt(e.target.value, 10) as UpdraftTier)}
-            className="w-full bg-[#111111] border border-[#2A2A2A] focus:border-[#7C3AED] px-3 py-2 text-sm text-white outline-none rounded-lg"
+            className="w-full bg-canvas border border-line focus:border-accent px-3 py-2 text-sm text-white outline-none rounded-xl"
           >
             <option value={1}>{TIER_LABEL[1]}</option>
             <option value={2}>{TIER_LABEL[2]}</option>
@@ -540,7 +540,7 @@ function TierView({
             <option value={4}>{TIER_LABEL[4]}</option>
           </select>
           {overridden && (
-            <p className="mt-2 text-xs text-[#7C3AED]">Overriding the auto-detection.</p>
+            <p className="mt-2 text-xs text-accent-bright">Overriding the auto-detection.</p>
           )}
         </div>
 
@@ -549,7 +549,7 @@ function TierView({
             type="button"
             onClick={submit}
             disabled={busy}
-            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="bg-gradient-to-b from-accent-bright to-accent-deep hover:brightness-110 text-white shadow-[0_10px_30px_-12px_rgb(139_92_246/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] px-5 py-2 text-sm rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {busy ? 'Saving…' : 'Continue →'}
           </button>

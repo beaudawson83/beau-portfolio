@@ -107,7 +107,7 @@ export default function LoginForm({ initialError }: { initialError?: string | nu
   if (status === 'sent') {
     return (
       <div className="text-center py-2">
-        <div className="inline-flex w-14 h-14 rounded-2xl bg-[#8b6dff]/15 text-[#8b6dff] items-center justify-center mb-4">
+        <div className="inline-flex w-14 h-14 rounded-2xl bg-accent-bright/15 text-accent-bright items-center justify-center mb-4">
           <Icon name="mail" size={26} />
         </div>
         <h3 className="text-xl font-semibold text-white tracking-tight">
@@ -127,7 +127,7 @@ export default function LoginForm({ initialError }: { initialError?: string | nu
             setStatus('idle');
             setEmail('');
           }}
-          className="mt-3 text-sm font-medium text-[#8b6dff] hover:underline"
+          className="mt-3 text-sm font-medium text-accent-bright hover:underline"
         >
           Use a different email
         </button>
@@ -151,7 +151,7 @@ export default function LoginForm({ initialError }: { initialError?: string | nu
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             disabled={status === 'sending'}
-            className="w-full bg-[#0a0910] border border-white/[0.08] focus:border-[#8b6dff] focus:ring-2 focus:ring-[#8b6dff]/30 rounded-xl px-3.5 py-3 text-[15px] text-white outline-none transition placeholder:text-white/30 disabled:opacity-60"
+            className="w-full bg-canvas border border-white/[0.08] focus:border-accent-bright focus:ring-2 focus:ring-accent-bright/30 rounded-xl px-3.5 py-3 text-[15px] text-white outline-none transition placeholder:text-white/30 disabled:opacity-60"
           />
         </label>
 
@@ -164,7 +164,7 @@ export default function LoginForm({ initialError }: { initialError?: string | nu
         <button
           type="submit"
           disabled={status === 'sending' || !email.trim()}
-          className="w-full mt-1 inline-flex items-center justify-center gap-2 bg-[#8b6dff] hover:bg-[#7c5dff] active:scale-[0.99] text-white font-semibold rounded-xl px-3.5 py-3 text-[15px] shadow-[0_8px_24px_-8px_rgba(139,109,255,0.7)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full mt-1 inline-flex items-center justify-center gap-2 bg-accent-bright hover:bg-accent active:scale-[0.99] text-white font-semibold rounded-xl px-3.5 py-3 text-[15px] shadow-[0_8px_24px_-8px_rgba(139,109,255,0.7)] transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {status === 'sending' ? (
             'Sending link…'
@@ -183,7 +183,7 @@ export default function LoginForm({ initialError }: { initialError?: string | nu
             key={label}
             className="flex-1 flex flex-col items-center gap-1.5 text-center text-[11px] text-white/55"
           >
-            <span className="text-[#8b6dff]">
+            <span className="text-accent-bright">
               <Icon name={icon as IconName} size={16} />
             </span>
             <span>{label}</span>

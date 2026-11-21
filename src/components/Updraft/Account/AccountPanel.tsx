@@ -100,20 +100,20 @@ export default function AccountPanel({ user, sessions: initialSessions }: Props)
   };
 
   return (
-    <main className="min-h-screen bg-[#111111] text-white">
-      <header className="border-b border-[#1F1F1F]">
+    <main className="min-h-screen text-ink">
+      <header className="border-b border-raised">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
           <div>
-            <p className="text-xs tracking-widest text-[#7C3AED] uppercase">
+            <p className="text-xs tracking-wider text-accent-bright uppercase">
               UpDraft · account
             </p>
-            <p className="text-sm text-[#94A3B8] mt-1">
+            <p className="text-sm text-muted mt-1">
               <span className="text-white">{user.email}</span>
             </p>
           </div>
           <Link
             href="/updraft"
-            className="text-xs text-[#94A3B8] hover:text-white transition-colors"
+            className="text-xs text-muted hover:text-white transition-colors"
           >
             ← Back to dashboard
           </Link>
@@ -124,24 +124,24 @@ export default function AccountPanel({ user, sessions: initialSessions }: Props)
         {/* Account overview */}
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">Account</h1>
-          <p className="text-sm text-[#cbd5e1] mb-6">
+          <p className="text-sm text-soft mb-6">
             Email-based account. No password to forget. We collect only what you
             see below — your email, the sessions you create, and the files those
             sessions generate.
           </p>
-          <dl className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-5 space-y-3">
+          <dl className="bg-surface border border-line rounded-xl p-5 space-y-3">
             <div className="flex justify-between text-sm">
-              <dt className="text-[#94A3B8]">Email</dt>
-              <dd className="text-white font-mono">{user.email}</dd>
+              <dt className="text-muted">Email</dt>
+              <dd className="text-white ">{user.email}</dd>
             </div>
             <div className="flex justify-between text-sm">
-              <dt className="text-[#94A3B8]">Account created</dt>
+              <dt className="text-muted">Account created</dt>
               <dd className="text-white" suppressHydrationWarning>
                 {mounted ? formatDate(user.createdAt) : ''}
               </dd>
             </div>
             <div className="flex justify-between text-sm">
-              <dt className="text-[#94A3B8]">Sessions</dt>
+              <dt className="text-muted">Sessions</dt>
               <dd className="text-white">{sessions.length}</dd>
             </div>
           </dl>
@@ -150,7 +150,7 @@ export default function AccountPanel({ user, sessions: initialSessions }: Props)
         {/* Sessions */}
         <div>
           <h2 className="text-xl font-semibold mb-2">Your sessions</h2>
-          <p className="text-sm text-[#cbd5e1] mb-4">
+          <p className="text-sm text-soft mb-4">
             Sessions auto-delete <span className="text-white">30 days after
             last activity</span> unless you mark them as kept. Toggle the keep
             flag on anything you want to hold onto. Manual delete cascades
@@ -158,11 +158,11 @@ export default function AccountPanel({ user, sessions: initialSessions }: Props)
           </p>
 
           {sessions.length === 0 ? (
-            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-8 text-center text-sm text-[#94A3B8]">
+            <div className="bg-surface border border-line rounded-xl p-8 text-center text-sm text-muted">
               No sessions yet.
             </div>
           ) : (
-            <ul className="divide-y divide-[#1F1F1F] border border-[#2A2A2A] rounded-lg overflow-hidden">
+            <ul className="divide-y divide-raised border border-line rounded-xl overflow-hidden">
               {sessions.map((s) => {
                 const eta = mounted
                   ? purgeEtaDays(s.lastActivityAt, s.keepIndefinitely)
@@ -170,53 +170,53 @@ export default function AccountPanel({ user, sessions: initialSessions }: Props)
                 return (
                   <li
                     key={s.id}
-                    className="px-5 py-4 bg-[#1A1A1A] flex items-start justify-between gap-4"
+                    className="px-5 py-4 bg-surface flex items-start justify-between gap-4"
                   >
                     <div className="flex-1 min-w-0">
                       <Link
                         href={`/updraft/${s.id}`}
-                        className="block text-sm text-white hover:text-[#7C3AED] transition-colors"
+                        className="block text-sm text-white hover:text-accent-bright transition-colors"
                       >
                         <span suppressHydrationWarning>
                           Session started{' '}
                           {mounted ? formatDate(s.startedAt) : '…'}
                         </span>
                       </Link>
-                      <p className="text-xs text-[#94A3B8] mt-1">
+                      <p className="text-xs text-muted mt-1">
                         {s.status.toUpperCase()}
                         {s.tier ? ` · TIER ${s.tier}` : ''}
                         {s.path ? ` · ${s.path.toUpperCase()}` : ''}
                       </p>
-                      <p className="text-[11px] text-[#64748b] mt-1" suppressHydrationWarning>
+                      <p className="text-[11px] text-faint mt-1" suppressHydrationWarning>
                         Last activity: {mounted ? formatDate(s.lastActivityAt) : '…'}
                         {eta !== null && (
                           <span className="ml-2">
                             ·{' '}
-                            <span className={eta <= 3 ? 'text-amber-400' : 'text-[#64748b]'}>
+                            <span className={eta <= 3 ? 'text-amber-400' : 'text-faint'}>
                               auto-deletes in {eta} day{eta === 1 ? '' : 's'}
                             </span>
                           </span>
                         )}
                         {s.keepIndefinitely && (
-                          <span className="ml-2 text-[#10B981]">· kept indefinitely</span>
+                          <span className="ml-2 text-success">· kept indefinitely</span>
                         )}
                       </p>
                     </div>
 
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                      <label className="flex items-center gap-2 text-[11px] text-[#94A3B8] cursor-pointer">
+                      <label className="flex items-center gap-2 text-[11px] text-muted cursor-pointer">
                         <input
                           type="checkbox"
                           checked={s.keepIndefinitely}
                           onChange={(e) => setKeep(s.id, e.target.checked)}
-                          className="cursor-pointer accent-[#7C3AED]"
+                          className="cursor-pointer accent-accent"
                         />
                         Keep
                       </label>
                       <button
                         type="button"
                         onClick={() => deleteSession(s.id)}
-                        className="text-[11px] text-[#94A3B8] hover:text-red-400 transition-colors"
+                        className="text-[11px] text-muted hover:text-red-400 transition-colors"
                       >
                         Delete
                       </button>
@@ -231,7 +231,7 @@ export default function AccountPanel({ user, sessions: initialSessions }: Props)
         {/* Data export */}
         <div>
           <h2 className="text-xl font-semibold mb-2">Download your data</h2>
-          <p className="text-sm text-[#cbd5e1] mb-4">
+          <p className="text-sm text-soft mb-4">
             Get a JSON archive of everything we have on you — profile, every
             session, every event log entry, and signed download URLs for every
             generated file. GDPR-style portability, available any time.
@@ -240,16 +240,16 @@ export default function AccountPanel({ user, sessions: initialSessions }: Props)
             type="button"
             onClick={downloadDataExport}
             disabled={exportPhase !== 'idle'}
-            className="bg-[#1A1A1A] hover:bg-[#1F1F1F] border border-[#2A2A2A] hover:border-[#7C3AED] text-white px-5 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-50 font-medium"
+            className="bg-surface hover:bg-raised border border-line hover:border-accent text-white px-5 py-2.5 text-sm rounded-xl transition-colors disabled:opacity-50 font-medium"
           >
             {exportPhase === 'downloading' ? 'Preparing…' : 'Download all my data (.json)'}
           </button>
         </div>
 
         {/* Danger zone */}
-        <div className="border-t border-[#1F1F1F] pt-8">
+        <div className="border-t border-raised pt-8">
           <h2 className="text-xl font-semibold mb-2 text-red-400">Delete my account</h2>
-          <p className="text-sm text-[#cbd5e1] mb-4">
+          <p className="text-sm text-soft mb-4">
             Removes your account, every session, every file, every event. No
             recovery — this is the full GDPR right-to-erasure path. Magic-link
             tokens are also revoked. Won&apos;t be confirmed by email; the
@@ -258,7 +258,7 @@ export default function AccountPanel({ user, sessions: initialSessions }: Props)
           <button
             type="button"
             onClick={() => setDeleteModalOpen(true)}
-            className="bg-[#1A1A1A] hover:bg-red-950/30 border border-red-900/50 hover:border-red-500 text-red-400 hover:text-red-300 px-5 py-2.5 text-sm rounded-lg transition-colors font-medium"
+            className="bg-surface hover:bg-red-950/30 border border-red-900/50 hover:border-red-500 text-red-400 hover:text-red-300 px-5 py-2.5 text-sm rounded-xl transition-colors font-medium"
           >
             Delete my account
           </button>
@@ -331,16 +331,16 @@ function DeleteModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-modal-title"
-        className="bg-[#1A1A1A] border border-red-900/50 rounded-lg max-w-md w-full p-6"
+        className="bg-surface border border-red-900/50 rounded-xl max-w-md w-full p-6"
         onClick={(e) => e.stopPropagation()}
       >
         {phase === 'done' ? (
           <div className="text-center">
-            <p className="text-[10px] tracking-widest text-[#10B981] uppercase font-mono mb-3">
+            <p className="text-[11px] tracking-wider text-success uppercase mb-3">
               Deletion complete
             </p>
             <h3 className="text-xl font-bold mb-2">Goodbye for now.</h3>
-            <p className="text-sm text-[#cbd5e1]">
+            <p className="text-sm text-soft">
               All your UpDraft data has been removed. Redirecting…
             </p>
           </div>
@@ -349,11 +349,11 @@ function DeleteModal({
             <h3 id="delete-modal-title" className="text-xl font-bold mb-2 text-red-400">
               Delete my account
             </h3>
-            <p className="text-sm text-[#cbd5e1] mb-4 leading-relaxed">
+            <p className="text-sm text-soft mb-4 leading-relaxed">
               This removes everything we have on you. Type your full email
               below to confirm.
             </p>
-            <p className="text-xs text-[#94A3B8] mb-2 font-mono">{email}</p>
+            <p className="text-xs text-muted mb-2 ">{email}</p>
             <input
               type="email"
               autoComplete="off"
@@ -362,7 +362,7 @@ function DeleteModal({
               onChange={(e) => setTyped(e.target.value)}
               placeholder="Type your email exactly"
               disabled={phase === 'deleting'}
-              className="w-full bg-[#111111] border border-[#2A2A2A] focus:border-red-500 px-3 py-2 text-sm text-white outline-none transition-colors rounded-lg"
+              className="w-full bg-canvas border border-line focus:border-red-500 px-3 py-2 text-sm text-white outline-none transition-colors rounded-xl"
             />
 
             {error && (
@@ -376,14 +376,14 @@ function DeleteModal({
                 type="button"
                 onClick={onClose}
                 disabled={phase === 'deleting'}
-                className="text-xs text-[#94A3B8] hover:text-white transition-colors disabled:opacity-50"
+                className="text-xs text-muted hover:text-white transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={!matches || phase === 'deleting'}
-                className="bg-red-950/40 hover:bg-red-900/40 border border-red-900/50 hover:border-red-500 text-red-400 hover:text-red-300 px-5 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="bg-red-950/40 hover:bg-red-900/40 border border-red-900/50 hover:border-red-500 text-red-400 hover:text-red-300 px-5 py-2 text-sm rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 {phase === 'deleting' ? 'Deleting…' : 'Delete forever'}
               </button>
