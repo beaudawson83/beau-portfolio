@@ -213,7 +213,7 @@ export function CalloutBlock({
           width: 22,
           height: 22,
           flexShrink: 0,
-          borderRadius: 4,
+          borderRadius: 10,
           background: cfg.color,
           color: '#fff',
           display: 'flex',
@@ -278,7 +278,7 @@ function ImagePlaceholder({
         background:
           'repeating-linear-gradient(135deg, var(--tn-bg2) 0 12px, var(--tn-bg3) 12px 24px)',
         border: '1px solid var(--tn-line)',
-        borderRadius: 6,
+        borderRadius: 14,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -320,7 +320,7 @@ export function ImageBlock({
           style={{
             width: '100%',
             height: 'auto',
-            borderRadius: 6,
+            borderRadius: 14,
             border: '1px solid var(--tn-line)',
             display: 'block',
           }}
@@ -496,7 +496,7 @@ export function VideoBlock({
           style={{
             position: 'relative',
             aspectRatio: '16/9',
-            borderRadius: 6,
+            borderRadius: 14,
             overflow: 'hidden',
             background: '#000',
             border: '1px solid var(--tn-line)',
@@ -552,7 +552,7 @@ function SimulatedVideo({ caption, label }: { caption?: string; label?: string }
   }, [playing]);
   return (
     <figure style={{ margin: '28px 0' }}>
-      <div style={{ position: 'relative', borderRadius: 6, overflow: 'hidden', background: '#000' }}>
+      <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', background: '#000' }}>
         <ImagePlaceholder ratio="16/9" label={label} style={{ borderRadius: 0, border: 0 }} />
         <button
           type="button"
@@ -712,7 +712,7 @@ export function AudioBlock({
         padding: '14px 16px',
         background: 'var(--tn-bg2)',
         border: '1px solid var(--tn-line)',
-        borderRadius: 6,
+        borderRadius: 14,
         display: 'flex',
         alignItems: 'center',
         gap: 14,
@@ -804,7 +804,7 @@ export function CodeBlock({
     <div
       style={{
         margin: '28px 0',
-        borderRadius: 6,
+        borderRadius: 14,
         overflow: 'hidden',
         border: '1px solid var(--tn-line)',
       }}
@@ -817,7 +817,7 @@ export function CodeBlock({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          fontFamily: 'var(--tn-mono)',
+          fontFamily: 'var(--tn-code)',
           fontSize: 11,
           color: 'var(--tn-dim)',
         }}
@@ -841,7 +841,7 @@ export function CodeBlock({
       <pre style={{ margin: 0, padding: '14px 0', background: 'var(--tn-bg)', overflow: 'auto' }}>
         <code
           style={{
-            fontFamily: 'var(--tn-mono)',
+            fontFamily: 'var(--tn-code)',
             fontSize: 13,
             lineHeight: 1.7,
             display: 'block',
@@ -909,7 +909,7 @@ export function TableBlock({ headers, rows }: { headers: string[]; rows: string[
         margin: '28px 0',
         overflowX: 'auto',
         border: '1px solid var(--tn-line)',
-        borderRadius: 6,
+        borderRadius: 14,
       }}
     >
       <table
@@ -994,7 +994,7 @@ export function ChartBlock({
         padding: 18,
         background: 'var(--tn-bg2)',
         border: '1px solid var(--tn-line)',
-        borderRadius: 6,
+        borderRadius: 14,
       }}
     >
       {title ? (
@@ -1105,7 +1105,7 @@ const WORDART_STYLES: Record<string, CSSProperties> = {
     background: 'var(--tn-accent)',
     color: '#fff',
     padding: '20px 28px',
-    borderRadius: 8,
+    borderRadius: 16,
   },
   chrome: {
     background: 'linear-gradient(180deg, #fff 0%, #999 50%, #666 51%, #ccc 100%)',
@@ -1163,7 +1163,7 @@ export function TweetEmbed({
         padding: 16,
         background: 'var(--tn-bg2)',
         border: '1px solid var(--tn-line)',
-        borderRadius: 8,
+        borderRadius: 16,
         display: 'flex',
         gap: 12,
       }}
@@ -1309,7 +1309,7 @@ export function TableOfContents({
           borderBottom: '1px solid var(--tn-line)',
         }}
       >
-        ~/contents
+        Contents
       </div>
       <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {headings.map((h) => (

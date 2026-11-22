@@ -444,7 +444,7 @@ export function EditableCallout({
             border: '1px solid var(--tn-line2)',
             color,
             padding: '2px 6px',
-            borderRadius: 3,
+            borderRadius: 8,
             textTransform: 'uppercase',
             letterSpacing: '.08em',
           }}
@@ -510,7 +510,7 @@ export function EditableImage({
             ? 'transparent'
             : 'repeating-linear-gradient(135deg, var(--tn-bg2) 0 12px, var(--tn-bg3) 12px 24px)',
           border: '1px solid var(--tn-line)',
-          borderRadius: 6,
+          borderRadius: 14,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -551,7 +551,7 @@ export function EditableImage({
             flex: 1,
             background: 'var(--tn-bg2)',
             border: '1px solid var(--tn-line2)',
-            borderRadius: 4,
+            borderRadius: 10,
             padding: '6px 10px',
             fontFamily: 'var(--tn-mono)',
             fontSize: 11,
@@ -606,7 +606,7 @@ const miniInputStyle = (w: number): CSSProperties => ({
   background: 'transparent',
   border: '1px solid var(--tn-line2)',
   padding: '3px 7px',
-  borderRadius: 3,
+  borderRadius: 8,
   outline: 'none',
 });
 
@@ -625,7 +625,7 @@ export function EditableCode({
     <div
       style={{
         margin: '28px 0',
-        borderRadius: 6,
+        borderRadius: 14,
         overflow: 'hidden',
         border: '1px solid var(--tn-line)',
       }}
@@ -664,7 +664,7 @@ export function EditableCode({
           color: 'var(--tn-ink)',
           border: 0,
           outline: 'none',
-          fontFamily: 'var(--tn-mono)',
+          fontFamily: 'var(--tn-code)',
           fontSize: 13,
           lineHeight: 1.7,
           padding: '12px 14px',
@@ -730,7 +730,7 @@ export function EditableTable({
         style={{
           overflowX: 'auto',
           border: '1px solid var(--tn-line)',
-          borderRadius: 6,
+          borderRadius: 14,
         }}
       >
         <table
@@ -861,7 +861,7 @@ export function EditableWordArt({
               fontFamily: 'var(--tn-mono)',
               fontSize: 10,
               padding: '3px 8px',
-              borderRadius: 3,
+              borderRadius: 8,
               background: variant === v ? 'var(--tn-accent-glow)' : 'transparent',
               color: variant === v ? 'var(--tn-accent)' : 'var(--tn-dim)',
               border: `1px solid ${variant === v ? 'var(--tn-accent-dim)' : 'var(--tn-line2)'}`,
@@ -884,7 +884,7 @@ export function EditableWordArt({
           style={{
             background: 'var(--tn-bg2)',
             border: '1px solid var(--tn-line2)',
-            borderRadius: 4,
+            borderRadius: 10,
             padding: '6px 10px',
             fontFamily: 'var(--tn-mono)',
             fontSize: 11,

@@ -68,32 +68,36 @@ export default function Footer() {
   };
 
   const inputClasses =
-    'w-full bg-[#1A1A1A] border border-[#2A2A2A] focus:border-[#7C3AED] px-4 py-2.5 text-sm text-white outline-none transition-colors rounded-lg';
+    'w-full bg-white/[0.03] border border-line focus:border-accent-bright/60 focus:shadow-[0_0_0_4px_rgb(139_92_246/0.12)] px-4 py-3 text-sm text-ink placeholder:text-faint outline-none transition-all duration-300 rounded-xl';
 
   return (
     <footer
       id="contact"
-      className="py-16 sm:py-20 2xl:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16 border-t border-[#1F1F1F]"
+      className="relative py-16 sm:py-20 md:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16 overflow-hidden"
     >
-      <div className="max-w-2xl mx-auto" ref={ref}>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-24 h-[28rem] w-[48rem] max-w-full -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,rgb(139_92_246/0.22),transparent_65%)] blur-2xl"
+      />
+      <div className="relative max-w-2xl mx-auto" ref={ref}>
         <motion.div
-          initial={{ opacity: 0, y: 15 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
           {/* Header */}
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+          <h2 className="text-4xl sm:text-5xl md:text-6xl font-semibold tracking-[-0.04em] text-ink mb-4 text-center">
             Get in Touch
           </h2>
-          <p className="text-sm sm:text-base text-[#94A3B8] mb-8">
+          <p className="text-base sm:text-lg text-muted mb-10 text-center">
             Available for full-time, fractional, and project-based engagements.
           </p>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4 mb-10">
+          <form onSubmit={handleSubmit} className="ui-card space-y-5 p-6 sm:p-8 mb-10 backdrop-blur-md">
             {/* Name */}
             <div>
-              <label htmlFor="name" className="block text-xs text-[#94A3B8] mb-1.5">
+              <label htmlFor="name" className="block text-sm font-medium text-ink/80 mb-2">
                 Name
               </label>
               <input
@@ -110,7 +114,7 @@ export default function Footer() {
 
             {/* Objective */}
             <div>
-              <label htmlFor="objective" className="block text-xs text-[#94A3B8] mb-1.5">
+              <label htmlFor="objective" className="block text-sm font-medium text-ink/80 mb-2">
                 Objective
               </label>
               <select
@@ -134,7 +138,7 @@ export default function Footer() {
 
             {/* Message */}
             <div>
-              <label htmlFor="message" className="block text-xs text-[#94A3B8] mb-1.5">
+              <label htmlFor="message" className="block text-sm font-medium text-ink/80 mb-2">
                 Message
               </label>
               <textarea
@@ -153,7 +157,7 @@ export default function Footer() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-6 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto rounded-full bg-gradient-to-b from-accent-bright to-accent-deep px-7 py-3 text-sm font-medium text-white shadow-[0_10px_30px_-10px_rgb(139_92_246/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_40px_-8px_rgb(139_92_246/0.95),inset_0_1px_0_rgb(255_255_255/0.25)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
             >
               {isSubmitting ? 'Sending...' : 'Send Message'}
             </button>
@@ -165,7 +169,7 @@ export default function Footer() {
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="text-sm text-[#10B981]"
+                  className="text-sm text-success"
                 >
                   Message sent. I&apos;ll be in touch.
                 </motion.p>
@@ -184,7 +188,7 @@ export default function Footer() {
           </form>
 
           {/* Social links */}
-          <div className="flex flex-wrap gap-4 mb-10">
+          <div className="flex flex-wrap justify-center gap-2 mb-12">
             {socialLinks.map((link) => (
               <a
                 key={link.label}
@@ -192,7 +196,7 @@ export default function Footer() {
                 target={link.type === 'linkedin' ? '_blank' : undefined}
                 rel={link.type === 'linkedin' ? 'noopener noreferrer' : undefined}
                 onClick={() => handleSocialClick(link.label, link.url)}
-                className="text-sm text-[#94A3B8] hover:text-[#7C3AED] transition-colors"
+                className="rounded-full border border-line bg-white/[0.03] px-4 py-2 text-sm text-muted transition-colors hover:border-accent-bright/50 hover:text-ink"
               >
                 {link.label}
               </a>
@@ -200,8 +204,8 @@ export default function Footer() {
           </div>
 
           {/* Copyright */}
-          <div className="pt-6 border-t border-[#1F1F1F]">
-            <p className="text-xs text-[#94A3B8]/40 text-center">
+          <div className="pt-6 border-t border-line">
+            <p className="text-xs text-faint text-center">
               {new Date().getFullYear()} Beau Dawson / BAD Labs
             </p>
           </div>

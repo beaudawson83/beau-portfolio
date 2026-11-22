@@ -20,7 +20,7 @@ export default async function Home() {
   return (
     <>
       <Header />
-      <main className="pt-12">
+      <main>
         <Hero />
         <TelemetryGrid />
         <CaseStudies />

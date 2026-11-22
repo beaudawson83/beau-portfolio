@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import { Geist, JetBrains_Mono } from 'next/font/google';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import AnalyticsProvider from '@/components/AnalyticsProvider';
 import './globals.css';
 
-const inter = Inter({
-  variable: '--font-inter',
+const geist = Geist({
+  variable: '--font-geist',
   subsets: ['latin'],
   display: 'swap',
 });
@@ -63,8 +63,9 @@ export default function RootLayout({
         <GoogleAnalytics />
       </head>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-[#111111] text-white`}
+        className={`${geist.variable} ${jetbrainsMono.variable} antialiased bg-canvas text-ink`}
       >
+        <div className="ui-backdrop" aria-hidden="true" />
         <AnalyticsProvider>{children}</AnalyticsProvider>
       </body>
     </html>

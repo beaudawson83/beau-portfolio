@@ -28,7 +28,7 @@ export default function PrivacyCallout({ copy }: { copy: UpdraftPrivacyCopy }) {
   return (
     <section
       aria-label="Privacy, Trust & Opportunity"
-      className="text-[#cbd5e1] text-xs sm:text-[13px] leading-relaxed"
+      className="text-soft text-xs sm:text-[13px] leading-relaxed"
     >
       <h2 className="text-base sm:text-lg font-bold text-white mb-3">
         {copy.heading}
@@ -51,7 +51,7 @@ export default function PrivacyCallout({ copy }: { copy: UpdraftPrivacyCopy }) {
           <li key={point.heading} className="flex gap-2 items-start">
             <span
               aria-hidden="true"
-              className="text-[#7C3AED] mt-[3px] flex-shrink-0 select-none"
+              className="text-accent-bright mt-[3px] flex-shrink-0 select-none"
             >
               ▸
             </span>
@@ -74,18 +74,18 @@ export default function PrivacyCallout({ copy }: { copy: UpdraftPrivacyCopy }) {
       </div>
 
       {sources.length > 0 && (
-        <div className="mt-6 pt-4 border-t border-[#1F1F1F]">
-          <h3 className="text-[10px] tracking-widest text-[#94A3B8] uppercase mb-2">
+        <div className="mt-6 pt-4 border-t border-raised">
+          <h3 className="text-[11px] tracking-wider text-muted uppercase mb-2">
             Sources
           </h3>
-          <ul className="text-[11px] text-[#94A3B8] flex flex-wrap gap-x-4 gap-y-1">
+          <ul className="text-[11px] text-muted flex flex-wrap gap-x-4 gap-y-1">
             {sources.map((c) => (
               <li key={c.href}>
                 <a
                   href={c.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline decoration-dotted underline-offset-2 hover:text-[#7C3AED] transition-colors"
+                  className="underline decoration-dotted underline-offset-2 hover:text-accent-bright transition-colors"
                 >
                   {c.label}
                 </a>
@@ -95,7 +95,7 @@ export default function PrivacyCallout({ copy }: { copy: UpdraftPrivacyCopy }) {
         </div>
       )}
 
-      <p className="mt-5 text-[11px] leading-relaxed text-[#94A3B8]">
+      <p className="mt-5 text-[11px] leading-relaxed text-muted">
         {copy.footerMicrocopy}
       </p>
     </section>

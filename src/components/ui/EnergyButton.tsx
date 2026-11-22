@@ -19,12 +19,12 @@ export default function EnergyButton({
     <button
       onClick={onClick}
       className={`
-        w-full sm:w-auto px-6 py-3 font-mono text-sm tracking-wider rounded-lg
-        transition-all duration-200 text-center
+        w-full sm:w-auto px-6 py-3 text-sm font-medium rounded-full
+        transition-all duration-300 text-center active:scale-[0.98]
         ${
           isPrimary
-            ? 'bg-[#7C3AED] text-white hover:bg-[#6D28D9] active:scale-[0.98]'
-            : 'bg-transparent text-[#7C3AED] border border-[#7C3AED]/40 hover:border-[#7C3AED] hover:bg-[#7C3AED]/5 active:scale-[0.98]'
+            ? 'bg-gradient-to-b from-accent-bright to-accent-deep text-white shadow-[0_10px_30px_-10px_rgb(139_92_246/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] hover:shadow-[0_14px_40px_-8px_rgb(139_92_246/0.95),inset_0_1px_0_rgb(255_255_255/0.25)] hover:-translate-y-0.5'
+            : 'bg-white/[0.04] text-ink border border-line-strong hover:bg-white/[0.08] hover:border-accent-bright/50 hover:-translate-y-0.5'
         }
         ${className}
       `}

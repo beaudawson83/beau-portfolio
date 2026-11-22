@@ -17,7 +17,7 @@ export default function Sparkline({ data }: SparklineProps) {
           fontFamily: 'var(--gc-mono)',
           fontSize: 10,
           letterSpacing: '0.08em',
-          color: '#52525b',
+          color: 'var(--faint)',
           textTransform: 'uppercase' as const,
         }}
       >

@@ -28,9 +28,9 @@ function statusLabel(status: UpdraftDashboardSession['status']): string {
 }
 
 function statusClass(status: UpdraftDashboardSession['status']): string {
-  if (status === 'completed') return 'text-[#10B981]';
-  if (status === 'in_progress') return 'text-[#7C3AED]';
-  return 'text-[#94A3B8]';
+  if (status === 'completed') return 'text-success';
+  if (status === 'in_progress') return 'text-accent-bright';
+  return 'text-muted';
 }
 
 /** The headline label for a session row: target role when known, else a
@@ -156,30 +156,30 @@ export default function Dashboard({
   };
 
   return (
-    <main className="min-h-screen bg-[#111111] text-white">
-      <header className="border-b border-[#1F1F1F]">
+    <main className="min-h-screen text-ink">
+      <header className="border-b border-raised">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
           <div>
-            <p className="text-xs tracking-widest text-[#7C3AED] uppercase">
+            <p className="text-xs tracking-wider text-accent-bright uppercase">
               UpDraft · by BAD Labs
             </p>
-            <p className="text-sm text-[#94A3B8] mt-1">
+            <p className="text-sm text-muted mt-1">
               Signed in as <span className="text-white">{email}</span>
             </p>
           </div>
           <div className="flex items-center gap-4">
             <Link
               href="/updraft/account"
-              className="text-xs text-[#94A3B8] hover:text-white transition-colors"
+              className="text-xs text-muted hover:text-white transition-colors"
             >
               Account
             </Link>
-            <span className="text-[#2A2A2A]">·</span>
+            <span className="text-line">·</span>
             <button
               type="button"
               onClick={handleSignOut}
               disabled={signingOut}
-              className="text-xs text-[#94A3B8] hover:text-white transition-colors disabled:opacity-50"
+              className="text-xs text-muted hover:text-white transition-colors disabled:opacity-50"
             >
               {signingOut ? 'Signing out…' : 'Sign out'}
             </button>
@@ -188,23 +188,23 @@ export default function Dashboard({
       </header>
 
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex items-end justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 mb-8">
           <div>
             <h1 className="text-3xl font-bold">Your sessions</h1>
-            <p className="text-sm text-[#94A3B8] mt-2 max-w-2xl">
+            <p className="text-sm text-muted mt-2 max-w-2xl">
               Your <span className="text-white">active MOD</span> is the master
               profile new tailored resumes start from — set it on any finished
               session below. Sessions auto-delete 30 days after last activity
               unless you mark them as kept.
             </p>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 sm:shrink-0">
             {activeId && (
               <button
                 type="button"
                 onClick={handleRetailor}
                 disabled={retailoring}
-                className="border border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED] hover:text-white px-5 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="border border-accent/50 bg-accent/10 text-accent-bright hover:bg-accent hover:text-white px-5 py-2.5 text-sm rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 {retailoring ? 'Starting…' : 'Tailor to a new role'}
               </button>
@@ -213,7 +213,7 @@ export default function Dashboard({
               type="button"
               onClick={handleNewSession}
               disabled={creatingSession}
-              className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-5 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="bg-gradient-to-b from-accent-bright to-accent-deep hover:brightness-110 text-white shadow-[0_10px_30px_-12px_rgb(139_92_246/0.8),inset_0_1px_0_rgb(255_255_255/0.25)] px-5 py-2.5 text-sm rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {creatingSession ? 'Starting…' : '+ New session'}
             </button>
@@ -231,27 +231,27 @@ export default function Dashboard({
         )}
 
         {sessions.length === 0 ? (
-          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-12 text-center">
+          <div className="bg-surface border border-line rounded-xl p-12 text-center">
             <h2 className="text-lg font-semibold text-white mb-2">
               No sessions yet
             </h2>
-            <p className="text-sm text-[#94A3B8] max-w-md mx-auto">
+            <p className="text-sm text-muted max-w-md mx-auto">
               Start your first session to build a master profile. Once a
               session is finished you can mark it as your active MOD and tailor
               it to new roles.
             </p>
           </div>
         ) : (
-          <ul className="divide-y divide-[#1F1F1F] border border-[#2A2A2A] rounded-lg overflow-hidden">
+          <ul className="divide-y divide-raised border border-line rounded-xl overflow-hidden">
             {sessions.map((s) => {
               const isActive = s.id === activeId;
               const isPending = pendingId === s.id;
               return (
                 <li
                   key={s.id}
-                  className={isActive ? 'bg-[#1c1726]' : 'bg-[#1A1A1A]'}
+                  className={isActive ? 'bg-raised' : 'bg-surface'}
                 >
-                  <div className="px-5 py-4 flex items-center justify-between gap-4 hover:bg-[#1F1F1F] transition-colors">
+                  <div className="px-5 py-4 flex items-center justify-between gap-4 hover:bg-raised transition-colors">
                     <Link
                       href={`/updraft/${s.id}`}
                       className="flex-1 min-w-0"
@@ -261,7 +261,7 @@ export default function Dashboard({
                           {sessionTitle(s, mounted)}
                         </span>
                         {isActive && (
-                          <span className="text-[10px] tracking-widest uppercase text-[#7C3AED] border border-[#7C3AED]/40 rounded px-1.5 py-0.5">
+                          <span className="text-[11px] tracking-wider uppercase text-accent-bright border border-accent/40 rounded px-1.5 py-0.5">
                             Active MOD
                           </span>
                         )}
@@ -276,7 +276,7 @@ export default function Dashboard({
 
                     <div className="flex items-center gap-4 shrink-0">
                       <span
-                        className="text-xs text-[#64748b] hidden sm:block"
+                        className="text-xs text-faint hidden sm:block"
                         suppressHydrationWarning
                       >
                         {mounted ? formatDate(s.lastActivityAt) : ''}
@@ -287,7 +287,7 @@ export default function Dashboard({
                             type="button"
                             onClick={() => setActiveMod(null)}
                             disabled={isPending}
-                            className="text-xs text-[#94A3B8] hover:text-white transition-colors disabled:opacity-50 whitespace-nowrap"
+                            className="text-xs text-muted hover:text-white transition-colors disabled:opacity-50 whitespace-nowrap"
                           >
                             {isPending ? 'Updating…' : 'Unset'}
                           </button>
@@ -296,7 +296,7 @@ export default function Dashboard({
                             type="button"
                             onClick={() => setActiveMod(s.id)}
                             disabled={isPending || pendingId !== null}
-                            className="text-xs text-[#7C3AED] hover:text-white border border-[#7C3AED]/40 hover:border-[#7C3AED] rounded px-2.5 py-1 transition-colors disabled:opacity-50 whitespace-nowrap"
+                            className="text-xs text-accent-bright hover:text-white border border-accent/40 hover:border-accent rounded px-2.5 py-1 transition-colors disabled:opacity-50 whitespace-nowrap"
                           >
                             {isPending ? 'Updating…' : 'Set as active MOD'}
                           </button>

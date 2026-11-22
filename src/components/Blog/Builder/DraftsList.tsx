@@ -95,7 +95,7 @@ function Listing({ secret }: { secret: string }) {
                 marginBottom: 14,
               }}
             >
-              $ ls -lh ~/blog/drafts
+              Drafts and posts
             </div>
             <h1
               style={{
@@ -175,7 +175,7 @@ function Listing({ secret }: { secret: string }) {
                   padding: 16,
                   background: 'var(--tn-bg2)',
                   border: '1px solid var(--tn-line)',
-                  borderRadius: 6,
+                  borderRadius: 14,
                   textDecoration: 'none',
                   color: 'inherit',
                   transition: '.15s',

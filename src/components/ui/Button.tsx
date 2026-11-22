@@ -10,13 +10,13 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant = 'primary', children, className = '', ...props }, ref) => {
     const baseStyles =
-      'font-mono text-sm tracking-wider transition-all duration-200 cursor-pointer';
+      'text-sm font-medium rounded-full transition-all duration-300 cursor-pointer';
 
     const variants = {
       primary:
-        'bg-[#7C3AED] hover:bg-[#6D28D9] text-white px-6 py-3 border border-[#7C3AED] hover:border-[#6D28D9]',
+        'bg-accent hover:bg-accent-deep text-white px-6 py-3 border border-accent hover:border-accent-deep',
       secondary:
-        'bg-transparent hover:bg-[#1F1F1F] text-white px-6 py-3 border border-[#94A3B8] hover:border-white',
+        'bg-white/[0.04] hover:bg-white/[0.08] text-ink px-6 py-3 border border-line-strong hover:border-accent-bright/50',
     };
 
     return (

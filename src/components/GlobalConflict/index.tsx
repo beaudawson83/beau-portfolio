@@ -126,7 +126,7 @@ export default function GlobalConflictModule({ initialData }: GlobalConflictModu
               Active hotspot
             </span>
             <span className="gc-legend-item">
-              <span className="gc-legend-dot" style={{ background: '#3a3a3a' }} />
+              <span className="gc-legend-dot" style={{ background: 'rgb(255 255 255 / 0.2)' }} />
               No documented hotspot
             </span>
           </div>

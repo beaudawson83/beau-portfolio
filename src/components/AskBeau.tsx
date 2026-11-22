@@ -107,7 +107,7 @@ export default function AskBeau() {
 
   return (
     <div className="w-full max-w-lg">
-      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] overflow-hidden">
+      <div className="rounded-2xl border border-line bg-white/[0.03] backdrop-blur-md overflow-hidden transition-colors duration-300 focus-within:border-accent-bright/50 focus-within:shadow-[0_0_0_4px_rgb(139_92_246/0.12)]">
         {/* Messages */}
         {messages.length > 0 && (
           <div className="px-4 pt-4 pb-2 space-y-3 max-h-64 overflow-y-auto">
@@ -119,11 +119,11 @@ export default function AskBeau() {
                   animate={{ opacity: 1, y: 0 }}
                 >
                   {message.type === 'question' ? (
-                    <p className="text-sm text-white">
+                    <p className="text-sm text-ink font-medium">
                       {message.text}
                     </p>
                   ) : (
-                    <p className="text-sm text-[#94A3B8] leading-relaxed">
+                    <p className="text-sm text-muted leading-relaxed">
                       {message.text}
                     </p>
                   )}
@@ -132,7 +132,7 @@ export default function AskBeau() {
             </AnimatePresence>
 
             {isLoading && (
-              <p className="text-sm text-[#94A3B8]/50 animate-pulse">
+              <p className="text-sm text-faint animate-pulse">
                 Thinking...
               </p>
             )}
@@ -141,11 +141,11 @@ export default function AskBeau() {
 
         {/* Input */}
         {hasReachedLimit ? (
-          <div className="px-4 py-3 text-xs text-[#94A3B8]">
+          <div className="px-4 py-3 text-xs text-muted">
             Question limit reached. Refresh to start over, or reach out directly below.
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex items-center border-t border-[#2A2A2A]">
+          <form onSubmit={handleSubmit} className={`flex items-center ${messages.length > 0 ? 'border-t border-line' : ''}`}>
             <input
               ref={inputRef}
               type="text"
@@ -154,13 +154,13 @@ export default function AskBeau() {
               onFocus={handleInputFocus}
               placeholder={messages.length === 0 ? 'Ask about Beau...' : 'Follow up...'}
               disabled={isLoading}
-              className="flex-1 bg-transparent px-4 py-3 text-sm text-white placeholder-[#94A3B8]/30 outline-none"
+              className="flex-1 bg-transparent px-4 py-3.5 text-sm text-ink placeholder:text-faint outline-none"
               maxLength={200}
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="px-4 py-3 text-xs font-mono text-[#94A3B8]/40 hover:text-[#7C3AED] transition-colors disabled:opacity-30"
+              className="mr-2 min-w-8 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs tabular-nums text-muted hover:bg-accent hover:text-white transition-colors disabled:opacity-40"
             >
               {MAX_QUESTIONS - questionCount}
             </button>

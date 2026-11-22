@@ -60,7 +60,7 @@ export default function Sidebar(props: SidebarProps) {
               alignItems: 'center',
               background: 'var(--tn-bg)',
               border: '1px solid var(--tn-line2)',
-              borderRadius: 5,
+              borderRadius: 10,
               padding: '0 8px',
             }}
           >
@@ -101,7 +101,7 @@ export default function Sidebar(props: SidebarProps) {
                   fontFamily: 'var(--tn-mono)',
                   fontSize: 11,
                   padding: '6px 0',
-                  borderRadius: 4,
+                  borderRadius: 10,
                   background: props.status === s ? 'var(--tn-accent-glow)' : 'var(--tn-bg)',
                   color: props.status === s ? 'var(--tn-accent)' : 'var(--tn-dim)',
                   border: `1px solid ${
@@ -128,7 +128,7 @@ export default function Sidebar(props: SidebarProps) {
               gap: 6,
               padding: 6,
               border: '1px solid var(--tn-line2)',
-              borderRadius: 5,
+              borderRadius: 10,
               background: 'var(--tn-bg)',
               minHeight: 36,
             }}
@@ -215,7 +215,7 @@ export default function Sidebar(props: SidebarProps) {
               resize: 'vertical',
               background: 'var(--tn-bg)',
               border: '1px solid var(--tn-line2)',
-              borderRadius: 5,
+              borderRadius: 10,
               padding: '8px 10px',
               color: 'var(--tn-ink)',
               fontFamily: 'var(--tn-sans)',
@@ -318,7 +318,7 @@ function SerpPreview({ title, dek, slug }: { title: string; dek: string; slug: s
         padding: 10,
         background: 'var(--tn-bg)',
         border: '1px solid var(--tn-line2)',
-        borderRadius: 5,
+        borderRadius: 10,
         fontFamily: 'var(--tn-sans)',
       }}
     >

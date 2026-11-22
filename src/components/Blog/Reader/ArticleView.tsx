@@ -31,7 +31,7 @@ export default function ArticleView({
       <Topbar
         theme={theme}
         crumb={[
-          { text: '~/', href: '/' },
+          { text: 'Home', href: '/' },
           { text: 'beaudawson', accent: true, href: '/' },
           { text: 'blog', href: '/blog' },
           { text: post.slug, bold: true },
@@ -51,7 +51,7 @@ export default function ArticleView({
 
         {/* Cover band — CoverBand handles the 'none' case (returns null). */}
         {post.coverId ? (
-          <div style={{ padding: '32px 48px 0' }}>
+          <div className="tn-pad" style={{ padding: '32px 48px 0' }}>
             <div style={{ maxWidth: 1100, margin: '0 auto' }}>
               <CoverBand coverId={post.coverId} coverUrl={post.coverUrl} />
             </div>
@@ -59,6 +59,7 @@ export default function ArticleView({
         ) : null}
 
         <header
+          className="tn-pad"
           style={{
             padding: '48px 48px 32px',
             borderBottom: '1px solid var(--tn-line)',
@@ -78,7 +79,7 @@ export default function ArticleView({
                 flexWrap: 'wrap',
               }}
             >
-              <span style={{ color: 'var(--tn-accent)' }}>~/blog/{post.slug}.md</span>
+              <span style={{ color: 'var(--tn-accent)' }}>Notes</span>
               {post.category ? (
                 <>
                   <span>·</span>
@@ -97,7 +98,7 @@ export default function ArticleView({
             <h1
               style={{
                 fontFamily: 'var(--tn-sans)',
-                fontSize: 56,
+                fontSize: 'clamp(34px, 7vw, 56px)',
                 fontWeight: 800,
                 letterSpacing: '-1.8px',
                 lineHeight: 1.04,
@@ -138,6 +139,7 @@ export default function ArticleView({
 
         {/* Body grid: TOC | content | meta */}
         <div
+          className="tn-article-grid tn-pad"
           style={{
             maxWidth: 1300,
             margin: '0 auto',
@@ -147,7 +149,7 @@ export default function ArticleView({
             gap: 40,
           }}
         >
-          <aside>
+          <aside className="tn-article-toc">
             {headings.length > 0 ? (
               <TableOfContents headings={headings} scrollRoot={scrollRoot} />
             ) : null}
@@ -164,10 +166,11 @@ export default function ArticleView({
           </article>
 
           <aside
+            className="tn-article-meta"
             style={{ fontFamily: 'var(--tn-mono)', fontSize: 11.5, color: 'var(--tn-dim)' }}
           >
             <div style={{ position: 'sticky', top: 24 }}>
-              <SidebarHeader>~/meta</SidebarHeader>
+              <SidebarHeader>Details</SidebarHeader>
               {post.publishAt ? (
                 <Meta k="published" v={post.publishAt.slice(0, 10)} />
               ) : null}
@@ -185,7 +188,7 @@ export default function ArticleView({
                   borderTop: '1px solid var(--tn-line)',
                 }}
               >
-                <SidebarHeader>~/share</SidebarHeader>
+                <SidebarHeader>Share</SidebarHeader>
                 <ShareLinks slug={post.slug} title={post.title} />
               </div>
             </div>
@@ -195,6 +198,7 @@ export default function ArticleView({
         {/* Footer next/prev */}
         {(prev || next) && (
           <footer
+            className="tn-pad"
             style={{
               borderTop: '1px solid var(--tn-line)',
               padding: '32px 48px',
@@ -364,7 +368,7 @@ function NavLink({
       style={{
         padding: 16,
         border: '1px solid var(--tn-line)',
-        borderRadius: 6,
+        borderRadius: 14,
         textDecoration: 'none',
         background: 'var(--tn-bg)',
         transition: '.15s',

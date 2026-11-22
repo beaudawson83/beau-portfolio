@@ -468,7 +468,7 @@ export default function Editor({
                   style={{
                     width: '100%',
                     aspectRatio: '4/1',
-                    borderRadius: 6,
+                    borderRadius: 14,
                     border: '1px dashed var(--tn-line2)',
                     display: 'flex',
                     alignItems: 'center',
@@ -619,7 +619,7 @@ export default function Editor({
                     background: 'transparent',
                     border: '1px dashed var(--tn-line2)',
                     padding: 16,
-                    borderRadius: 6,
+                    borderRadius: 14,
                     width: '100%',
                     cursor: 'pointer',
                   }}
@@ -871,7 +871,7 @@ const handleBtnStyle: CSSProperties = {
   fontFamily: 'var(--tn-mono)',
   fontSize: 14,
   lineHeight: 1,
-  borderRadius: 4,
+  borderRadius: 10,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

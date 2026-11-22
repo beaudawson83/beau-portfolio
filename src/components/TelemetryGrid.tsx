@@ -58,25 +58,21 @@ function MetricCard({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.4, delay: index * 0.08 }}
-      className="text-center md:text-left px-2 py-3"
+      transition={{ duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+      className="ui-card ui-card-hover flex flex-col p-4 sm:p-6"
     >
       {/* Value */}
-      <div className="font-mono text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#7C3AED] mb-1 whitespace-nowrap">
+      <div className="ui-gradient-text text-[1.375rem] sm:text-3xl xl:text-4xl 2xl:text-5xl font-semibold tracking-[-0.04em] tabular-nums whitespace-nowrap mb-3 pb-1">
         <AnimatedValue value={metric.value} inView={isInView} />
       </div>
 
       {/* Context */}
-      <div className="text-[11px] sm:text-xs md:text-sm text-[#94A3B8] leading-snug mb-1">
-        {metric.context}
-      </div>
+      <div className="text-sm text-muted leading-snug mb-4">{metric.context}</div>
 
       {/* Source */}
-      <div className="font-mono text-[9px] sm:text-[10px] md:text-xs text-[#94A3B8]/40">
-        {metric.source}
-      </div>
+      <div className="mt-auto text-xs font-medium text-faint">{metric.source}</div>
     </motion.div>
   );
 }
@@ -88,28 +84,26 @@ export default function TelemetryGrid() {
   useTrackSectionWithRef(ref, 'TelemetryGrid');
 
   return (
-    <section className="relative py-10 sm:py-14 md:py-16 2xl:py-20 px-4 sm:px-6 lg:px-8 2xl:px-16 border-y border-[#1F1F1F]">
+    <section className="relative py-16 sm:py-20 md:py-24 px-4 sm:px-6 lg:px-8 2xl:px-16">
       <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto" ref={ref}>
         {/* Section header — sets up the "Where I've Done It" section below
             so the page reads as a what → where progression. */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.4 }}
-          className="mb-8 sm:mb-10"
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-10 sm:mb-12"
         >
-          <p className="font-mono text-xs text-[#94A3B8] tracking-[0.12em] uppercase mb-2">
-            What I&apos;ve Done
-          </p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+          <p className="ui-eyebrow mb-4">What I&apos;ve Done</p>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-[-0.03em] text-ink mb-3">
             By the Numbers
           </h2>
-          <p className="text-sm sm:text-base text-[#94A3B8]">
+          <p className="text-base sm:text-lg text-muted max-w-2xl">
             Twenty years of operating, building, and removing zeros from problems.
           </p>
         </motion.div>
 
-        <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
+        <motion.div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {metrics.map((metric, index) => (
             <MetricCard
               key={metric.label}

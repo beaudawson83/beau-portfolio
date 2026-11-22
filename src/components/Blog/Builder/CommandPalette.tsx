@@ -72,7 +72,7 @@ export default function CommandPalette({
           width: 560,
           background: 'var(--tn-bg3)',
           border: '1px solid var(--tn-line2)',
-          borderRadius: 10,
+          borderRadius: 18,
           boxShadow: 'var(--tn-shadow)',
           overflow: 'hidden',
         }}
@@ -120,7 +120,7 @@ export default function CommandPalette({
                 width: '100%',
                 textAlign: 'left',
                 padding: '9px 12px',
-                borderRadius: 5,
+                borderRadius: 10,
                 background: i === idx ? 'var(--tn-accent-glow)' : 'transparent',
                 color: 'var(--tn-ink)',
                 border: 0,

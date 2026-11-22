@@ -56,7 +56,7 @@ export default function PublishModal({
           width: 460,
           background: 'var(--tn-bg2)',
           border: '1px solid var(--tn-line2)',
-          borderRadius: 10,
+          borderRadius: 18,
           boxShadow: 'var(--tn-shadow)',
           overflow: 'hidden',
         }}
@@ -78,7 +78,7 @@ export default function PublishModal({
               letterSpacing: '.1em',
             }}
           >
-            $ publish ./post
+            Publish
           </div>
           <button
             type="button"
@@ -110,7 +110,7 @@ export default function PublishModal({
                   background: mode === m ? 'var(--tn-accent-glow)' : 'var(--tn-bg)',
                   color: mode === m ? 'var(--tn-accent)' : 'var(--tn-dim)',
                   border: `1px solid ${mode === m ? 'var(--tn-accent-dim)' : 'var(--tn-line2)'}`,
-                  borderRadius: 5,
+                  borderRadius: 10,
                   textTransform: 'uppercase',
                   letterSpacing: '.08em',
                   cursor: 'pointer',
@@ -190,7 +190,7 @@ function inputStyle(): CSSProperties {
     background: 'transparent',
     border: '1px solid var(--tn-line2)',
     padding: '8px 10px',
-    borderRadius: 3,
+    borderRadius: 8,
     outline: 'none',
   };
 }
